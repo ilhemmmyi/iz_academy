@@ -1,0 +1,181 @@
+{
+  "name": "IZ COACH — Career Chatbot Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "iz-coach",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-entry",
+      "name": "Webhook — Student Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            { "id": "action-analyze", "leftValue": "={{ $json.body.action }}", "rightValue": "analyze_cv", "operator": { "type": "string", "operation": "equals" } },
+            { "id": "action-roadmap", "leftValue": "={{ $json.body.action }}", "rightValue": "generate_roadmap", "operator": { "type": "string", "operation": "equals" } },
+            { "id": "action-chat",    "leftValue": "={{ $json.body.action }}", "rightValue": "chat", "operator": { "type": "string", "operation": "equals" } }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "switch-action",
+      "name": "Switch — Route by Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://iz-coach-api:8000/analyze_cv",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ student_id: $json.body.student_id, cv_text: $json.body.cv_text, target_country: $json.body.target_country || 'France', career_goals: $json.body.career_goals || [] }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "http-analyze-cv",
+      "name": "HTTP — Analyze CV (FastAPI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://iz-coach-api:8000/generate_roadmap",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ student_id: $json.body.student_id, extracted_skills: $json.body.extracted_skills || [], skill_gaps: $json.body.skill_gaps || [], career_goals: $json.body.career_goals || [], available_courses: $json.body.available_courses || [], weeks: $json.body.weeks || 12 }) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "http-generate-roadmap",
+      "name": "HTTP — Generate Roadmap (FastAPI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://iz-coach-api:8000/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ student_id: $json.body.student_id, message: $json.body.message, history: $json.body.history || [], context: $json.body.context || {} }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "http-chat",
+      "name": "HTTP — Chat (FastAPI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format CV analysis response for frontend\nconst data = $input.first().json;\nreturn [{ json: { success: true, action: 'analyze_cv', data } }];"
+      },
+      "id": "format-cv-response",
+      "name": "Format — CV Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format roadmap response for frontend\nconst data = $input.first().json;\nreturn [{ json: { success: true, action: 'generate_roadmap', data } }];"
+      },
+      "id": "format-roadmap-response",
+      "name": "Format — Roadmap Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format chat response for frontend\nconst data = $input.first().json;\nreturn [{ json: { success: true, action: 'chat', data } }];"
+      },
+      "id": "format-chat-response",
+      "name": "Format — Chat Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-cv",
+      "name": "Respond — CV",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-roadmap",
+      "name": "Respond — Roadmap",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-chat",
+      "name": "Respond — Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 500]
+    }
+  ],
+  "connections": {
+    "Webhook — Student Request": {
+      "main": [[{ "node": "Switch — Route by Action", "type": "main", "index": 0 }]]
+    },
+    "Switch — Route by Action": {
+      "main": [
+        [{ "node": "HTTP — Analyze CV (FastAPI)", "type": "main", "index": 0 }],
+        [{ "node": "HTTP — Generate Roadmap (FastAPI)", "type": "main", "index": 0 }],
+        [{ "node": "HTTP — Chat (FastAPI)", "type": "main", "index": 0 }]
+      ]
+    },
+    "HTTP — Analyze CV (FastAPI)": {
+      "main": [[{ "node": "Format — CV Response", "type": "main", "index": 0 }]]
+    },
+    "HTTP — Generate Roadmap (FastAPI)": {
+      "main": [[{ "node": "Format — Roadmap Response", "type": "main", "index": 0 }]]
+    },
+    "HTTP — Chat (FastAPI)": {
+      "main": [[{ "node": "Format — Chat Response", "type": "main", "index": 0 }]]
+    },
+    "Format — CV Response": {
+      "main": [[{ "node": "Respond — CV", "type": "main", "index": 0 }]]
+    },
+    "Format — Roadmap Response": {
+      "main": [[{ "node": "Respond — Roadmap", "type": "main", "index": 0 }]]
+    },
+    "Format — Chat Response": {
+      "main": [[{ "node": "Respond — Chat", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [{ "name": "iz-coach" }]
+}
