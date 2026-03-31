@@ -19,7 +19,6 @@ import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { LessonComments } from '../../components/LessonComments';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
-import { CourseRatingSection } from '../../components/CourseRatingSection';
 
 type VideoProgressMap = Record<string, { watchedSeconds: number; durationSeconds: number }>;
 
@@ -556,8 +555,6 @@ export function StudentCourseView() {
               </div>
             </div>
 
-            {/* Rating */}
-            <CourseRatingSection courseId={courseId!} canRate={progressPct === 100} />
           </div>
         </div>
       </div>

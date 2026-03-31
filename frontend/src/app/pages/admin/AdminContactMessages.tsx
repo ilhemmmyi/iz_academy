@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Mail, MailCheck, Reply, Send, User } from 'lucide-react';
+import { Mail, MailCheck, Send, Inbox, Clock, CheckCheck, User, AtSign, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminLayout } from '../../components/AdminLayout';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
 import { contactApi, type ContactMessage } from '../../../api/contact.api';
 
 export function AdminContactMessages() {
@@ -43,11 +40,7 @@ export function AdminContactMessages() {
   const handleReply = async () => {
     if (!selectedMessage) return;
     const trimmed = replyMessage.trim();
-    if (!trimmed) {
-      toast.error('La réponse ne peut pas être vide');
-      return;
-    }
-
+    if (!trimmed) { toast.error('La réponse ne peut pas être vide'); return; }
     try {
       setSending(true);
       const updated = await contactApi.reply(selectedMessage.id, trimmed);
@@ -57,7 +50,7 @@ export function AdminContactMessages() {
       setReplyMessage(updated.replyMessage || '');
       toast.success('Réponse envoyée par email');
     } catch {
-      toast.error('Impossible d\'envoyer la réponse');
+      toast.error("Impossible d'envoyer la réponse");
     } finally {
       setSending(false);
     }
@@ -67,106 +60,175 @@ export function AdminContactMessages() {
     setReplyMessage(selectedMessage?.replyMessage || '');
   }, [selectedMessage?.id]);
 
+  const unread = messages.filter(m => !m.isRead).length;
+  const replied = messages.filter(m => m.repliedAt).length;
+
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div>
-          <h1 className="mb-2">Messages de contact</h1>
-          <p className="text-muted-foreground">Consultez les demandes envoyées depuis la page d'accueil et répondez par email.</p>
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="mb-1">Messages de contact</h1>
+            <p className="text-muted-foreground text-sm">Gérez les demandes et répondez directement par email.</p>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-2 rounded-xl text-sm font-medium">
+              <Clock className="w-4 h-4" />
+              {unread} non lu{unread !== 1 ? 's' : ''}
+            </div>
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-xl text-sm font-medium">
+              <CheckCheck className="w-4 h-4" />
+              {replied} répondu{replied !== 1 ? 's' : ''}
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Boîte de réception</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+        {/* Main layout */}
+        <div className="grid lg:grid-cols-[340px_1fr] gap-0 bg-white border border-border rounded-2xl overflow-hidden shadow-sm" style={{ minHeight: '600px' }}>
+
+          {/* Left panel — inbox */}
+          <div className="border-r border-border flex flex-col">
+            <div className="px-4 py-4 border-b border-border bg-accent/30">
+              <div className="flex items-center gap-2 font-semibold text-sm">
+                <Inbox className="w-4 h-4" />
+                Boîte de réception
+                {unread > 0 && (
+                  <span className="ml-auto bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">{unread}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-border">
               {loading ? (
-                <div className="text-sm text-muted-foreground">Chargement...</div>
+                <div className="p-6 text-center text-sm text-muted-foreground">Chargement...</div>
               ) : messages.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Aucun message pour le moment.</div>
+                <div className="p-8 text-center">
+                  <Mail className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-sm text-muted-foreground">Aucun message pour le moment.</p>
+                </div>
               ) : messages.map((message) => (
                 <button
                   key={message.id}
                   type="button"
                   onClick={() => setSelectedId(message.id)}
-                  className={`w-full rounded-xl border p-4 text-left transition ${selectedId === message.id ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/50'}`}
+                  className={`w-full px-4 py-4 text-left transition-colors ${
+                    selectedId === message.id
+                      ? 'bg-primary/5 border-l-2 border-l-primary'
+                      : 'hover:bg-accent/40 border-l-2 border-l-transparent'
+                  }`}
                 >
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <div className="font-medium truncate">{message.subject}</div>
-                    <Badge variant={message.repliedAt ? 'default' : 'secondary'}>
-                      {message.repliedAt ? 'Répondu' : message.isRead ? 'Lu' : 'Nouveau'}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground truncate">{message.name} • {message.email}</div>
-                  <div className="mt-2 line-clamp-2 text-sm text-muted-foreground">{message.message}</div>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Détail et réponse</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!selectedMessage ? (
-                <div className="text-sm text-muted-foreground">Sélectionnez un message pour le consulter.</div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Badge variant={selectedMessage.repliedAt ? 'default' : 'secondary'}>
-                      {selectedMessage.repliedAt ? <MailCheck className="mr-1 h-3 w-3" /> : <Mail className="mr-1 h-3 w-3" />}
-                      {selectedMessage.repliedAt ? 'Répondu' : 'En attente'}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      Reçu le {new Date(selectedMessage.createdAt).toLocaleString('fr-FR')}
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className={`text-sm truncate ${!message.isRead ? 'font-semibold' : 'font-medium'}`}>
+                      {message.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                      {new Date(message.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                     </span>
                   </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-xl border border-border p-4">
-                      <div className="mb-2 flex items-center gap-2 font-medium"><User className="h-4 w-4" /> Expéditeur</div>
-                      <div>{selectedMessage.name}</div>
-                      <div className="text-sm text-muted-foreground">{selectedMessage.email}</div>
-                    </div>
-                    <div className="rounded-xl border border-border p-4">
-                      <div className="mb-2 flex items-center gap-2 font-medium"><Reply className="h-4 w-4" /> Sujet</div>
-                      <div>{selectedMessage.subject}</div>
-                    </div>
+                  <div className={`text-xs mb-1 truncate ${!message.isRead ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                    {message.subject}
                   </div>
-
-                  <div className="rounded-xl border border-border p-4">
-                    <div className="mb-2 font-medium">Message reçu</div>
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{selectedMessage.message}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground line-clamp-1">{message.message}</span>
+                    {message.repliedAt ? (
+                      <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                        <MailCheck className="w-3 h-3" /> Répondu
+                      </span>
+                    ) : !message.isRead ? (
+                      <span className="flex-shrink-0 w-2 h-2 rounded-full bg-primary" />
+                    ) : null}
                   </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
-                  <div className="space-y-3">
-                    <label htmlFor="replyMessage" className="block font-medium">Réponse par email</label>
-                    <textarea
-                      id="replyMessage"
-                      value={replyMessage}
-                      onChange={(event) => setReplyMessage(event.target.value)}
-                      rows={8}
-                      placeholder="Rédigez la réponse qui sera envoyée à l'expéditeur..."
-                      className="w-full rounded-xl border border-border bg-input-background px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="text-sm text-muted-foreground">
-                        {selectedMessage.repliedAt
-                          ? `Dernière réponse envoyée le ${new Date(selectedMessage.repliedAt).toLocaleString('fr-FR')}`
-                          : 'Aucune réponse envoyée pour le moment.'}
-                      </div>
-                      <Button onClick={handleReply} disabled={sending}>
-                        <Send className="mr-2 h-4 w-4" />
-                        {sending ? 'Envoi...' : selectedMessage.repliedAt ? 'Renvoyer la réponse' : 'Envoyer la réponse'}
-                      </Button>
-                    </div>
+          {/* Right panel — detail */}
+          <div className="flex flex-col">
+            {!selectedMessage ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground p-8">
+                <MessageSquare className="w-12 h-12 opacity-30" />
+                <p className="text-sm">Sélectionnez un message pour le lire</p>
+              </div>
+            ) : (
+              <>
+                {/* Message header */}
+                <div className="px-6 py-5 border-b border-border">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <h2 className="text-lg font-semibold leading-tight">{selectedMessage.subject}</h2>
+                    {selectedMessage.repliedAt ? (
+                      <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded-full font-medium">
+                        <MailCheck className="w-3.5 h-3.5" /> Répondu
+                      </span>
+                    ) : (
+                      <span className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs bg-orange-50 text-orange-600 border border-orange-200 px-3 py-1 rounded-full font-medium">
+                        <Clock className="w-3.5 h-3.5" /> En attente
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" /> {selectedMessage.name}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <AtSign className="w-3.5 h-3.5" /> {selectedMessage.email}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      {new Date(selectedMessage.createdAt).toLocaleString('fr-FR')}
+                    </span>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+
+                {/* Message body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                  <div className="bg-accent/30 rounded-xl p-5">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedMessage.message}</p>
+                  </div>
+
+                  {selectedMessage.repliedAt && selectedMessage.replyMessage && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-5">
+                      <div className="flex items-center gap-2 text-xs font-medium text-green-700 mb-2">
+                        <MailCheck className="w-3.5 h-3.5" />
+                        Votre réponse — envoyée le {new Date(selectedMessage.repliedAt).toLocaleString('fr-FR')}
+                      </div>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-green-900">{selectedMessage.replyMessage}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reply area */}
+                <div className="border-t border-border px-6 py-4 bg-accent/20">
+                  <label className="block text-sm font-medium mb-2">
+                    {selectedMessage.repliedAt ? 'Envoyer une nouvelle réponse' : 'Répondre par email'}
+                  </label>
+                  <textarea
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    rows={4}
+                    placeholder="Rédigez votre réponse..."
+                    className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  />
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-xs text-muted-foreground">
+                      {selectedMessage.repliedAt
+                        ? `Dernière réponse : ${new Date(selectedMessage.repliedAt).toLocaleString('fr-FR')}`
+                        : 'La réponse sera envoyée à ' + selectedMessage.email}
+                    </span>
+                    <button
+                      onClick={handleReply}
+                      disabled={sending}
+                      className="inline-flex items-center gap-2 px-5 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90 transition disabled:opacity-60"
+                    >
+                      <Send className="w-4 h-4" />
+                      {sending ? 'Envoi...' : selectedMessage.repliedAt ? 'Renvoyer' : 'Envoyer'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </AdminLayout>

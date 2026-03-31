@@ -10,7 +10,6 @@ import {
   Play,
   XCircle,
   Hourglass,
-  Star,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -28,7 +27,6 @@ import {
 } from '../components/ui/alert-dialog';
 import { coursesApi } from '../../api/courses.api';
 import { enrollmentsApi } from '../../api/enrollments.api';
-import { reviewsApi, type ReviewSummary } from '../../api/reviews.api';
 import { useAuth } from '../../context/AuthContext';
 
 type EnrollmentStatus = 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -41,7 +39,6 @@ export function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [enrollmentStatus, setEnrollmentStatus] = useState<EnrollmentStatus>('NONE');
   const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -49,7 +46,6 @@ export function CourseDetailPage() {
       .then(data => setCourse(data))
       .catch(() => setCourse(null))
       .finally(() => setLoading(false));
-    reviewsApi.getSummary(id).then(setReviewSummary).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -227,22 +223,6 @@ export function CourseDetailPage() {
                     <div className="text-sm text-muted-foreground">
                       Paiement unique
                     </div>
-                    {reviewSummary && reviewSummary.count > 0 && (
-                      <div className="flex items-center justify-center gap-1 mt-2">
-                        {[1,2,3,4,5].map(s => (
-                          <Star
-                            key={s}
-                            className={`w-4 h-4 ${s <= Math.round(reviewSummary.average) ? 'fill-amber-400 text-amber-400' : 'fill-none text-gray-300'}`}
-                          />
-                        ))}
-                        <span className="text-sm font-semibold text-amber-600 ml-1">
-                          {reviewSummary.average.toFixed(1)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({reviewSummary.count} avis)
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   {enrollmentStatus === 'APPROVED' ? (
