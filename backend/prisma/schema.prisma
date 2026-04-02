@@ -94,7 +94,7 @@ model Course {
   categoryId       String
   category         Category      @relation(fields: [categoryId], references: [id])
   teacherId        String
-  teacher          User          @relation("TeacherCourses", fields: [teacherId], references: [id])
+  teacher          User          @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: Restrict)
   objectives       String[]
   modules          Module[]
   enrollments      Enrollment[]
@@ -146,7 +146,7 @@ model Lesson {
   moduleId    String
   module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress LessonProgress[]
-  quiz     Quiz?            @relation(fields: [quizId], references: [id])
+  quiz     Quiz?            @relation(fields: [quizId], references: [id], onDelete: SetNull)
   quizId   String?
   comments LessonComment[]
 
@@ -193,8 +193,8 @@ model Payment {
   courseId  String
   amount    Float
   status    PaymentStatus @default(PENDING)
-  user      User          @relation(fields: [userId], references: [id])
-  course    Course        @relation(fields: [courseId], references: [id])
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdAt DateTime      @default(now())
 
   @@unique([userId, courseId])
@@ -228,8 +228,8 @@ model QuizAttempt {
   quizId    String
   score     Float
   passed    Boolean
-  user      User     @relation(fields: [userId], references: [id])
-  quiz      Quiz     @relation(fields: [quizId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@index([userId])
@@ -241,8 +241,8 @@ model Message {
   content    String
   senderId   String
   receiverId String
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
@@ -262,7 +262,7 @@ model ContactMessage {
   repliedById  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  repliedBy    User?    @relation("ContactReplies", fields: [repliedById], references: [id])
+  repliedBy    User?    @relation("ContactReplies", fields: [repliedById], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([isRead])
@@ -275,8 +275,8 @@ model Certificate {
   userId   String
   courseId String
   fileUrl  String?  // null while async generation is in progress
-  user     User     @relation(fields: [userId], references: [id])
-  course   Course   @relation(fields: [courseId], references: [id])
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   issuedAt DateTime @default(now())
 
   @@unique([userId, courseId])

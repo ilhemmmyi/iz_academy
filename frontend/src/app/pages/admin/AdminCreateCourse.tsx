@@ -228,7 +228,7 @@ export function AdminCreateCourse() {
         price: parseFloat(price) || 0,
         objectives: objectives.filter(o => o.trim()),
         thumbnailUrl: thumbnailUrl || null,
-        isPublished: false,
+        isPublished: true,
         modules: sections.map(s => ({
           title: s.title,
           lessons: s.lessons.map(l => ({

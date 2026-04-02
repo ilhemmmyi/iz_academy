@@ -1,0 +1,1 @@
+import{g as e}from"./index-C_vc_aOj.js";const m={getAll:()=>e("/payments"),getMine:()=>e("/payments/me"),create:(t,p)=>e("/payments",{method:"POST",body:JSON.stringify({courseId:t,amount:p})})};export{m as p};

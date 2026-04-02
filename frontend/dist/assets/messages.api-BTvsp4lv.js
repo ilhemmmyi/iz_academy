@@ -1,1 +1,0 @@
-import{f as s}from"./index-BLgzYGjl.js";const m={getContacts:()=>s("/messages/contacts"),getAll:()=>s("/messages"),send:(e,a)=>s("/messages",{method:"POST",body:JSON.stringify({receiverId:e,content:a})}),markRead:e=>s(`/messages/${e}/read`,{method:"PUT"})};export{m};

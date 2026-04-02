@@ -355,6 +355,7 @@ export function AdminUsers() {
   const [showAddTeacher, setShowAddTeacher] = useState(false);
   const [editUser, setEditUser] = useState<ApiUser | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', formation: '', duree: '', dateDebut: '' });
+  const [editTeacherCourseIds, setEditTeacherCourseIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -384,7 +385,7 @@ export function AdminUsers() {
     Promise.all([usersApi.getAll(), coursesApi.getAdmin()])
       .then(([userData, courseData]) => {
         setUsers(userData as ApiUser[]);
-        setAvailableCourses((courseData as any[]).map((c: any) => ({ id: c.id, title: c.title })));
+        setAvailableCourses((courseData as any[]).map((c: any) => ({ id: c.id, title: c.title, teacherId: c.teacher?.id })));
       })
       .catch(() => setError('Impossible de charger les utilisateurs.'))
       .finally(() => setLoading(false));
@@ -483,19 +484,33 @@ export function AdminUsers() {
   const openEditModal = (u: ApiUser) => {
     setEditUser(u);
     setEditForm({ name: u.name, email: u.email, formation: u.formation || '', duree: u.duree || '', dateDebut: u.dateDebut || '' });
+    if (u.role.toLowerCase() === 'teacher') {
+      // Pre-select courses where this teacher is assigned
+      const assigned = availableCourses.filter(c => (c as any).teacherId === u.id).map(c => c.id);
+      setEditTeacherCourseIds(assigned);
+    } else {
+      setEditTeacherCourseIds([]);
+    }
   };
 
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editUser) return;
     try {
+      const isTeacher = editUser.role.toLowerCase() === 'teacher';
+      const formationValue = isTeacher
+        ? availableCourses.filter(c => editTeacherCourseIds.includes(c.id)).map(c => c.title).join(', ')
+        : editForm.formation;
       const updated: ApiUser = await usersApi.updateUser(editUser.id, {
         name: editForm.name,
         email: editForm.email,
-        formation: editForm.formation,
+        formation: formationValue,
         duree: editForm.duree,
         dateDebut: editForm.dateDebut,
       });
+      if (isTeacher) {
+        await usersApi.assignCourses(editUser.id, editTeacherCourseIds);
+      }
       setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...updated } : u));
       setEditUser(null);
       toast.success('Utilisateur modifié avec succès.');
@@ -896,11 +911,35 @@ export function AdminUsers() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  {editUser?.role.toLowerCase() === 'teacher' ? 'Formation assignée' : 'Formation actuelle'}
+                  {editUser?.role.toLowerCase() === 'teacher' ? 'Cours assignés' : 'Formation actuelle'}
                 </label>
-                <input type="text" value={editForm.formation}
-                  onChange={e => setEditForm(p => ({ ...p, formation: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                {editUser?.role.toLowerCase() === 'teacher' ? (
+                  availableCourses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucun cours disponible.</p>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                      {availableCourses.map(course => (
+                        <label key={course.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editTeacherCourseIds.includes(course.id)}
+                            onChange={e => {
+                              setEditTeacherCourseIds(prev =>
+                                e.target.checked ? [...prev, course.id] : prev.filter(id => id !== course.id)
+                              );
+                            }}
+                            className="w-4 h-4 rounded border-border accent-primary"
+                          />
+                          <span className="text-sm">{course.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  <input type="text" value={editForm.formation}
+                    onChange={e => setEditForm(p => ({ ...p, formation: e.target.value }))}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                )}
               </div>
               {editUser?.role.toLowerCase() === 'teacher' ? (
                 <div>

@@ -82,7 +82,7 @@ export function Contact() {
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder="Jean Dupont"
+                    placeholder="Votre nom complet"
                     className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />

@@ -1,20 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router';
-import {
-  LayoutDashboard,
-  BookOpen,
-  FolderGit2,
-  MessageSquare,
-  GraduationCap,
-  Menu,
-  ClipboardCheck,
-  X,
-  LogOut,
-  User,
-  Award,
-} from 'lucide-react';
 import { useState } from 'react';
+import { LayoutDashboard, BookOpen, ClipboardCheck, Award, MessageSquare, Menu, GraduationCap, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { IzCoach } from './IzCoach';
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -119,8 +106,6 @@ export function StudentLayout({ children }: StudentLayoutProps) {
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
 
-      {/* IZ Coach chatbot — floating on all student pages */}
-      <IzCoach />
     </div>
   );
 }

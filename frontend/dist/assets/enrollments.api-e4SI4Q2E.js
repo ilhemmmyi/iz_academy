@@ -1,1 +1,0 @@
-import{f as e}from"./index-BLgzYGjl.js";const o={request:(t,n)=>e("/enrollments",{method:"POST",body:JSON.stringify({courseId:t,message:n})}),getAll:()=>e("/enrollments"),getMine:()=>e("/enrollments/me"),updateStatus:(t,n)=>e(`/enrollments/${t}`,{method:"PUT",body:JSON.stringify({status:n})})};export{o as e};
