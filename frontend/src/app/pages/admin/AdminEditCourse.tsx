@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { coursesApi } from '../../../api/courses.api';
 import { uploadApi } from '../../../api/upload.api';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
+import { usersApi } from '../../../api/users.api';
 
 interface QuizQuestion {
   id: string;
@@ -97,6 +98,8 @@ export function AdminEditCourse() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('__admin__');
 
   // Step 2
   const [sections, setSections] = useState<SectionForm[]>([newSection()]);
@@ -118,9 +121,12 @@ export function AdminEditCourse() {
       coursesApi.getById(courseId),
       coursesApi.getCategories(),
       resourcesApi.getResources(courseId).catch(() => [] as CourseResource[]),
-    ]).then(([course, cats, res]) => {
+      usersApi.getAll().catch(() => [] as any[]),
+    ]).then(([course, cats, res, users]) => {
       setCategories(cats);
       setResources(res);
+      setTeachers((users as any[]).filter((u: any) => u.role === 'TEACHER'));
+      setSelectedTeacherId(course.teacherId || '__admin__');
       setTitle(course.title);
       setShortDesc(course.shortDescription);
       setLongDesc(course.longDescription || '');
@@ -319,6 +325,7 @@ export function AdminEditCourse() {
         price: parseFloat(price) || 0,
         objectives: objectives.filter(o => o.trim()),
         thumbnailUrl: thumbnailUrl || null,
+        ...(selectedTeacherId && selectedTeacherId !== '__admin__' ? { teacherId: selectedTeacherId } : {}),
         modules: sections.map(s => ({
           title: s.title,
           lessons: s.lessons.map(l => ({
@@ -463,6 +470,21 @@ export function AdminEditCourse() {
                     <Label>Prix (DT)</Label>
                     <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0 = Gratuit" min="0" />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Formateur (optionnel)</Label>
+                  <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Administrateur (par défaut)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__admin__">Administrateur (par défaut)</SelectItem>
+                      {teachers.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>

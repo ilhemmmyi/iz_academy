@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { coursesApi } from '../../../api/courses.api';
 import { uploadApi } from '../../../api/upload.api';
+import { usersApi } from '../../../api/users.api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface QuizQuestion {
@@ -95,6 +96,8 @@ export function AdminCreateCourse() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('__admin__');
 
   // Step 2 – Sections + lessons
   const [sections, setSections] = useState<SectionForm[]>([newSection()]);
@@ -105,6 +108,9 @@ export function AdminCreateCourse() {
 
   useEffect(() => {
     coursesApi.getCategories().then(setCategories).catch(() => {});
+    usersApi.getAll()
+      .then((users: any[]) => setTeachers(users.filter((u: any) => u.role === 'TEACHER')))
+      .catch(() => {});
   }, []);
 
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,8 +218,8 @@ export function AdminCreateCourse() {
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!title || !categoryId || !level) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
+    if (!title || !shortDesc || !categoryId || !level) {
+      toast.error('Veuillez remplir tous les champs obligatoires (titre, description courte, catégorie, niveau)');
       return;
     }
     setSubmitting(true);
@@ -229,6 +235,7 @@ export function AdminCreateCourse() {
         objectives: objectives.filter(o => o.trim()),
         thumbnailUrl: thumbnailUrl || null,
         isPublished: true,
+        ...(selectedTeacherId && selectedTeacherId !== '__admin__' ? { teacherId: selectedTeacherId } : {}),
         modules: sections.map(s => ({
           title: s.title,
           lessons: s.lessons.map(l => ({
@@ -259,7 +266,7 @@ export function AdminCreateCourse() {
 
   // ─── UI helpers ───────────────────────────────────────────────────────────
   const canGoNext = () => {
-    if (step === 1) return !!(title && categoryId && level);
+    if (step === 1) return !!(title && shortDesc && categoryId && level);
     if (step === 2) return sections.every(s => s.title.trim() && s.lessons.every(l => l.title.trim()));
     return true;
   };
@@ -370,6 +377,21 @@ export function AdminCreateCourse() {
                     <Label>Prix (DT)</Label>
                     <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0 = Gratuit" min="0" />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Formateur (optionnel)</Label>
+                  <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Assigné à l'administrateur par défaut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__admin__">Administrateur (par défaut)</SelectItem>
+                      {teachers.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>

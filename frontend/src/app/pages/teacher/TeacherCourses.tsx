@@ -13,7 +13,7 @@ export function TeacherCourses() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    coursesApi.getAll()
+    coursesApi.getMine()
       .then(data => setCourses(data))
       .catch(() => {})
       .finally(() => setLoading(false));

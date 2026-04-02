@@ -13,6 +13,7 @@ export const usersApi = {
   updateUser: (id: string, data: { role?: string; isActive?: boolean; formation?: string; duree?: string; dateDebut?: string; name?: string; email?: string }) =>
     apiClient(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUser: (id: string) => apiClient(`/users/${id}`, { method: 'DELETE' }),
+  resetPassword: (id: string) => apiClient(`/users/${id}/reset-password`, { method: 'POST' }),
   revokeCertificate: (userId: string, courseId: string) =>
     apiClient(`/users/${userId}/certificates/${courseId}`, { method: 'DELETE' }),
 };

@@ -8,6 +8,8 @@ export const coursesApi = {
 
   getAdmin: () => apiClient('/courses/admin'),
 
+  getMine: () => apiClient('/courses/mine'),
+
   getCategories: () => apiClient('/courses/categories'),
 
   createCategory: (name: string) =>

@@ -28,7 +28,7 @@ export function TeacherDashboard() {
 
   useEffect(() => {
     Promise.all([
-      coursesApi.getAll().catch(() => []),
+      coursesApi.getMine().catch(() => []),
       messagesApi.getAll().catch(() => []),
       enrollmentsApi.getAll().catch(() => []),
       projectsApi.teacherSubmissions().catch(() => []),

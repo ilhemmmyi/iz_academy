@@ -3,7 +3,7 @@ import {
   Search, Trash2, Eye, UserPlus, Edit, Copy, CheckCheck,
   ChevronRight, BookOpen, FolderGit2, Award, CheckCircle2, Clock, XCircle,
   ShieldCheck, Loader2, ExternalLink, AlertCircle, Trophy, HelpCircle,
-  Users, GraduationCap, Briefcase, ShieldAlert,
+  Users, GraduationCap, Briefcase, ShieldAlert, KeyRound,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -360,10 +360,11 @@ export function AdminUsers() {
   const [error, setError] = useState('');
 
   const [teacherForm, setTeacherForm] = useState({ name: '', email: '' });
-  const [teacherCourseIds, setTeacherCourseIds] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<{ id: string; title: string }[]>([]);
   const [generatedPassword, setGeneratedPassword] = useState<{ name: string; email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [resetCopied, setResetCopied] = useState(false);
 
   const [users, setUsers] = useState<ApiUser[]>([]);
 
@@ -456,12 +457,8 @@ export function AdminUsers() {
     try {
       const res = await usersApi.createUser({ name: teacherForm.name, email: teacherForm.email, role: 'teacher' });
       const { generatedPassword: pwd, ...created } = res;
-      if (teacherCourseIds.length > 0) {
-        await usersApi.assignCourses(created.id, teacherCourseIds);
-      }
       setUsers(prev => [...prev, created as ApiUser]);
       setTeacherForm({ name: '', email: '' });
-      setTeacherCourseIds([]);
       setShowAddTeacher(false);
       setGeneratedPassword({ name: created.name, email: created.email, password: pwd });
     } catch {
@@ -478,6 +475,16 @@ export function AdminUsers() {
       toast.success('Utilisateur supprimé.');
     } catch {
       toast.error('Erreur lors de la suppression.');
+    }
+  };
+
+  const handleResetPassword = async (u: ApiUser) => {
+    if (!window.confirm(`Réinitialiser le mot de passe de ${u.name} ?`)) return;
+    try {
+      const res = await usersApi.resetPassword(u.id);
+      setResetPasswordResult({ name: u.name, email: u.email, password: res.generatedPassword });
+    } catch {
+      toast.error('Erreur lors de la réinitialisation.');
     }
   };
 
@@ -711,6 +718,11 @@ export function AdminUsers() {
                           <button className="p-2 hover:bg-amber-50 text-amber-500 rounded-lg transition" onClick={() => openEditModal(u)} title="Modifier">
                             <Edit className="w-4 h-4" />
                           </button>
+                          {u.role.toLowerCase() !== 'student' && (
+                            <button className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition" onClick={() => handleResetPassword(u)} title="Réinitialiser le mot de passe">
+                              <KeyRound className="w-4 h-4" />
+                            </button>
+                          )}
                           <button className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition" onClick={() => handleDeleteUser(u.id)} title="Supprimer">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -889,6 +901,55 @@ export function AdminUsers() {
           </DialogContent>
         </Dialog>
 
+        {/* ── Reset Password Modal ──────────────────────────────────────────── */}
+        <Dialog open={resetPasswordResult !== null} onOpenChange={() => { setResetPasswordResult(null); setResetCopied(false); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Mot de passe réinitialisé !</DialogTitle>
+              <DialogDescription>
+                Communiquez ces nouveaux identifiants à <strong>{resetPasswordResult?.name}</strong>. Le mot de passe ne sera plus affiché.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-muted-foreground">Email</label>
+                <div className="px-3 py-2 border border-border rounded-lg bg-accent/30 text-sm font-mono">{resetPasswordResult?.email}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-muted-foreground">Nouveau mot de passe</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-3 py-2 border border-border rounded-lg bg-accent/30 text-sm font-mono tracking-wider">
+                    {resetPasswordResult?.password}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetPasswordResult?.password || '');
+                      setResetCopied(true);
+                      setTimeout(() => setResetCopied(false), 2000);
+                    }}
+                    className="p-2 border border-border rounded-lg hover:bg-accent transition"
+                    title="Copier"
+                  >
+                    {resetCopied ? <CheckCheck className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                ⚠️ Notez ce mot de passe maintenant. Il ne sera plus visible après fermeture.
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => { setResetPasswordResult(null); setResetCopied(false); }}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* ── Edit User Modal ───────────────────────────────────────────────── */}
         <Dialog open={editUser !== null} onOpenChange={() => setEditUser(null)}>
           <DialogContent className="max-w-md">
@@ -991,30 +1052,6 @@ export function AdminUsers() {
                   onChange={e => setTeacherForm(p => ({ ...p, email: e.target.value }))}
                   placeholder="formateur@email.com"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Cours assignés</label>
-                {availableCourses.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucun cours disponible.</p>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
-                    {availableCourses.map(course => (
-                      <label key={course.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={teacherCourseIds.includes(course.id)}
-                          onChange={e => {
-                            setTeacherCourseIds(prev =>
-                              e.target.checked ? [...prev, course.id] : prev.filter(id => id !== course.id)
-                            );
-                          }}
-                          className="rounded border-border"
-                        />
-                        <span className="text-sm">{course.title}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddTeacher(false)}
