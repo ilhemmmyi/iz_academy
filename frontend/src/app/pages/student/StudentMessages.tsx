@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { StudentLayout } from '../../components/StudentLayout';
-import { MessageSquare, Search, Send, Clock, BookOpen } from 'lucide-react';
+import { MessageSquare, Search, Send, Clock, BookOpen, Flag } from 'lucide-react';
 import { messagesApi } from '../../../api/messages.api';
 import { useAuth } from '../../../context/AuthContext';
+import { ReportModal } from '../../components/ReportModal';
 
 interface Contact {
   id: string;
@@ -22,6 +23,7 @@ export function StudentMessages() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [reportMessageId, setReportMessageId] = useState<string | null>(null);
 
   // Load contacts (enrolled teachers) + all messages in parallel
   useEffect(() => {
@@ -264,12 +266,21 @@ export function StudentMessages() {
                         >
                           {msg.content}
                         </div>
-                        <div className={`text-[10px] text-gray-400 flex items-center gap-1 px-1 ${isMine ? 'justify-end' : ''}`}>
+                        <div className={`text-[10px] text-gray-400 flex items-center gap-1.5 px-1 ${isMine ? 'justify-end' : ''}`}>
                           <Clock className="w-2.5 h-2.5" />
                           {new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
+                          {!isMine && (
+                            <button
+                              onClick={() => setReportMessageId(msg.id)}
+                              className="ml-0.5 text-gray-300 hover:text-red-400 transition"
+                              title="Signaler ce message"
+                            >
+                              <Flag className="w-2.5 h-2.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -309,6 +320,13 @@ export function StudentMessages() {
           </div>
         </div>
       </div>
+
+      <ReportModal
+        open={reportMessageId !== null}
+        onClose={() => setReportMessageId(null)}
+        messageId={reportMessageId ?? undefined}
+        targetLabel="ce message"
+      />
     </StudentLayout>
   );
 }

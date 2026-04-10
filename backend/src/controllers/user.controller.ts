@@ -50,7 +50,7 @@ export const UserController = {
       if (req.params.id === req.user!.userId) {
         return res.status(400).json({ message: 'Cannot delete your own account' });
       }
-      await UserService.deleteUser(String(req.params.id));
+      await UserService.deleteUser(String(req.params.id), req.user!.userId);
       res.json({ message: 'User deleted' });
     } catch (err: any) {
       res.status(500).json({ message: 'Failed to delete user' });
@@ -78,23 +78,48 @@ export const UserController = {
   async updateUser(req: AuthRequest, res: Response) {
     try {
       const { role, isActive, formation, duree, dateDebut, name, email } = req.body;
+
+      // Determine the target user's role to enforce student-specific restrictions
+      const targetUser = await prisma.user.findUnique({
+        where: { id: String(req.params.id) },
+        select: { role: true },
+      });
+      if (!targetUser) return res.status(404).json({ message: 'User not found' });
+
       const data: Record<string, unknown> = {};
-      if (role !== undefined) {
-        const validRoles = ['STUDENT', 'TEACHER', 'ADMIN'];
-        if (!validRoles.includes(role)) {
-          return res.status(400).json({ message: 'Invalid role' });
+
+      if (targetUser.role === 'STUDENT') {
+        // For students, only name and email may be changed
+        if (name !== undefined) data.name = name;
+        if (email !== undefined) data.email = email;
+      } else {
+        if (role !== undefined) {
+          const validRoles = ['STUDENT', 'TEACHER', 'ADMIN'];
+          if (!validRoles.includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
+          }
+          data.role = role;
         }
-        data.role = role;
+        if (isActive !== undefined) data.isActive = Boolean(isActive);
+        if (formation !== undefined) data.formation = formation;
+        if (duree !== undefined) data.duree = duree;
+        if (dateDebut !== undefined) data.dateDebut = dateDebut;
+        if (name !== undefined) data.name = name;
+        if (email !== undefined) data.email = email;
       }
-      if (isActive !== undefined) data.isActive = Boolean(isActive);
-      if (formation !== undefined) data.formation = formation;
-      if (duree !== undefined) data.duree = duree;
-      if (dateDebut !== undefined) data.dateDebut = dateDebut;
-      if (name !== undefined) data.name = name;
-      if (email !== undefined) data.email = email;
+
       res.json(await UserService.updateUser(String(req.params.id), data));
     } catch {
       res.status(500).json({ message: 'Failed to update user' });
+    }
+  },
+
+  async resetPassword(req: AuthRequest, res: Response) {
+    try {
+      const result = await UserService.resetPassword(String(req.params.id));
+      res.json(result);
+    } catch {
+      res.status(500).json({ message: 'Failed to reset password' });
     }
   },
 
@@ -176,6 +201,17 @@ export const UserController = {
       res.json({ message: 'Certificate revoked' });
     } catch {
       res.status(500).json({ message: 'Failed to revoke certificate' });
+    }
+  },
+
+  async removeStudentCourseAccess(req: AuthRequest, res: Response) {
+    try {
+      const studentId = String(req.params.id);
+      const courseId = String(req.params.courseId);
+      await UserService.removeStudentCourseAccess(studentId, courseId);
+      res.json({ message: 'Course access removed' });
+    } catch {
+      res.status(500).json({ message: 'Failed to remove course access' });
     }
   },
 };

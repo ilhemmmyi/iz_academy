@@ -18,11 +18,13 @@ import {
   Users,
   Tag,
   DollarSign,
+  ExternalLink,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
+import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
@@ -40,6 +42,7 @@ export function AdminCourseView() {
 
   // Resources
   const [resources, setResources] = useState<CourseResource[]>([]);
+  const [lessonResources, setLessonResources] = useState<LessonRes[]>([]);
   const [resourceTitle, setResourceTitle] = useState('');
   const [resourceFile, setResourceFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -70,6 +73,7 @@ export function AdminCourseView() {
       if (firstLesson) {
         setSelectedLesson(firstLesson);
         loadVideo(firstLesson);
+        lessonResourcesApi.getResources(firstLesson.id).then(setLessonResources).catch(() => setLessonResources([]));
       }
       if (c?.modules?.[0]) setExpandedSections([c.modules[0].id]);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -78,6 +82,7 @@ export function AdminCourseView() {
   const handleSelectLesson = (lesson: any) => {
     setSelectedLesson(lesson);
     loadVideo(lesson);
+    lessonResourcesApi.getResources(lesson.id).then(setLessonResources).catch(() => setLessonResources([]));
   };
 
   const toggleSection = (moduleId: string) => {
@@ -283,7 +288,7 @@ export function AdminCourseView() {
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {tab === 'info' ? 'Détails du cours' : `Ressources (${resources.length})`}
+                    {tab === 'info' ? 'Détails du cours' : `Ressources (${resources.length + lessonResources.length})`}
                   </button>
                 ))}
               </div>
@@ -382,7 +387,35 @@ export function AdminCourseView() {
                     </Button>
                   </div>
 
-                  {/* Resource list */}
+                  {/* Lesson resources */}
+                  {lessonResources.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-600" />
+                        Ressources de la leçon
+                        {selectedLesson && <span className="text-xs font-normal text-muted-foreground">({selectedLesson.title})</span>}
+                      </h4>
+                      {lessonResources.map(r => (
+                        <a
+                          key={r.id}
+                          href={r.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 bg-white border border-indigo-100 border-l-4 border-l-emerald-400 rounded-xl shadow-sm hover:bg-emerald-50 transition"
+                        >
+                          <div className="p-2 bg-emerald-50 rounded-lg flex-shrink-0">
+                            {r.type === 'LINK'
+                              ? <ExternalLink className="w-4 h-4 text-emerald-600" />
+                              : <FileText className="w-4 h-4 text-emerald-600" />}
+                          </div>
+                          <span className="flex-1 text-sm font-medium truncate">{r.title}</span>
+                          {r.type === 'FILE' && <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Course resource list */}
                   {resources.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />

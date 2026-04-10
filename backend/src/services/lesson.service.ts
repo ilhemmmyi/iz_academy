@@ -5,45 +5,96 @@ import { config } from '../config';
 import { LessonModel } from '../models/lesson.model';
 import { EnrollmentModel } from '../models/enrollment.model';
 
+const LESSON_COMPLETE_THRESHOLD = 0.9;
+const COMPLETE_THRESHOLD_EPSILON = 0.001;
+
+/** Shared helper: check if course is fully complete and emit certificate if so. */
+async function checkAndIssueCertificate(userId: string, lessonId: string) {
+  const lesson = await LessonModel.findById(lessonId);
+  if (!lesson?.module?.courseId) return;
+  const courseId = lesson.module.courseId;
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: { modules: { include: { lessons: true } } },
+  });
+  if (!course) return;
+  const total = course.modules.flatMap((m: any) => m.lessons).length;
+  const done = await LessonModel.countCompleted(userId, courseId);
+  if (done >= total) {
+    certificateQueue.add('issue', { userId, courseId }).catch((err) =>
+      console.error('Certificate queue error:', err)
+    );
+  }
+}
+
 export const LessonService = {
 
   async completeLesson(lessonId: string, userId: string) {
+    console.log(`[Backend Complete API] Manual complete called for lesson ${lessonId}, userId: ${userId}`);
     await LessonModel.upsertProgress(userId, lessonId, {
       completed: true,
       completedAt: new Date(),
     });
-
-    const lesson = await LessonModel.findById(lessonId);
-
-    if (lesson?.module?.courseId) {
-      const courseId = lesson.module.courseId;
-      const course = await prisma.course.findUnique({
-        where: { id: courseId },
-        include: { modules: { include: { lessons: true } } },
-      });
-      if (course) {
-        const total = course.modules.flatMap((m: any) => m.lessons).length;
-        const done = await LessonModel.countCompleted(userId, courseId);
-        if (done >= total) {
-          certificateQueue.add('issue', { userId, courseId }).catch((err) =>
-            console.error('Certificate queue error:', err)
-          );
-        }
-      }
-    }
+    console.log(`[Backend Complete API] Lesson ${lessonId} marked completed`);
+    await checkAndIssueCertificate(userId, lessonId);
   },
 
   async getProgress(lessonId: string, userId: string) {
     const progress = await LessonModel.getProgress(userId, lessonId);
-    return {
+    const result = {
       completed: progress?.completed || false,
       watchedSeconds: progress?.watchedSeconds || 0,
       durationSeconds: progress?.durationSeconds || 0,
     };
+    console.log(`[Backend Get Progress] Lesson ${lessonId}, Completed: ${result.completed}, Watched: ${result.watchedSeconds}s / ${result.durationSeconds}s`);
+    return result;
   },
 
   async saveVideoProgress(lessonId: string, userId: string, watchedSeconds: number, durationSeconds: number) {
-    await LessonModel.upsertProgress(userId, lessonId, { watchedSeconds, durationSeconds });
+    const lesson = await LessonModel.findById(lessonId);
+    if (!lesson) {
+      const err: any = new Error('Lesson not found');
+      err.status = 404;
+      throw err;
+    }
+
+    const progress = await LessonModel.getProgress(userId, lessonId);
+    const normalizedWatched = Math.max(0, watchedSeconds);
+    const normalizedDuration = Math.max(0, durationSeconds);
+    let maxWatchedSeconds = Math.max(progress?.watchedSeconds || 0, normalizedWatched);
+    if (normalizedDuration > 0) {
+      maxWatchedSeconds = Math.min(maxWatchedSeconds, normalizedDuration);
+    }
+
+    const updateData: {
+      watchedSeconds: number;
+      durationSeconds: number;
+      completed?: boolean;
+      completedAt?: Date;
+    } = {
+      watchedSeconds: maxWatchedSeconds,
+      durationSeconds: normalizedDuration,
+    };
+
+    const watchedRatio = normalizedDuration > 0 ? maxWatchedSeconds / normalizedDuration : 0;
+    const shouldComplete = watchedRatio + COMPLETE_THRESHOLD_EPSILON >= LESSON_COMPLETE_THRESHOLD;
+    const isNewCompletion = shouldComplete && !progress?.completed;
+    console.log(`[Backend Progress] LessonId: ${lessonId}, UserId: ${userId}, Watched: ${maxWatchedSeconds.toFixed(1)}s, Duration: ${normalizedDuration.toFixed(1)}s, Ratio: ${watchedRatio.toFixed(3)}, Threshold: ${LESSON_COMPLETE_THRESHOLD}, ShouldComplete: ${shouldComplete}, AlreadyCompleted: ${progress?.completed || false}`);
+    if (shouldComplete) {
+      updateData.completed = true;
+      if (isNewCompletion) updateData.completedAt = new Date();
+      console.log(`[Backend Complete] Marking lesson ${lessonId} as COMPLETED`);
+    }
+
+    await LessonModel.upsertProgress(userId, lessonId, updateData);
+    console.log(`[Backend Progress Saved] Lesson ${lessonId} progress upserted`);
+
+    // If newly completed via video progress, also check certificate eligibility
+    if (isNewCompletion) {
+      checkAndIssueCertificate(userId, lessonId).catch((err) =>
+        console.error('Certificate check error from saveVideoProgress:', err)
+      );
+    }
   },
 
   async canUnlock(lessonId: string, userId: string) {
@@ -55,7 +106,18 @@ export const LessonService = {
     if (!prevLesson) return true;
 
     const progress = await LessonModel.getProgress(userId, prevLesson.id);
-    return progress?.completed === true;
+    if (!progress?.completed) return false;
+
+    // If the previous lesson has a quiz the student must have scored ≥ threshold
+    if (prevLesson.quizId) {
+      const bestAttempt = await prisma.quizAttempt.findFirst({
+        where: { userId, quizId: prevLesson.quizId },
+        orderBy: { score: 'desc' },
+      });
+      if (!bestAttempt || bestAttempt.score < config.quizPassThreshold) return false;
+    }
+
+    return true;
   },
 
   async getVideoUrl(lessonId: string, userId: string, userRole: string) {
@@ -83,3 +145,4 @@ export const LessonService = {
     return getPresignedUrl(key, 7200);
   },
 };
+

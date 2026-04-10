@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, ClipboardCheck, Award, MessageSquare, Menu, GraduationCap, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, ClipboardCheck, Award, MessageSquare, Menu, GraduationCap, LogOut, Bot } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface StudentLayoutProps {
@@ -19,6 +19,7 @@ export function StudentLayout({ children }: StudentLayoutProps) {
     { name: 'Test de niveau', href: '/student/test-niveau', icon: ClipboardCheck },
     { name: 'Certificats', href: '/student/certificates', icon: Award },
     { name: 'Messages', href: '/student/messages', icon: MessageSquare },
+    { name: 'Coach Carrière IA', href: '/student/career', icon: Bot },
   ];
 
   return (

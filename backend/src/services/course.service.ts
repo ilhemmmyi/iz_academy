@@ -28,6 +28,10 @@ export const CourseService = {
     return withCache(`courses:${JSON.stringify(filters || {})}`, () => CourseModel.findAll(filters));
   },
 
+  async getMine(teacherId: string) {
+    return CourseModel.findByTeacher(teacherId);
+  },
+
   async getAllAdmin() {
     // M-1: cache admin listing
     return withCache('courses:admin', () => CourseModel.findAllAdmin());

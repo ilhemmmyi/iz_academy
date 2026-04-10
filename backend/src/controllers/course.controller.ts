@@ -61,6 +61,15 @@ export const CourseController = {
     }
   },
 
+  async getMyCourses(req: AuthRequest, res: Response) {
+    try {
+      const courses = await CourseService.getMine(req.user!.userId);
+      res.json(courses);
+    } catch {
+      res.status(500).json({ message: 'Failed to fetch courses' });
+    }
+  },
+
   async getAll(req: Request, res: Response) {
     try {
       const { category, level, search } = req.query;
@@ -96,7 +105,9 @@ export const CourseController = {
 
   async create(req: AuthRequest, res: Response) {
     try {
-      const course = await CourseService.create({ ...req.body, teacherId: req.user!.userId });
+      const { teacherId: requestedTeacherId, ...rest } = req.body;
+      const teacherId = requestedTeacherId || req.user!.userId;
+      const course = await CourseService.create({ ...rest, teacherId });
       res.status(201).json(course);
     } catch {
       res.status(500).json({ message: 'Failed to create course' });

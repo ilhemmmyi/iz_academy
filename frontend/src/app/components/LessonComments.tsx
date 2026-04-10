@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Send, Trash2, Reply, ChevronDown, ChevronUp } from 'lucide-react';
+import { MessageSquare, Send, Trash2, Reply, ChevronDown, ChevronUp, Flag } from 'lucide-react';
 import { lessonCommentsApi, LessonComment, LessonCommentReply } from '../../api/lessonComments.api';
 import { useAuth } from '../../context/AuthContext';
+import { ReportModal } from './ReportModal';
 
 interface Props {
   lessonId: string;
@@ -36,6 +37,7 @@ export function LessonComments({ lessonId }: Props) {
   const [replyText, setReplyText] = useState('');
   const [replyingSubmitting, setReplyingSubmitting] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [reportTarget, setReportTarget] = useState<{ type: 'comment' | 'message'; id: string } | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -169,6 +171,15 @@ export function LessonComments({ lessonId }: Props) {
                             <Trash2 className="w-3 h-3" /> Supprimer
                           </button>
                         )}
+                        {user?.id !== comment.authorId && (
+                          <button
+                            onClick={() => setReportTarget({ type: 'comment', id: comment.id })}
+                            className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition"
+                            title="Signaler ce commentaire"
+                          >
+                            <Flag className="w-3 h-3" /> Signaler
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -188,14 +199,25 @@ export function LessonComments({ lessonId }: Props) {
                               <span className="text-xs text-muted-foreground">{timeAgo(reply.createdAt)}</span>
                             </div>
                             <p className="text-sm mt-1 whitespace-pre-wrap">{reply.content}</p>
-                            {canDelete(reply.authorId) && (
-                              <button
-                                onClick={() => handleDelete(reply.id, comment.id)}
-                                className="mt-1 text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition"
-                              >
-                                <Trash2 className="w-3 h-3" /> Supprimer
-                              </button>
-                            )}
+                            <div className="mt-1 flex items-center gap-3">
+                              {canDelete(reply.authorId) && (
+                                <button
+                                  onClick={() => handleDelete(reply.id, comment.id)}
+                                  className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Supprimer
+                                </button>
+                              )}
+                              {user?.id !== reply.authorId && (
+                                <button
+                                  onClick={() => setReportTarget({ type: 'comment', id: reply.id })}
+                                  className="text-xs text-muted-foreground hover:text-red-500 flex items-center gap-1 transition"
+                                  title="Signaler cette réponse"
+                                >
+                                  <Flag className="w-3 h-3" /> Signaler
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -229,6 +251,13 @@ export function LessonComments({ lessonId }: Props) {
           </div>
         </div>
       )}
+
+      <ReportModal
+        open={reportTarget !== null}
+        onClose={() => setReportTarget(null)}
+        commentId={reportTarget?.type === 'comment' ? reportTarget.id : undefined}
+        targetLabel="ce commentaire"
+      />
     </div>
   );
 }

@@ -16,4 +16,6 @@ export const usersApi = {
   resetPassword: (id: string) => apiClient(`/users/${id}/reset-password`, { method: 'POST' }),
   revokeCertificate: (userId: string, courseId: string) =>
     apiClient(`/users/${userId}/certificates/${courseId}`, { method: 'DELETE' }),
+  removeStudentCourseAccess: (userId: string, courseId: string) =>
+    apiClient(`/users/${userId}/enrollments/${courseId}`, { method: 'DELETE' }),
 };

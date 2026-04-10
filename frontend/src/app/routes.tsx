@@ -23,6 +23,7 @@ const StudentProjects = lazy(() => import("./pages/student/StudentProjects").the
 const StudentMessages = lazy(() => import("./pages/student/StudentMessages").then(m => ({ default: m.StudentMessages })));
 const StudentCertificates = lazy(() => import("./pages/student/StudentCertificates").then(m => ({ default: m.StudentCertificates })));
 const StudentCertificateDetail = lazy(() => import("./pages/student/StudentCertificateDetail").then(m => ({ default: m.StudentCertificateDetail })));
+const CareerChatbot = lazy(() => import("./pages/student/CareerChatbot").then(m => ({ default: m.CareerChatbot })));
 
 // Lazy-loaded teacher pages
 const TeacherDashboard = lazy(() => import("./pages/teacher/TeacherDashboard").then(m => ({ default: m.TeacherDashboard })));
@@ -45,6 +46,7 @@ const AdminPayments = lazy(() => import("./pages/admin/AdminPayments").then(m =>
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
 const AdminEnrollmentRequests = lazy(() => import("./pages/admin/AdminEnrollmentRequests").then(m => ({ default: m.AdminEnrollmentRequests })));
 const AdminContactMessages = lazy(() => import("./pages/admin/AdminContactMessages").then(m => ({ default: m.AdminContactMessages })));
+const AdminReports = lazy(() => import("./pages/admin/AdminReports").then(m => ({ default: m.AdminReports })));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -102,6 +104,7 @@ export const router = createBrowserRouter([
   { path: "/student/messages", element: <Guard roles={["STUDENT"]}><StudentMessages /></Guard> },
   { path: "/student/certificates", element: <Guard roles={["STUDENT"]}><StudentCertificates /></Guard> },
   { path: "/student/certificates/:id", element: <Guard roles={["STUDENT"]}><StudentCertificateDetail /></Guard> },
+  { path: "/student/career", element: <Guard roles={["STUDENT"]}><CareerChatbot /></Guard> },
 
   // Teacher Routes
   { path: "/teacher", element: <Guard roles={["TEACHER"]}><TeacherDashboard /></Guard> },
@@ -121,6 +124,7 @@ export const router = createBrowserRouter([
   { path: "/admin/courses", element: <Guard roles={["ADMIN"]}><AdminCourses /></Guard> },
   { path: "/admin/categories", element: <Guard roles={["ADMIN"]}><AdminCategories /></Guard> },
   { path: "/admin/contact-messages", element: <Guard roles={["ADMIN"]}><AdminContactMessages /></Guard> },
+  { path: "/admin/reports", element: <Guard roles={["ADMIN"]}><AdminReports /></Guard> },
   { path: "/admin/payments", element: <Guard roles={["ADMIN"]}><AdminPayments /></Guard> },
   { path: "/admin/settings", element: <Guard roles={["ADMIN"]}><AdminSettings /></Guard> },
   { path: "/admin/enrollment-requests", element: <Guard roles={["ADMIN"]}><AdminEnrollmentRequests /></Guard> },

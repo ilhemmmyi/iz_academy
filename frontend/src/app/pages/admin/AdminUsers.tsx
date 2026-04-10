@@ -382,6 +382,11 @@ export function AdminUsers() {
   const [revokingCertId, setRevokingCertId] = useState<string | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<Certificate | null>(null);
 
+  // Edit student: enrolled courses (for course access removal)
+  const [editStudentCourses, setEditStudentCourses] = useState<{ courseId: string; courseTitle: string }[]>([]);
+  const [editStudentCoursesLoading, setEditStudentCoursesLoading] = useState(false);
+  const [removingCourseId, setRemovingCourseId] = useState<string | null>(null);
+
   useEffect(() => {
     Promise.all([usersApi.getAll(), coursesApi.getAdmin()])
       .then(([userData, courseData]) => {
@@ -495,8 +500,18 @@ export function AdminUsers() {
       // Pre-select courses where this teacher is assigned
       const assigned = availableCourses.filter(c => (c as any).teacherId === u.id).map(c => c.id);
       setEditTeacherCourseIds(assigned);
+      setEditStudentCourses([]);
+    } else if (u.role.toLowerCase() === 'student') {
+      setEditTeacherCourseIds([]);
+      setEditStudentCourses([]);
+      setEditStudentCoursesLoading(true);
+      usersApi.getStudentOverview(u.id)
+        .then((data: any) => setEditStudentCourses(data.progressByCourse || []))
+        .catch(() => {})
+        .finally(() => setEditStudentCoursesLoading(false));
     } else {
       setEditTeacherCourseIds([]);
+      setEditStudentCourses([]);
     }
   };
 
@@ -504,17 +519,27 @@ export function AdminUsers() {
     e.preventDefault();
     if (!editUser) return;
     try {
+      const isStudent = editUser.role.toLowerCase() === 'student';
       const isTeacher = editUser.role.toLowerCase() === 'teacher';
-      const formationValue = isTeacher
-        ? availableCourses.filter(c => editTeacherCourseIds.includes(c.id)).map(c => c.title).join(', ')
-        : editForm.formation;
-      const updated: ApiUser = await usersApi.updateUser(editUser.id, {
-        name: editForm.name,
-        email: editForm.email,
-        formation: formationValue,
-        duree: editForm.duree,
-        dateDebut: editForm.dateDebut,
-      });
+
+      let payload: Parameters<typeof usersApi.updateUser>[1];
+      if (isStudent) {
+        // Students: only name and email may be updated
+        payload = { name: editForm.name, email: editForm.email };
+      } else {
+        const formationValue = isTeacher
+          ? availableCourses.filter(c => editTeacherCourseIds.includes(c.id)).map(c => c.title).join(', ')
+          : editForm.formation;
+        payload = {
+          name: editForm.name,
+          email: editForm.email,
+          formation: formationValue,
+          duree: editForm.duree,
+          dateDebut: editForm.dateDebut,
+        };
+      }
+
+      const updated: ApiUser = await usersApi.updateUser(editUser.id, payload);
       if (isTeacher) {
         await usersApi.assignCourses(editUser.id, editTeacherCourseIds);
       }
@@ -523,6 +548,26 @@ export function AdminUsers() {
       toast.success('Utilisateur modifié avec succès.');
     } catch {
       toast.error('Erreur lors de la modification.');
+    }
+  };
+
+  const handleRemoveStudentCourseAccess = async (courseId: string) => {
+    if (!editUser) return;
+    setRemovingCourseId(courseId);
+    try {
+      await usersApi.removeStudentCourseAccess(editUser.id, courseId);
+      setEditStudentCourses(prev => prev.filter(c => c.courseId !== courseId));
+      // Refresh overview panel if open for this student
+      if (expandedStudentId === editUser.id) {
+        usersApi.getStudentOverview(editUser.id)
+          .then((data: any) => setOverview(data as StudentOverview))
+          .catch(() => {});
+      }
+      toast.success('Accès au cours supprimé.');
+    } catch {
+      toast.error("Erreur lors de la suppression de l'accès.");
+    } finally {
+      setRemovingCourseId(null);
     }
   };
 
@@ -952,7 +997,7 @@ export function AdminUsers() {
 
         {/* ── Edit User Modal ───────────────────────────────────────────────── */}
         <Dialog open={editUser !== null} onOpenChange={() => setEditUser(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Modifier l&apos;utilisateur</DialogTitle>
               <DialogDescription>Modifiez les informations de {editUser?.name}</DialogDescription>
@@ -970,53 +1015,94 @@ export function AdminUsers() {
                   onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))}
                   className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  {editUser?.role.toLowerCase() === 'teacher' ? 'Cours assignés' : 'Formation actuelle'}
-                </label>
-                {editUser?.role.toLowerCase() === 'teacher' ? (
-                  availableCourses.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aucun cours disponible.</p>
+
+              {/* ── Student: course access removal ─────────────────────────── */}
+              {editUser?.role.toLowerCase() === 'student' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Accès aux cours</label>
+                  {editStudentCoursesLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Chargement des cours…
+                    </div>
+                  ) : editStudentCourses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucune inscription pour cet étudiant.</p>
                   ) : (
-                    <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
-                      {availableCourses.map(course => (
-                        <label key={course.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={editTeacherCourseIds.includes(course.id)}
-                            onChange={e => {
-                              setEditTeacherCourseIds(prev =>
-                                e.target.checked ? [...prev, course.id] : prev.filter(id => id !== course.id)
-                              );
-                            }}
-                            className="w-4 h-4 rounded border-border accent-primary"
-                          />
-                          <span className="text-sm">{course.title}</span>
-                        </label>
+                    <div className="border border-border rounded-lg divide-y divide-border max-h-48 overflow-y-auto">
+                      {editStudentCourses.map(c => (
+                        <div key={c.courseId} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="text-sm truncate" title={c.courseTitle}>{c.courseTitle}</span>
+                          <button
+                            type="button"
+                            disabled={removingCourseId === c.courseId}
+                            onClick={() => handleRemoveStudentCourseAccess(c.courseId)}
+                            className="shrink-0 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                            title="Retirer l'accès à ce cours"
+                          >
+                            {removingCourseId === c.courseId
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       ))}
                     </div>
-                  )
-                ) : (
-                  <input type="text" value={editForm.formation}
-                    onChange={e => setEditForm(p => ({ ...p, formation: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
-                )}
-              </div>
-              {editUser?.role.toLowerCase() === 'teacher' ? (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Durée</label>
-                  <input type="text" value={editForm.duree}
-                    onChange={e => setEditForm(p => ({ ...p, duree: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Date de commencement</label>
-                  <input type="date" value={editForm.dateDebut}
-                    onChange={e => setEditForm(p => ({ ...p, dateDebut: e.target.value }))}
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                  )}
                 </div>
               )}
+
+              {/* ── Teacher / Admin: formation, duree, dateDebut, course assignments ── */}
+              {editUser?.role.toLowerCase() !== 'student' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      {editUser?.role.toLowerCase() === 'teacher' ? 'Cours assignés' : 'Formation actuelle'}
+                    </label>
+                    {editUser?.role.toLowerCase() === 'teacher' ? (
+                      availableCourses.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Aucun cours disponible.</p>
+                      ) : (
+                        <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                          {availableCourses.map(course => (
+                            <label key={course.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editTeacherCourseIds.includes(course.id)}
+                                onChange={e => {
+                                  setEditTeacherCourseIds(prev =>
+                                    e.target.checked ? [...prev, course.id] : prev.filter(id => id !== course.id)
+                                  );
+                                }}
+                                className="w-4 h-4 rounded border-border accent-primary"
+                              />
+                              <span className="text-sm">{course.title}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )
+                    ) : (
+                      <input type="text" value={editForm.formation}
+                        onChange={e => setEditForm(p => ({ ...p, formation: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                    )}
+                  </div>
+                  {editUser?.role.toLowerCase() === 'teacher' ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Durée</label>
+                      <input type="text" value={editForm.duree}
+                        onChange={e => setEditForm(p => ({ ...p, duree: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Date de commencement</label>
+                      <input type="date" value={editForm.dateDebut}
+                        onChange={e => setEditForm(p => ({ ...p, dateDebut: e.target.value }))}
+                        className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  )}
+                </>
+              )}
+
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setEditUser(null)}
                   className="px-4 py-2 border border-border rounded-lg hover:bg-accent transition">

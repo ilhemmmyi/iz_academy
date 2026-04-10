@@ -24,7 +24,7 @@ export const UserService = {
     return users.map(toSafeUser);
   },
 
-  async deleteUser(id: string) {
+  async deleteUser(id: string, adminId: string) {
     // Gather courses taught by this user (relevant for TEACHERs)
     const courses = await prisma.course.findMany({
       where: { teacherId: id },
@@ -32,37 +32,20 @@ export const UserService = {
     });
     const courseIds = courses.map((c) => c.id);
 
-    // Gather quizzes inside those courses so we can remove their attempts
-    const quizIds = courseIds.length
-      ? (await prisma.quiz.findMany({ where: { courseId: { in: courseIds } }, select: { id: true } }))
-          .map((q) => q.id)
-      : [];
-
     await prisma.$transaction([
-      // 1. Remove quiz attempts referencing the teacher's quizzes (no CASCADE)
-      ...(quizIds.length
-        ? [prisma.quizAttempt.deleteMany({ where: { quizId: { in: quizIds } } })]
-        : []),
-      // 2. Remove the user's own quiz attempts (student path)
+      // 1. Remove the user's own quiz attempts (student path)
       prisma.quizAttempt.deleteMany({ where: { userId: id } }),
-      // 3. Remove payments & certificates tied to the teacher's courses (no CASCADE)
-      ...(courseIds.length
-        ? [
-            prisma.payment.deleteMany({ where: { courseId: { in: courseIds } } }),
-            prisma.certificate.deleteMany({ where: { courseId: { in: courseIds } } }),
-          ]
-        : []),
-      // 4. Remove the user's own messages, certificates & payments
+      // 2. Remove the user's own messages, certificates & payments
       prisma.message.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } }),
       CertificateModel.deleteByUser(id),
       prisma.payment.deleteMany({ where: { userId: id } }),
-      // 5. Nullify contact-message replies authored by this user
+      // 3. Nullify contact-message replies authored by this user
       prisma.contactMessage.updateMany({ where: { repliedById: id }, data: { repliedById: null } }),
-      // 6. Delete the teacher's courses (children cascade via schema)
+      // 4. Reassign teacher's courses to the admin instead of deleting them
       ...(courseIds.length
-        ? [prisma.course.deleteMany({ where: { id: { in: courseIds } } })]
+        ? [prisma.course.updateMany({ where: { teacherId: id }, data: { teacherId: adminId } })]
         : []),
-      // 7. Finally delete the user (remaining cascading relations handle the rest)
+      // 5. Finally delete the user (remaining cascading relations handle the rest)
       prisma.user.delete({ where: { id } }),
     ]);
   },
@@ -93,6 +76,18 @@ export const UserService = {
   async updateUser(id: string, data: Record<string, unknown>) {
     const user = await UserModel.update(id, data);
     return toSafeUser(user);
+  },
+
+  async resetPassword(id: string) {
+    const words = ['Alpha', 'Bravo', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'Lima', 'Oscar', 'Sierra'];
+    const symbols = ['!', '@', '#', '$', '&', '*'];
+    const plainPassword =
+      words[Math.floor(Math.random() * words.length)] +
+      Math.floor(1000 + Math.random() * 9000) +
+      symbols[Math.floor(Math.random() * symbols.length)];
+    const hashed = await bcrypt.hash(plainPassword, 12);
+    await UserModel.update(id, { password: hashed });
+    return { generatedPassword: plainPassword };
   },
 
   async getMyCertificates(userId: string) {
@@ -130,6 +125,12 @@ export const UserService = {
     await prisma.course.updateMany({
       where: { id: { in: courseIds } },
       data: { teacherId },
+    });
+  },
+
+  async removeStudentCourseAccess(studentId: string, courseId: string) {
+    await prisma.enrollment.deleteMany({
+      where: { userId: studentId, courseId },
     });
   },
 

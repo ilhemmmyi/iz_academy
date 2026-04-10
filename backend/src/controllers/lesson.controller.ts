@@ -6,9 +6,12 @@ export const LessonController = {
 
   async completeLesson(req: AuthRequest, res: Response) {
     try {
+      console.log(`[Controller Complete] Complete request for lesson ${req.params.id}, user: ${req.user!.userId}`);
       await LessonService.completeLesson(String(req.params.id), req.user!.userId);
+      console.log(`[Controller Complete] Completed successfully`);
       res.json({ message: 'Lesson completed' });
-    } catch {
+    } catch (err) {
+      console.error(`[Controller Complete] Error:`, err);
       res.status(500).json({ message: 'Failed to complete lesson' });
     }
   },
@@ -30,7 +33,11 @@ export const LessonController = {
       }
       await LessonService.saveVideoProgress(String(req.params.id), req.user!.userId, watchedSeconds, durationSeconds);
       res.json({ message: 'Video progress saved' });
-    } catch {
+    } catch (err: any) {
+      console.error(`[Controller SaveVideoProgress] Error for lesson ${req.params.id}:`, err?.message || err);
+      if (err.status === 404 || err.message === 'Lesson not found') {
+        return res.status(404).json({ message: 'Lesson not found' });
+      }
       res.status(500).json({ message: 'Failed to save video progress' });
     }
   },

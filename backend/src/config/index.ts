@@ -31,4 +31,7 @@ export const config = {
   emailFrom: process.env.EMAIL_FROM!,
   emailAppPassword: process.env.EMAIL_APP_PASSWORD!,
   sentryDsn: process.env.SENTRY_DSN!,
+  /** Minimum quiz score (0–100) required to unlock the next lesson */
+  quizPassThreshold: Number(process.env.QUIZ_PASS_THRESHOLD) || 80,
+  huggingFaceApiKey: process.env.HUGGINGFACE_API_KEY || '',
 };

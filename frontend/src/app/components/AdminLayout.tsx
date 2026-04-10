@@ -12,7 +12,7 @@ import {
   LogOut,
   User,
   Bell,
-
+  Flag,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -42,6 +42,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Cours', href: '/admin/courses', icon: BookOpen },
     { name: 'Catégories', href: '/admin/categories', icon: FolderTree },
     { name: 'Messages contact', href: '/admin/contact-messages', icon: Mail },
+    { name: 'Signalements', href: '/admin/reports', icon: Flag },
     { name: 'Paiements', href: '/admin/payments', icon: CreditCard },
     { name: 'Paramètres', href: '/admin/settings', icon: Settings },
   ];

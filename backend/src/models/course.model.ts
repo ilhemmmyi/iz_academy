@@ -21,6 +21,27 @@ export const CourseModel = {
     orderBy: { createdAt: 'desc' },
   }),
 
+  findByTeacher: (teacherId: string) => prisma.course.findMany({
+    where: { teacherId },
+    select: {
+      id: true, title: true, shortDescription: true, thumbnailUrl: true,
+      price: true, level: true, duration: true, createdAt: true, isPublished: true,
+      teacherId: true,
+      category: { select: { id: true, name: true } },
+      teacher: { select: { id: true, name: true } },
+      _count: { select: { modules: true } },
+      modules: {
+        select: {
+          id: true, title: true, order: true,
+          _count: { select: { lessons: true } },
+          lessons: { orderBy: { order: 'asc' }, select: { id: true } },
+        },
+        orderBy: { order: 'asc' },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  }),
+
   findAllAdmin: () => prisma.course.findMany({
     select: {
       id: true, title: true, shortDescription: true, thumbnailUrl: true,

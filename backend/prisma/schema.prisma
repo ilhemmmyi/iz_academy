@@ -33,6 +33,16 @@ enum SubmissionStatus {
   NEEDS_IMPROVEMENT
 }
 
+enum ReportStatus {
+  PENDING
+  REVIEWED
+}
+
+enum LessonResourceType {
+  FILE
+  LINK
+}
+
 model User {
   id               String           @id @default(cuid())
   name             String
@@ -46,7 +56,8 @@ model User {
   twoFactorSecret  String?
   formation        String?
   duree            String?
-  dateDebut        String?
+  
+  
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   refreshTokens    RefreshToken[]
@@ -62,6 +73,7 @@ model User {
   projectSubmissions ProjectSubmission[] @relation("StudentSubmissions")
   lessonComments   LessonComment[]
   contactReplies   ContactMessage[] @relation("ContactReplies")
+  reports          Report[]
 }
 
 model RefreshToken {
@@ -149,8 +161,21 @@ model Lesson {
   quiz     Quiz?            @relation(fields: [quizId], references: [id], onDelete: SetNull)
   quizId   String?
   comments LessonComment[]
+  lessonResources LessonResource[]
 
   @@index([moduleId])
+}
+
+model LessonResource {
+  id        String             @id @default(cuid())
+  title     String
+  type      LessonResourceType
+  url       String
+  lessonId  String
+  lesson    Lesson             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  createdAt DateTime           @default(now())
+
+  @@index([lessonId])
 }
 
 model LessonProgress {
@@ -245,6 +270,7 @@ model Message {
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
+  reports    Report[]
 
   @@index([senderId])
   @@index([receiverId])
@@ -345,10 +371,29 @@ model LessonComment {
   author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parent    LessonComment? @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   LessonComment[] @relation("Replies")
+  reports   Report[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
   @@index([lessonId])
   @@index([authorId])
   @@index([parentId])
+}
+
+model Report {
+  id         String          @id @default(cuid())
+  reason     String
+  status     ReportStatus    @default(PENDING)
+  reporterId String
+  messageId  String?
+  commentId  String?
+  reporter   User            @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  message    Message?        @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  comment    LessonComment?  @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  createdAt  DateTime        @default(now())
+
+  @@index([reporterId])
+  @@index([messageId])
+  @@index([commentId])
+  @@index([status])
 }

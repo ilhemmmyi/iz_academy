@@ -16,8 +16,9 @@ export const LessonModel = {
 
   findPrevious: (moduleId: string, order: number) =>
     prisma.lesson.findFirst({
-      where: { moduleId, order: order - 1 },
-      select: { id: true },
+      where: { moduleId, order: { lt: order } },
+      orderBy: { order: 'desc' },
+      select: { id: true, quizId: true },
     }),
 
   // LessonProgress queries

@@ -13,12 +13,14 @@ import {
   FileText,
   Download,
   Play,
+  ExternalLink,
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { LessonComments } from '../../components/LessonComments';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
+import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 
 type VideoProgressMap = Record<string, { watchedSeconds: number; durationSeconds: number }>;
 
@@ -64,6 +66,7 @@ export function StudentCourseView() {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [courseResources, setCourseResources] = useState<CourseResource[]>([]);
+  const [lessonResources, setLessonResources] = useState<LessonRes[]>([]);
   // live watched % for the currently-playing lesson
   const [currentWatchedPct, setCurrentWatchedPct] = useState(0);
   // true while the student is playing ahead of their earned position
@@ -127,6 +130,7 @@ export function StudentCourseView() {
         setCurrentWatchedPct(saved && saved.durationSeconds > 0
           ? Math.min((saved.watchedSeconds / saved.durationSeconds) * 100, 100) : 0);
         loadVideo(firstLesson);
+        lessonResourcesApi.getResources(firstLesson.id).then(setLessonResources).catch(() => {});
       }
       if (c?.modules?.[0]) setExpandedSections([c.modules[0].id]);
     }).catch(() => {}).finally(() => setLoading(false));
@@ -261,6 +265,8 @@ export function StudentCourseView() {
       ? Math.min((saved.watchedSeconds / saved.durationSeconds) * 100, 100) : 0);
 
     loadVideo(lesson);
+    // Load lesson resources
+    lessonResourcesApi.getResources(lesson.id).then(setLessonResources).catch(() => setLessonResources([]));
   };
 
   /* ── loading / not-found screens ─────────────────────────── */
@@ -416,7 +422,54 @@ export function StudentCourseView() {
                     </div>
                   )}
 
-                  {/* Resources published by admin / teacher */}
+                  {/* Lesson-specific resources */}
+                  {lessonResources.length > 0 && (
+                    <div className="border-t border-border pt-4">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-600" />
+                        Ressources de cette leçon
+                      </h4>
+                      <div className="space-y-2">
+                        {lessonResources.map(r => (
+                          r.type === 'LINK' ? (
+                            <a
+                              key={r.id}
+                              href={r.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 rounded-lg border border-emerald-100 hover:bg-emerald-50 transition group"
+                            >
+                              <div className="p-1.5 bg-emerald-50 rounded-md flex-shrink-0">
+                                <ExternalLink className="w-4 h-4 text-emerald-600" />
+                              </div>
+                              <span className="flex-1 text-sm font-medium truncate group-hover:text-emerald-700 transition">
+                                {r.title}
+                              </span>
+                              <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0 opacity-60" />
+                            </a>
+                          ) : (
+                            <a
+                              key={r.id}
+                              href={r.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 rounded-lg border border-indigo-100 hover:bg-indigo-50 transition group"
+                            >
+                              <div className="p-1.5 bg-indigo-50 rounded-md flex-shrink-0">
+                                <FileText className="w-4 h-4 text-indigo-600" />
+                              </div>
+                              <span className="flex-1 text-sm font-medium truncate group-hover:text-primary transition">
+                                {r.title}
+                              </span>
+                              <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            </a>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resources published by admin / teacher (course-level) */}
                   {courseResources.length > 0 && (
                     <div className="border-t border-border pt-4">
                       <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
