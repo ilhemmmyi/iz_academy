@@ -1,1 +1,0 @@
-import{g as e}from"./index-C_vc_aOj.js";const o={submit:t=>e("/contact-messages",{method:"POST",body:JSON.stringify(t)}),getAll:()=>e("/contact-messages"),markRead:t=>e(`/contact-messages/${t}/read`,{method:"PATCH"}),reply:(t,s)=>e(`/contact-messages/${t}/reply`,{method:"POST",body:JSON.stringify({replyMessage:s})})};export{o as c};

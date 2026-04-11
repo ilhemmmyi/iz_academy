@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import {
   PlusCircle, Trash2, ArrowLeft, ChevronDown, ChevronUp,
   BookOpen, ListChecks, FolderKanban, CheckCircle2, ImageIcon, Video,
+  Paperclip, Link2, X,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -14,9 +15,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { coursesApi } from '../../../api/courses.api';
 import { uploadApi } from '../../../api/upload.api';
+import { lessonResourcesApi } from '../../../api/lessonResources.api';
 import { usersApi } from '../../../api/users.api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface PendingResource {
+  id: string;
+  type: 'FILE' | 'LINK';
+  title: string;
+  file?: File;
+  url?: string;
+}
 interface QuizQuestion {
   id: string;
   text: string;
@@ -31,6 +40,12 @@ interface LessonForm {
   hasQuiz: boolean;
   quizOpen: boolean;
   questions: QuizQuestion[];
+  resourcesOpen: boolean;
+  resourceType: 'FILE' | 'LINK';
+  resourceTitle: string;
+  resourceFile: File | null;
+  resourceUrl: string;
+  pendingResources: PendingResource[];
 }
 interface SectionForm {
   id: string;
@@ -58,6 +73,12 @@ const newLesson = (): LessonForm => ({
   hasQuiz: false,
   quizOpen: false,
   questions: [newQuestion()],
+  resourcesOpen: false,
+  resourceType: 'FILE',
+  resourceTitle: '',
+  resourceFile: null,
+  resourceUrl: '',
+  pendingResources: [],
 });
 const newSection = (): SectionForm => ({
   id: Date.now().toString() + Math.random(),
@@ -167,6 +188,31 @@ export function AdminCreateCourse() {
     }
   };
 
+  // ── Lesson resource helpers ───────────────────────────────────────────────
+  const addPendingResource = (sid: string, lid: string) => {
+    setSections(prev => prev.map(s => s.id === sid ? {
+      ...s, lessons: s.lessons.map(l => {
+        if (l.id !== lid) return l;
+        if (!l.resourceTitle.trim()) return l;
+        if (l.resourceType === 'FILE' && !l.resourceFile) return l;
+        if (l.resourceType === 'LINK' && !l.resourceUrl.trim()) return l;
+        const entry: PendingResource = {
+          id: Date.now().toString() + Math.random(),
+          type: l.resourceType,
+          title: l.resourceTitle.trim(),
+          ...(l.resourceType === 'FILE' ? { file: l.resourceFile! } : { url: l.resourceUrl.trim() }),
+        };
+        return { ...l, pendingResources: [...l.pendingResources, entry], resourceTitle: '', resourceFile: null, resourceUrl: '' };
+      })
+    } : s));
+  };
+  const removePendingResource = (sid: string, lid: string, rid: string) =>
+    setSections(prev => prev.map(s => s.id === sid ? {
+      ...s, lessons: s.lessons.map(l => l.id === lid
+        ? { ...l, pendingResources: l.pendingResources.filter(r => r.id !== rid) }
+        : l)
+    } : s));
+
   // ── Question helpers ──────────────────────────────────────────────────────
   const addQuestion = (sid: string, lid: string) =>
     setSections(sections.map(s =>
@@ -224,7 +270,7 @@ export function AdminCreateCourse() {
     }
     setSubmitting(true);
     try {
-      await coursesApi.create({
+      const created = await coursesApi.create({
         title,
         shortDescription: shortDesc,
         longDescription: longDesc,
@@ -254,7 +300,23 @@ export function AdminCreateCourse() {
         projects: projects
           .filter(p => p.title.trim())
           .map(p => ({ title: p.title, description: p.description, instructions: p.instructions })),
-      });
+      }) as any;
+      // Upload pending lesson resources using the returned lesson IDs
+      for (let mi = 0; mi < sections.length; mi++) {
+        const createdModule = (created as any)?.modules?.[mi];
+        if (!createdModule) continue;
+        for (let li = 0; li < sections[mi].lessons.length; li++) {
+          const lesson = sections[mi].lessons[li];
+          const createdLesson = createdModule.lessons?.[li];
+          if (!createdLesson || lesson.pendingResources.length === 0) continue;
+          for (const r of lesson.pendingResources) {
+            try {
+              if (r.type === 'FILE' && r.file) await lessonResourcesApi.uploadFile(createdLesson.id, r.title, r.file);
+              else if (r.type === 'LINK' && r.url) await lessonResourcesApi.addLink(createdLesson.id, r.title, r.url);
+            } catch { /* non-blocking */ }
+          }
+        }
+      }
       toast.success('Cours créé avec succès !');
       navigate('/admin/courses');
     } catch (err: any) {
@@ -498,6 +560,83 @@ export function AdminCreateCourse() {
                           </div>
                           {lesson.videoUrl && (
                             <p className="text-xs text-green-600 truncate">✓ Vidéo prête</p>
+                          )}
+                        </div>
+
+                        {/* Resources section */}
+                        <div className="ml-6">
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-2"
+                            onClick={() => updateLesson(section.id, lesson.id, { resourcesOpen: !lesson.resourcesOpen })}
+                          >
+                            <Paperclip className="w-4 h-4" />
+                            Ressources
+                            {lesson.resourcesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                          {lesson.resourcesOpen && (
+                            <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4 space-y-3">
+                              <div className="flex gap-2">
+                                <button type="button"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${lesson.resourceType === 'FILE' ? 'bg-primary text-primary-foreground' : 'border border-border bg-white hover:bg-accent'}`}
+                                  onClick={() => updateLesson(section.id, lesson.id, { resourceType: 'FILE' })}
+                                ><Paperclip className="w-3.5 h-3.5" /> Fichier</button>
+                                <button type="button"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${lesson.resourceType === 'LINK' ? 'bg-primary text-primary-foreground' : 'border border-border bg-white hover:bg-accent'}`}
+                                  onClick={() => updateLesson(section.id, lesson.id, { resourceType: 'LINK' })}
+                                ><Link2 className="w-3.5 h-3.5" /> Lien</button>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium block mb-1">Titre de la ressource *</label>
+                                <Input
+                                  value={lesson.resourceTitle}
+                                  onChange={e => updateLesson(section.id, lesson.id, { resourceTitle: e.target.value })}
+                                  placeholder="Ex: Cours PDF Chapitre 1"
+                                  className="text-sm"
+                                />
+                              </div>
+                              {lesson.resourceType === 'FILE' ? (
+                                <div>
+                                  <label className="text-xs font-medium block mb-1">Fichier *</label>
+                                  <label className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-white cursor-pointer hover:bg-accent transition text-sm">
+                                    <Paperclip className="w-4 h-4 text-muted-foreground" />
+                                    {lesson.resourceFile ? lesson.resourceFile.name : 'Choisir un fichier (PDF, doc, image...)'}
+                                    <input type="file" className="hidden" onChange={e => updateLesson(section.id, lesson.id, { resourceFile: e.target.files?.[0] || null })} />
+                                  </label>
+                                </div>
+                              ) : (
+                                <div>
+                                  <label className="text-xs font-medium block mb-1">URL *</label>
+                                  <Input
+                                    value={lesson.resourceUrl}
+                                    onChange={e => updateLesson(section.id, lesson.id, { resourceUrl: e.target.value })}
+                                    placeholder="https://..."
+                                    className="text-sm"
+                                  />
+                                </div>
+                              )}
+                              <Button type="button" size="sm" className="bg-black hover:bg-black/80 text-white"
+                                onClick={() => addPendingResource(section.id, lesson.id)}
+                              >
+                                <PlusCircle className="w-4 h-4 mr-1" /> Ajouter
+                              </Button>
+                              {lesson.pendingResources.length > 0 && (
+                                <div className="space-y-1.5 pt-1">
+                                  {lesson.pendingResources.map(r => (
+                                    <div key={r.id} className="flex items-center justify-between bg-white border border-border rounded-lg px-3 py-2">
+                                      <div className="flex items-center gap-2 text-sm min-w-0">
+                                        {r.type === 'FILE' ? <Paperclip className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : <Link2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                        <span className="font-medium truncate">{r.title}</span>
+                                        <span className="text-xs text-muted-foreground truncate">{r.type === 'FILE' ? r.file?.name : r.url}</span>
+                                      </div>
+                                      <button type="button" className="flex-shrink-0 ml-2" onClick={() => removePendingResource(section.id, lesson.id, r.id)}>
+                                        <X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
 

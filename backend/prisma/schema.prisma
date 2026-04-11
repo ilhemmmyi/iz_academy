@@ -38,6 +38,12 @@ enum ReportStatus {
   REVIEWED
 }
 
+enum ActivityType {
+  COMMENT_REPLY
+  MESSAGE
+  PROJECT_UPDATE
+}
+
 enum LessonResourceType {
   FILE
   LINK
@@ -52,10 +58,11 @@ model User {
   role             Role             @default(STUDENT)
   avatarUrl        String?
   isActive         Boolean          @default(true)
-  twoFactorEnabled Boolean          @default(false)
-  twoFactorSecret  String?
-  formation        String?
-  duree            String?
+  twoFactorEnabled    Boolean          @default(false)
+  twoFactorSecret     String?
+  formation           String?
+  duree               String?
+  hasCompletedCoach   Boolean          @default(false)
   
   
   createdAt        DateTime         @default(now())
@@ -74,6 +81,8 @@ model User {
   lessonComments   LessonComment[]
   contactReplies   ContactMessage[] @relation("ContactReplies")
   reports          Report[]
+  careerCoachData  CareerCoachData?
+  activities       Activity[]
 }
 
 model RefreshToken {
@@ -396,4 +405,29 @@ model Report {
   @@index([messageId])
   @@index([commentId])
   @@index([status])
+}
+
+model CareerCoachData {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers         Json
+  recommendations Json
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  userId    String
+  type      ActivityType
+  message   String
+  link      String?
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }

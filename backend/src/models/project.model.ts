@@ -76,6 +76,16 @@ export const ProjectModel = {
       orderBy: { submittedAt: 'desc' },
     }),
 
+  findSubmissionsByCourse: (courseId: string) =>
+    prisma.projectSubmission.findMany({
+      where: { courseId },
+      include: {
+        project: { select: { id: true, title: true } },
+        student: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { submittedAt: 'desc' },
+    }),
+
   findValidatedSubmission: (studentId: string, courseId: string) =>
     prisma.projectSubmission.findFirst({
       where: { studentId, courseId, status: 'VALIDATED' },

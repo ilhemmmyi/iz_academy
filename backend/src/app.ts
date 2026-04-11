@@ -22,6 +22,7 @@ import { contactMessageRouter } from './routes/contactMessage.routes';
 import { reportRouter } from './routes/report.routes';
 import { lessonResourceRouter } from './routes/lessonResource.routes';
 import { aiRouter } from './routes/ai.routes';
+import { activityRouter } from './routes/activity.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
 Sentry.init({ dsn: config.sentryDsn, environment: process.env.NODE_ENV });
@@ -63,6 +64,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/contact-messages', contactMessageRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/lessons', lessonResourceRouter);
+app.use('/api/activities', activityRouter);
 
 Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);

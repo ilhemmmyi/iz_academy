@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { useNavigate, useParams } from 'react-router';
 import {
   PlusCircle, Trash2, ArrowLeft, ChevronDown, ChevronUp,
-  BookOpen, ListChecks, FolderKanban, CheckCircle2, ImageIcon, Video, Paperclip, FileText, Download, X,
+  BookOpen, ListChecks, FolderKanban, CheckCircle2, ImageIcon, Video, Paperclip, X, Link2,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -14,9 +14,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { coursesApi } from '../../../api/courses.api';
 import { uploadApi } from '../../../api/upload.api';
-import { resourcesApi, CourseResource } from '../../../api/resources.api';
+import { lessonResourcesApi, LessonResource } from '../../../api/lessonResources.api';
 import { usersApi } from '../../../api/users.api';
 
+interface PendingResource {
+  id: string;
+  type: 'FILE' | 'LINK';
+  title: string;
+  file?: File;
+  url?: string;
+}
 interface QuizQuestion {
   id: string;
   text: string;
@@ -31,6 +38,13 @@ interface LessonForm {
   hasQuiz: boolean;
   quizOpen: boolean;
   questions: QuizQuestion[];
+  resourcesOpen: boolean;
+  resourceType: 'FILE' | 'LINK';
+  resourceTitle: string;
+  resourceFile: File | null;
+  resourceUrl: string;
+  pendingResources: PendingResource[];
+  existingResources: LessonResource[];
 }
 interface SectionForm {
   id: string;
@@ -58,6 +72,13 @@ const newLesson = (): LessonForm => ({
   hasQuiz: false,
   quizOpen: false,
   questions: [newQuestion()],
+  resourcesOpen: false,
+  resourceType: 'FILE',
+  resourceTitle: '',
+  resourceFile: null,
+  resourceUrl: '',
+  pendingResources: [],
+  existingResources: [],
 });
 const newSection = (): SectionForm => ({
   id: Date.now().toString() + Math.random(),
@@ -75,7 +96,6 @@ const STEPS = [
   { label: 'Infos', icon: BookOpen },
   { label: 'Contenu', icon: ListChecks },
   { label: 'Projets', icon: FolderKanban },
-  { label: 'Ressources', icon: Paperclip },
   { label: 'Révision', icon: CheckCircle2 },
 ];
 
@@ -108,23 +128,14 @@ export function AdminEditCourse() {
   // Step 3
   const [projects, setProjects] = useState<ProjectForm[]>([newProject()]);
 
-  // Step 4 — Resources
-  const [resources, setResources] = useState<CourseResource[]>([]);
-  const [resourceTitle, setResourceTitle] = useState('');
-  const [resourceFile, setResourceFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     if (!courseId) return;
     Promise.all([
       coursesApi.getById(courseId),
       coursesApi.getCategories(),
-      resourcesApi.getResources(courseId).catch(() => [] as CourseResource[]),
       usersApi.getAll().catch(() => [] as any[]),
-    ]).then(([course, cats, res, users]) => {
+    ]).then(([course, cats, users]) => {
       setCategories(cats);
-      setResources(res);
       setTeachers((users as any[]).filter((u: any) => u.role === 'TEACHER'));
       setSelectedTeacherId(course.teacherId || '__admin__');
       setTitle(course.title);
@@ -137,32 +148,61 @@ export function AdminEditCourse() {
       setObjectives(course.objectives?.length ? course.objectives : ['']);
       setThumbnailUrl(course.thumbnailUrl || '');
 
-      setSections(
-        course.modules?.length
-          ? course.modules.map((m: any) => ({
-              id: m.id,
-              title: m.title,
-              lessons: m.lessons?.length
-                ? m.lessons.map((l: any) => ({
-                    id: l.id,
-                    title: l.title,
-                    description: l.description || '',
-                    videoUrl: l.videoUrl || '',
-                    hasQuiz: !!l.quiz,
-                    quizOpen: false,
-                    questions: l.quiz?.questions?.length
-                      ? l.quiz.questions.map((q: any) => ({
-                          id: q.id,
-                          text: q.text,
-                          answers: q.answers as [string, string, string, string],
-                          correctAnswer: q.correctAnswer,
-                        }))
-                      : [newQuestion()],
-                  }))
-                : [newLesson()],
-            }))
-          : [newSection()]
+      const builtSections: SectionForm[] = course.modules?.length
+        ? course.modules.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            lessons: m.lessons?.length
+              ? m.lessons.map((l: any) => ({
+                  id: l.id,
+                  title: l.title,
+                  description: l.description || '',
+                  videoUrl: l.videoUrl || '',
+                  hasQuiz: !!l.quiz,
+                  quizOpen: false,
+                  questions: l.quiz?.questions?.length
+                    ? l.quiz.questions.map((q: any) => ({
+                        id: q.id,
+                        text: q.text,
+                        answers: q.answers as [string, string, string, string],
+                        correctAnswer: q.correctAnswer,
+                      }))
+                    : [newQuestion()],
+                  resourcesOpen: false,
+                  resourceType: 'FILE' as 'FILE' | 'LINK',
+                  resourceTitle: '',
+                  resourceFile: null,
+                  resourceUrl: '',
+                  pendingResources: [],
+                  existingResources: [],
+                }))
+              : [newLesson()],
+          }))
+        : [newSection()];
+
+      setSections(builtSections);
+
+      // Fetch each lesson's resources via direct API calls (bypasses course-level cache)
+      const allLessonIds = (course.modules || []).flatMap((m: any) =>
+        (m.lessons || []).map((l: any) => l.id as string)
       );
+      if (allLessonIds.length > 0) {
+        Promise.all(
+          allLessonIds.map((lid: string) =>
+            lessonResourcesApi.getResources(lid)
+              .then(resources => ({ lid, resources }))
+              .catch(() => ({ lid, resources: [] as LessonResource[] }))
+          )
+        ).then(results => {
+          setSections(prev => prev.map(s => ({
+            ...s,
+            lessons: s.lessons.map(l => {
+              const found = results.find(r => r.lid === l.id);
+              return found && found.resources.length > 0 ? { ...l, existingResources: found.resources } : l;
+            }),
+          })));
+        });
+      }
 
       setProjects(
         course.projects?.length
@@ -232,6 +272,45 @@ export function AdminEditCourse() {
     }
   };
 
+  // ── Lesson resource helpers ───────────────────────────────────────────────
+  const addPendingResource = (sid: string, lid: string) => {
+    setSections(prev => prev.map(s => s.id === sid ? {
+      ...s, lessons: s.lessons.map(l => {
+        if (l.id !== lid) return l;
+        if (!l.resourceTitle.trim()) return l;
+        if (l.resourceType === 'FILE' && !l.resourceFile) return l;
+        if (l.resourceType === 'LINK' && !l.resourceUrl.trim()) return l;
+        const entry: PendingResource = {
+          id: Date.now().toString() + Math.random(),
+          type: l.resourceType,
+          title: l.resourceTitle.trim(),
+          ...(l.resourceType === 'FILE' ? { file: l.resourceFile! } : { url: l.resourceUrl.trim() }),
+        };
+        return { ...l, pendingResources: [...l.pendingResources, entry], resourceTitle: '', resourceFile: null, resourceUrl: '' };
+      })
+    } : s));
+  };
+  const removePendingResource = (sid: string, lid: string, rid: string) =>
+    setSections(prev => prev.map(s => s.id === sid ? {
+      ...s, lessons: s.lessons.map(l => l.id === lid
+        ? { ...l, pendingResources: l.pendingResources.filter(r => r.id !== rid) }
+        : l)
+    } : s));
+
+  const deleteExistingResource = async (sid: string, lid: string, rid: string) => {
+    try {
+      await lessonResourcesApi.deleteResource(rid);
+      setSections(prev => prev.map(s => s.id === sid ? {
+        ...s, lessons: s.lessons.map(l => l.id === lid
+          ? { ...l, existingResources: l.existingResources.filter(r => r.id !== rid) }
+          : l)
+      } : s));
+      toast.success('Ressource supprimée');
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   // ── Question helpers ──────────────────────────────────────────────────────
   const addQuestion = (sid: string, lid: string) =>
     setSections(sections.map(s =>
@@ -272,34 +351,6 @@ export function AdminEditCourse() {
         )
       } : s
     ));
-
-  // ── Resource helpers ──────────────────────────────────────────────────────
-  const handleAddResource = async () => {
-    if (!courseId || !resourceTitle.trim() || !resourceFile || uploading) return;
-    setUploading(true);
-    try {
-      const created = await resourcesApi.uploadResource(courseId, resourceTitle.trim(), resourceFile);
-      setResources(prev => [created, ...prev]);
-      setResourceTitle('');
-      setResourceFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      toast.success('Ressource ajoutée');
-    } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'ajout de la ressource");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteResource = async (id: string) => {
-    try {
-      await resourcesApi.deleteResource(id);
-      setResources(prev => prev.filter(r => r.id !== id));
-      toast.success('Ressource supprimée');
-    } catch {
-      toast.error('Erreur lors de la suppression');
-    }
-  };
 
   // ── Project helpers ───────────────────────────────────────────────────────
   const addProject = () => setProjects([...projects, newProject()]);
@@ -345,6 +396,26 @@ export function AdminEditCourse() {
           .filter(p => p.title.trim())
           .map(p => ({ title: p.title, description: p.description, instructions: p.instructions })),
       });
+      // Upload pending lesson resources using new lesson IDs
+      const hasPending = sections.some(s => s.lessons.some(l => l.pendingResources.length > 0));
+      if (hasPending) {
+        const updatedCourse = await coursesApi.getById(courseId!) as any;
+        for (let mi = 0; mi < sections.length; mi++) {
+          const createdModule = updatedCourse?.modules?.[mi];
+          if (!createdModule) continue;
+          for (let li = 0; li < sections[mi].lessons.length; li++) {
+            const lesson = sections[mi].lessons[li];
+            const createdLesson = createdModule.lessons?.[li];
+            if (!createdLesson || lesson.pendingResources.length === 0) continue;
+            for (const r of lesson.pendingResources) {
+              try {
+                if (r.type === 'FILE' && r.file) await lessonResourcesApi.uploadFile(createdLesson.id, r.title, r.file);
+                else if (r.type === 'LINK' && r.url) await lessonResourcesApi.addLink(createdLesson.id, r.title, r.url);
+              } catch { /* non-blocking */ }
+            }
+          }
+        }
+      }
       toast.success('Cours modifié avec succès !');
       navigate('/admin/courses');
     } catch (err: any) {
@@ -590,6 +661,102 @@ export function AdminEditCourse() {
                             <p className="text-xs text-green-600 truncate">✓ Vidéo prête</p>
                           )}
                         </div>
+
+                        {/* Resources section */}
+                        <div className="ml-6">
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-2"
+                            onClick={() => updateLesson(section.id, lesson.id, { resourcesOpen: !lesson.resourcesOpen })}
+                          >
+                            <Paperclip className="w-4 h-4" />
+                            Ressources
+                            {lesson.resourcesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                          {lesson.resourcesOpen && (
+                            <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4 space-y-3">
+                              {lesson.existingResources.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <p className="text-xs font-semibold text-muted-foreground">Ressources existantes</p>
+                                  {lesson.existingResources.map(r => (
+                                    <div key={r.id} className="flex items-center justify-between bg-white border border-border rounded-lg px-3 py-2">
+                                      <div className="flex items-center gap-2 text-sm min-w-0">
+                                        {r.type === 'FILE' ? <Paperclip className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : <Link2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                        <span className="font-medium truncate">{r.title}</span>
+                                        <span className="text-xs text-muted-foreground truncate">{r.type === 'LINK' ? r.url : ''}</span>
+                                      </div>
+                                      <button type="button" className="flex-shrink-0 ml-2 p-1 hover:bg-red-50 rounded" onClick={() => deleteExistingResource(section.id, lesson.id, r.id)}>
+                                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <hr className="border-blue-200" />
+                                </div>
+                              )}
+                              <div className="flex gap-2">
+                                <button type="button"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${lesson.resourceType === 'FILE' ? 'bg-primary text-primary-foreground' : 'border border-border bg-white hover:bg-accent'}`}
+                                  onClick={() => updateLesson(section.id, lesson.id, { resourceType: 'FILE' })}
+                                ><Paperclip className="w-3.5 h-3.5" /> Fichier</button>
+                                <button type="button"
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${lesson.resourceType === 'LINK' ? 'bg-primary text-primary-foreground' : 'border border-border bg-white hover:bg-accent'}`}
+                                  onClick={() => updateLesson(section.id, lesson.id, { resourceType: 'LINK' })}
+                                ><Link2 className="w-3.5 h-3.5" /> Lien</button>
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium block mb-1">Titre de la ressource *</label>
+                                <Input
+                                  value={lesson.resourceTitle}
+                                  onChange={e => updateLesson(section.id, lesson.id, { resourceTitle: e.target.value })}
+                                  placeholder="Ex: Cours PDF Chapitre 1"
+                                  className="text-sm"
+                                />
+                              </div>
+                              {lesson.resourceType === 'FILE' ? (
+                                <div>
+                                  <label className="text-xs font-medium block mb-1">Fichier *</label>
+                                  <label className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-white cursor-pointer hover:bg-accent transition text-sm">
+                                    <Paperclip className="w-4 h-4 text-muted-foreground" />
+                                    {lesson.resourceFile ? lesson.resourceFile.name : 'Choisir un fichier (PDF, doc, image...)'}
+                                    <input type="file" className="hidden" onChange={e => updateLesson(section.id, lesson.id, { resourceFile: e.target.files?.[0] || null })} />
+                                  </label>
+                                </div>
+                              ) : (
+                                <div>
+                                  <label className="text-xs font-medium block mb-1">URL *</label>
+                                  <Input
+                                    value={lesson.resourceUrl}
+                                    onChange={e => updateLesson(section.id, lesson.id, { resourceUrl: e.target.value })}
+                                    placeholder="https://..."
+                                    className="text-sm"
+                                  />
+                                </div>
+                              )}
+                              <Button type="button" size="sm" className="bg-black hover:bg-black/80 text-white"
+                                onClick={() => addPendingResource(section.id, lesson.id)}
+                              >
+                                <PlusCircle className="w-4 h-4 mr-1" /> Ajouter
+                              </Button>
+                              {lesson.pendingResources.length > 0 && (
+                                <div className="space-y-1.5 pt-1">
+                                  {lesson.pendingResources.map(r => (
+                                    <div key={r.id} className="flex items-center justify-between bg-white border border-border rounded-lg px-3 py-2">
+                                      <div className="flex items-center gap-2 text-sm min-w-0">
+                                        {r.type === 'FILE' ? <Paperclip className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : <Link2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                        <span className="font-medium truncate">{r.title}</span>
+                                        <span className="text-xs text-muted-foreground truncate">{r.type === 'FILE' ? r.file?.name : r.url}</span>
+                                      </div>
+                                      <button type="button" className="flex-shrink-0 ml-2" onClick={() => removePendingResource(section.id, lesson.id, r.id)}>
+                                        <X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
                         <div className="ml-6">
                           <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
                             <input
@@ -720,110 +887,8 @@ export function AdminEditCourse() {
           </div>
         )}
 
-        {/* ── Step 4: Resources ──────────────────────────────────────────── */}
+        {/* ── Step 4: Review ─────────────────────────────────────────────── */}
         {step === 4 && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Ressources du cours</h2>
-              <p className="text-sm text-muted-foreground mt-1">Ajoutez des fichiers PDF, documents ou liens utiles pour les étudiants inscrits.</p>
-            </div>
-
-            {/* Upload form */}
-            <Card className="border-l-4 border-l-indigo-400 border-indigo-100">
-              <CardContent className="pt-6 space-y-4">
-                <h3 className="font-semibold text-sm">Ajouter une ressource</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Titre de la ressource *</Label>
-                    <Input
-                      value={resourceTitle}
-                      onChange={e => setResourceTitle(e.target.value)}
-                      placeholder="Ex: Cours PDF Chapitre 1"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fichier *</Label>
-                    <div className="flex items-center gap-2">
-                      <label className="flex-1 cursor-pointer flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-accent transition text-sm">
-                        <Paperclip className="w-4 h-4 text-muted-foreground" />
-                        <span className="truncate text-muted-foreground">
-                          {resourceFile ? resourceFile.name : 'Choisir un fichier'}
-                        </span>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          className="hidden"
-                          onChange={e => setResourceFile(e.target.files?.[0] || null)}
-                        />
-                      </label>
-                      {resourceFile && (
-                        <button
-                          type="button"
-                          onClick={() => { setResourceFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                          className="p-2 hover:bg-accent rounded-lg transition"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleAddResource}
-                  disabled={!resourceTitle.trim() || !resourceFile || uploading}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  {uploading ? 'Upload en cours...' : 'Ajouter la ressource'}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Resource list */}
-            {resources.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-xl">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Aucune ressource ajoutée pour ce cours.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">{resources.length} ressource{resources.length > 1 ? 's' : ''}</p>
-                {resources.map(r => (
-                  <div key={r.id} className="flex items-center gap-3 p-4 bg-white border border-indigo-100 border-l-4 border-l-indigo-400 rounded-xl shadow-sm">
-                    <div className="p-2 bg-indigo-50 rounded-lg flex-shrink-0">
-                      <FileText className="w-5 h-5 text-indigo-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{r.title}</p>
-                      <p className="text-xs text-muted-foreground">{r.fileType} • {new Date(r.createdAt).toLocaleDateString('fr-FR')}</p>
-                    </div>
-                    <a
-                      href={r.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 hover:bg-accent rounded-lg transition text-muted-foreground"
-                      title="Télécharger"
-                    >
-                      <Download className="w-4 h-4" />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteResource(r.id)}
-                      className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Step 5: Review ─────────────────────────────────────────────── */}
-        {step === 5 && (
           <div className="space-y-6">
             <h2 className="text-xl font-semibold">Récapitulatif</h2>
             <Card>
@@ -842,7 +907,6 @@ export function AdminEditCourse() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Leçons</span><span>{sections.reduce((a, s) => a + s.lessons.length, 0)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Leçons avec quiz</span><span>{sections.reduce((a, s) => a + s.lessons.filter(l => l.hasQuiz).length, 0)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Projets</span><span>{projects.filter(p => p.title.trim()).length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Ressources</span><span>{resources.length}</span></div>
               </CardContent>
             </Card>
           </div>
@@ -856,7 +920,7 @@ export function AdminEditCourse() {
             </Button>
           )}
           <div className="flex-1" />
-          {step < 5 ? (
+          {step < 4 ? (
             <Button type="button" onClick={() => setStep(s => s + 1)} disabled={!canGoNext()}>
               Suivant →
             </Button>

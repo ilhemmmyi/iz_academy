@@ -12,6 +12,7 @@ interface User {
   email: string;
   role: string;
   avatarUrl?: string;
+  hasCompletedCoach: boolean;
 }
 
 interface AuthContextType {
@@ -21,6 +22,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
+  markCoachCompleted: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -80,8 +82,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  const markCoachCompleted = async () => {
+    await apiClient('/users/me/complete-coach', { method: 'PATCH' });
+    setUser((prev) => prev ? { ...prev, hasCompletedCoach: true } : prev);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, logout, setUser, markCoachCompleted }}>
       {children}
     </AuthContext.Provider>
   );

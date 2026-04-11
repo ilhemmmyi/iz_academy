@@ -19,6 +19,11 @@ export const UserService = {
     return toSafeUser(user);
   },
 
+  async completeCoach(userId: string) {
+    const user = await UserModel.update(userId, { hasCompletedCoach: true });
+    return toSafeUser(user);
+  },
+
   async getAll() {
     const users = await UserModel.findAll();
     return users.map(toSafeUser);

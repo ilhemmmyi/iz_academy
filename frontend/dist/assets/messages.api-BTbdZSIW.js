@@ -1,0 +1,1 @@
+import{h as e}from"./index-C5oDludu.js";const t={getContacts:()=>e("/messages/contacts"),getAll:()=>e("/messages"),send:(s,a)=>e("/messages",{method:"POST",body:JSON.stringify({receiverId:s,content:a})}),markRead:s=>e(`/messages/${s}/read`,{method:"PUT"}),markAllRead:s=>e("/messages/mark-all-read",{method:"PUT",body:JSON.stringify({senderId:s})})};export{t as m};

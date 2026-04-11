@@ -2,6 +2,7 @@ import { apiClient } from './client';
 
 export const projectsApi = {
   getByCourse: (courseId: string) => apiClient(`/courses/${courseId}/projects`),
+  courseSubmissions: (courseId: string) => apiClient(`/courses/${courseId}/project-submissions`),
   submit: (projectId: string, data: { githubUrl: string; comment?: string }) =>
     apiClient(`/projects/${projectId}/submit`, { method: 'POST', body: JSON.stringify(data) }),
   mySubmissions: () => apiClient('/projects/my-submissions'),

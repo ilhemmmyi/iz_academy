@@ -103,6 +103,15 @@ export const CourseController = {
     }
   },
 
+  async getCourseSubmissions(req: AuthRequest, res: Response) {
+    try {
+      const submissions = await ProjectModel.findSubmissionsByCourse(String(req.params.id));
+      res.json(submissions);
+    } catch {
+      res.status(500).json({ message: 'Failed to fetch submissions' });
+    }
+  },
+
   async create(req: AuthRequest, res: Response) {
     try {
       const { teacherId: requestedTeacherId, ...rest } = req.body;

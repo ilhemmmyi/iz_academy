@@ -1,33 +1,8 @@
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { contactApi } from '../../api/contact.api';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 export function Contact() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setIsSubmitting(true);
-      await contactApi.submit(formData);
-      toast.success('Votre message a été envoyé. Un administrateur vous répondra par email.');
-      setFormData({ name: '', email: '', subject: '', message: '' });
-    } catch (err: any) {
-      toast.error(err.message || 'Impossible d\'envoyer votre message');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -67,117 +42,33 @@ export function Contact() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            <div className="bg-white border border-border rounded-xl p-8">
-              <h2 className="mb-6">Envoyez-nous un message</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="name" className="block mb-2">
-                    Nom complet
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="Votre nom complet"
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+          <div className="space-y-6 max-w-xl mx-auto">
+            <div className="bg-accent/50 rounded-xl p-8">
+              <h3 className="mb-4">Horaires d'ouverture</h3>
+              <div className="space-y-3 text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Lundi - Vendredi</span>
+                  <span className="font-medium text-foreground">9h - 18h</span>
                 </div>
-
-                <div>
-                  <label htmlFor="email" className="block mb-2">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    placeholder="votre@email.com"
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                <div className="flex justify-between">
+                  <span>Samedi</span>
+                  <span className="font-medium text-foreground">10h - 16h</span>
                 </div>
-
-                <div>
-                  <label htmlFor="subject" className="block mb-2">
-                    Sujet
-                  </label>
-                  <input
-                    id="subject"
-                    type="text"
-                    value={formData.subject}
-                    onChange={(e) =>
-                      setFormData({ ...formData, subject: e.target.value })
-                    }
-                    placeholder="Comment puis-je vous aider ?"
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                <div className="flex justify-between">
+                  <span>Dimanche</span>
+                  <span className="font-medium text-foreground">Fermé</span>
                 </div>
-
-                <div>
-                  <label htmlFor="message" className="block mb-2">
-                    Message
-                  </label>
-                  <textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) =>
-                      setFormData({ ...formData, message: e.target.value })
-                    }
-                    placeholder="Décrivez votre demande..."
-                    className="w-full px-4 py-3 border border-border rounded-lg bg-input-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                    rows={6}
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  {isSubmitting ? 'Envoi en cours...' : 'Envoyer le message'}
-                </button>
-              </form>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-accent/50 rounded-xl p-8">
-                <h3 className="mb-4">Horaires d'ouverture</h3>
-                <div className="space-y-3 text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Lundi - Vendredi</span>
-                    <span className="font-medium text-foreground">9h - 18h</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Samedi</span>
-                    <span className="font-medium text-foreground">10h - 16h</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Dimanche</span>
-                    <span className="font-medium text-foreground">Fermé</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-border rounded-xl p-8">
-                <h3 className="mb-4">Réponse rapide</h3>
-                <p className="text-muted-foreground mb-4">
-                  Nous nous engageons à répondre à toutes les demandes dans un délai de 24 heures ouvrées.
-                </p>
-                <p className="text-muted-foreground">
-                  Pour les questions urgentes, n'hésitez pas à nous appeler directement.
-                </p>
-              </div>
+            <div className="bg-white border border-border rounded-xl p-8">
+              <h3 className="mb-4">Réponse rapide</h3>
+              <p className="text-muted-foreground mb-4">
+                Nous nous engageons à répondre à toutes les demandes dans un délai de 24 heures ouvrées.
+              </p>
+              <p className="text-muted-foreground">
+                Pour les questions urgentes, n'hésitez pas à nous appeler directement.
+              </p>
             </div>
           </div>
         </div>

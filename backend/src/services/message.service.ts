@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma';
 import { EnrollmentModel } from '../models/enrollment.model';
+import { ActivityService } from './activity.service';
 
 export const MessageService = {
   getConversations: (userId: string) =>
@@ -43,8 +44,23 @@ export const MessageService = {
     return [];
   },
 
-  send: (senderId: string, receiverId: string, content: string) =>
-    prisma.message.create({ data: { senderId, receiverId, content } }),
+  send: async (senderId: string, receiverId: string, content: string) => {
+    const message = await prisma.message.create({ data: { senderId, receiverId, content } });
+    // If sender is a teacher, create an activity for the student receiver
+    const sender = await prisma.user.findUnique({
+      where: { id: senderId },
+      select: { name: true, role: true },
+    });
+    if (sender?.role === 'TEACHER') {
+      ActivityService.create(
+        receiverId,
+        'MESSAGE',
+        `${sender.name} vous a envoyé un message`,
+        '/student/messages',
+      ).catch(() => {});
+    }
+    return message;
+  },
 
   markRead: (messageId: string) =>
     prisma.message.update({ where: { id: messageId }, data: { read: true } }),

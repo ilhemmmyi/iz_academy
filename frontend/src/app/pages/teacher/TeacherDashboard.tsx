@@ -41,7 +41,9 @@ export function TeacherDashboard() {
       const courseList = c as any[];
       if (courseList.length > 0) {
         Promise.all(courseList.map((course: any) =>
-          lessonCommentsApi.getByCourse(course.id).catch(() => [])
+          lessonCommentsApi.getByCourse(course.id)
+            .then((cms: any[]) => cms.map((cm: any) => ({ ...cm, courseId: course.id })))
+            .catch(() => [])
         )).then(results => {
           setComments((results as any[][]).flat());
         });
@@ -87,7 +89,7 @@ export function TeacherDashboard() {
         title: `Commentaire de ${c.author?.name || 'un étudiant'}`,
         subtitle: `${c.lesson?.title ? `Sur "${c.lesson.title}" \u2014 ` : ''}${c.content?.length > 70 ? c.content.slice(0, 70) + '\u2026' : c.content}`,
         date: c.createdAt,
-        href: `/teacher/comments`,
+        href: `/teacher/course/${c.courseId}`,
       })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 20);
 

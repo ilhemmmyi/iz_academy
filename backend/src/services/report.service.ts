@@ -26,8 +26,23 @@ export const ReportService = {
     return prisma.report.findMany({
       include: {
         reporter: { select: { id: true, name: true, email: true, role: true } },
-        message: { select: { id: true, content: true, senderId: true } },
-        comment: { select: { id: true, content: true, authorId: true, lessonId: true } },
+        message: {
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            sender: { select: { id: true, name: true, email: true, role: true } },
+          },
+        },
+        comment: {
+          select: {
+            id: true,
+            content: true,
+            authorId: true,
+            lessonId: true,
+            author: { select: { id: true, name: true, email: true, role: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

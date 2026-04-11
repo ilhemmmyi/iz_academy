@@ -14,6 +14,14 @@ export const UserController = {
     }
   },
 
+  async completeCoach(req: AuthRequest, res: Response) {
+    try {
+      res.json(await UserService.completeCoach(req.user!.userId));
+    } catch {
+      res.status(500).json({ message: 'Failed to complete coach' });
+    }
+  },
+
   async updateMe(req: AuthRequest, res: Response) {
     try {
       const { name, avatarUrl } = req.body;

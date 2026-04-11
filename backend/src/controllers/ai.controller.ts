@@ -104,7 +104,7 @@ function buildAnalysisMessages(
   const userContent = `COACHING TASK: Analyze this learner's profile and provide personalized coaching insights.
 
 ### Learner Profile:
-- Objective: ${q.goal} — ${q.shortTermGoal}
+- Objective: ${q.goal} ï¿½ ${q.shortTermGoal}
 - Field: ${q.field}
 - Level: ${q.level}
 - Known skills: ${q.skills.length > 0 ? q.skills.join(', ') : 'None listed'}
@@ -131,7 +131,7 @@ Return ONLY this exact JSON (no markdown fences, no extra text, no comments):
     {
       role: 'system',
       content:
-        'You are a career coach for an e-learning platform. Output ONLY strict valid JSON — no markdown fences, no prose outside the JSON. Be specific and concrete.',
+        'You are a career coach for an e-learning platform. Output ONLY strict valid JSON ï¿½ no markdown fences, no prose outside the JSON. Be specific and concrete.',
     },
     { role: 'user', content: userContent },
   ];
@@ -227,18 +227,36 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
         }
       }
     } else {
-      console.warn('[AI] No HUGGINGFACE_API_KEY — returning scored courses only.');
+      console.warn('[AI] No HUGGINGFACE_API_KEY ï¿½ returning scored courses only.');
     }
 
-    // -- 6. Return structured response -------------------------------------
-    return res.json({
+    // -- 6. Build response object ------------------------------------------
+    const result = {
       recommendedCourses: topCourses,
       strengths,
       weaknesses,
       focusAreas,
       learningPlan,
       cvParsed: !!cvText,
-    });
+    };
+
+    // -- 7. Persist to DB (upsert so re-runs overwrite old data) -----------
+    if (req.user?.userId) {
+      await prisma.careerCoachData.upsert({
+        where: { userId: req.user.userId },
+        create: {
+          userId: req.user.userId,
+          answers: questionnaire as any,
+          recommendations: result as any,
+        },
+        update: {
+          answers: questionnaire as any,
+          recommendations: result as any,
+        },
+      });
+    }
+
+    return res.json(result);
   } catch (err: any) {
     if (axios.isAxiosError(err)) {
       const status = err.response?.status;
@@ -261,7 +279,7 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
       if (status === 503) {
         return res
           .status(503)
-          .json({ message: 'AI model is loading, please try again in 20–30 seconds.', loading: true });
+          .json({ message: 'AI model is loading, please try again in 20ï¿½30 seconds.', loading: true });
       }
       if (err.code === 'ECONNABORTED' || status === 504) {
         return res.status(504).json({ message: 'AI request timed out. Please try again.' });
@@ -273,5 +291,32 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
 
     console.error('[AI] Unexpected error:', err?.message);
     return res.status(500).json({ message: 'Failed to get AI recommendation.' });
+  }
+};
+
+// GET /api/ai/my-coach â€” returns saved coach data for the authenticated user
+export const getMyCoachData = async (req: AuthRequest, res: Response) => {
+  try {
+    const data = await prisma.careerCoachData.findUnique({
+      where: { userId: req.user!.userId },
+    });
+    if (!data) return res.json(null);
+    return res.json({
+      answers: data.answers,
+      recommendations: data.recommendations,
+      updatedAt: data.updatedAt,
+    });
+  } catch {
+    return res.status(500).json({ message: 'Failed to fetch coach data.' });
+  }
+};
+
+// DELETE /api/ai/my-coach â€” removes saved coach data so user can restart
+export const deleteMyCoachData = async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.careerCoachData.deleteMany({ where: { userId: req.user!.userId } });
+    return res.json({ message: 'Coach data deleted.' });
+  } catch {
+    return res.status(500).json({ message: 'Failed to delete coach data.' });
   }
 };

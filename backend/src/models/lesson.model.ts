@@ -21,6 +21,25 @@ export const LessonModel = {
       select: { id: true, quizId: true },
     }),
 
+  /** Find the lesson that immediately precedes `lessonId` across all modules in the same course. */
+  findPreviousGlobal: async (lessonId: string) => {
+    const current = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { order: true, module: { select: { order: true, courseId: true } } },
+    });
+    if (!current) return undefined; // lesson not found
+
+    const all = await prisma.lesson.findMany({
+      where: { module: { courseId: current.module.courseId } },
+      select: { id: true, quizId: true, order: true, module: { select: { order: true } } },
+      orderBy: [{ module: { order: 'asc' } }, { order: 'asc' }],
+    });
+
+    const idx = all.findIndex((l) => l.id === lessonId);
+    if (idx <= 0) return null; // first lesson globally → no predecessor
+    return all[idx - 1];
+  },
+
   // LessonProgress queries
   getProgress: (userId: string, lessonId: string) =>
     prisma.lessonProgress.findUnique({

@@ -1,1 +1,0 @@
-import{g as e}from"./index-C_vc_aOj.js";const t={getProgress:s=>e(`/lessons/${s}/progress`),complete:s=>e(`/lessons/${s}/complete`,{method:"POST"}),getVideoUrl:s=>e(`/lessons/${s}/video-url`),saveVideoProgress:(s,o,r)=>e(`/lessons/${s}/video-progress`,{method:"POST",body:JSON.stringify({watchedSeconds:o,durationSeconds:r})})};export{t as l};

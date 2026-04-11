@@ -3,6 +3,7 @@ import { SubmissionStatus } from '.prisma/client';
 import { certificateQueue } from '../queues/certificate.queue';
 import { ProjectModel } from '../models/project.model';
 import { LessonModel } from '../models/lesson.model';
+import { ActivityService } from './activity.service';
 
 const GRACE_MS = 3 * 60 * 1000;
 
@@ -68,16 +69,28 @@ export const ProjectService = {
   async review(submissionId: string, status: SubmissionStatus, feedback?: string) {
     const submission = await ProjectModel.updateSubmission(submissionId, status, feedback);
     if (status === 'NEEDS_IMPROVEMENT') {
-      // Revoke any certificate for this student/course — project is no longer valid
       await prisma.certificate.deleteMany({
         where: { userId: (submission as any).studentId, courseId: (submission as any).project.courseId },
       });
-      // Also reset adminApproved so the admin must re-approve after teacher re-validates
       await prisma.projectSubmission.update({
         where: { id: submissionId },
         data: { adminApproved: false, adminApprovedAt: null, adminApprovedById: null },
       });
     }
+    // Notify student of their project decision
+    const studentId = (submission as any).studentId;
+    const courseId = (submission as any).project?.courseId;
+    const projectTitle = (submission as any).project?.title || 'votre projet';
+    const actMessage =
+      status === 'VALIDATED'
+        ? `"${projectTitle}" a été validé par votre formateur`
+        : `"${projectTitle}" nécessite des améliorations selon votre formateur`;
+    ActivityService.create(
+      studentId,
+      'PROJECT_UPDATE',
+      actMessage,
+      courseId ? `/student/projects/${courseId}` : '/student',
+    ).catch(() => {});
     return submission;
   },
 

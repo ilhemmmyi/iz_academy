@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
-import { LayoutDashboard, BookOpen, ClipboardCheck, Award, MessageSquare, Menu, GraduationCap, LogOut, Bot } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Award, MessageSquare, Menu, GraduationCap, LogOut, Bot, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface StudentLayoutProps {
@@ -16,7 +16,6 @@ export function StudentLayout({ children }: StudentLayoutProps) {
   const navigation = [
     { name: 'Tableau de bord', href: '/student', icon: LayoutDashboard },
     { name: 'Mes cours', href: '/student/courses', icon: BookOpen },
-    { name: 'Test de niveau', href: '/student/test-niveau', icon: ClipboardCheck },
     { name: 'Certificats', href: '/student/certificates', icon: Award },
     { name: 'Messages', href: '/student/messages', icon: MessageSquare },
     { name: 'Coach Carrière IA', href: '/student/career', icon: Bot },
@@ -73,7 +72,19 @@ export function StudentLayout({ children }: StudentLayoutProps) {
           <nav className="p-4 space-y-2">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href;
-              return (
+              const isCoachRoute = item.href === '/student/career';
+              const locked = !user?.hasCompletedCoach && !isCoachRoute;
+              return locked ? (
+                <span
+                  key={item.name}
+                  title="Complète le Coach IA pour débloquer"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-not-allowed opacity-40 text-foreground select-none"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5 ml-auto opacity-70" />}
+                </span>
+              ) : (
                 <Link
                   key={item.name}
                   to={item.href}
@@ -89,6 +100,7 @@ export function StudentLayout({ children }: StudentLayoutProps) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.name}</span>
+                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5 ml-auto opacity-70" />}
                 </Link>
               );
             })}

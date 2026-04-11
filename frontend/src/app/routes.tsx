@@ -4,6 +4,7 @@ import { LandingPage } from "./pages/LandingPage";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { CoachGuard } from "./components/CoachGuard";
 
 // Lazy-loaded public pages
 const CoursesPage = lazy(() => import("./pages/CoursesPage").then(m => ({ default: m.CoursesPage })));
@@ -15,7 +16,6 @@ const Verify2FA = lazy(() => import("./pages/Verify2FA").then(m => ({ default: m
 
 // Lazy-loaded student pages
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
-const StudentLevelTest = lazy(() => import("./pages/student/StudentLevelTest").then(m => ({ default: m.StudentLevelTest })));
 const StudentCourses = lazy(() => import("./pages/student/StudentCourses").then(m => ({ default: m.StudentCourses })));
 const StudentCourseView = lazy(() => import("./pages/student/StudentCourseView").then(m => ({ default: m.StudentCourseView })));
 const StudentQuiz = lazy(() => import("./pages/student/StudentQuiz").then(m => ({ default: m.StudentQuiz })));
@@ -32,7 +32,6 @@ const TeacherMessages = lazy(() => import("./pages/teacher/TeacherMessages").the
 const TeacherCourses = lazy(() => import("./pages/teacher/TeacherCourses").then(m => ({ default: m.TeacherCourses })));
 const TeacherCourseView = lazy(() => import("./pages/teacher/TeacherCourseView").then(m => ({ default: m.TeacherCourseView })));
 const TeacherProjects = lazy(() => import("./pages/teacher/TeacherProjects").then(m => ({ default: m.TeacherProjects })));
-const TeacherComments = lazy(() => import("./pages/teacher/TeacherComments").then(m => ({ default: m.TeacherComments })));
 
 // Lazy-loaded admin pages
 const AdminCreateCourse = lazy(() => import("./pages/admin/AdminCreateCourse").then(m => ({ default: m.AdminCreateCourse })));
@@ -58,6 +57,15 @@ const PageLoader = () => (
 const Guard = ({ roles, children }: { roles: string[]; children: React.ReactNode }) => (
   <ProtectedRoute roles={roles}>
     <Suspense fallback={<PageLoader />}>{children}</Suspense>
+  </ProtectedRoute>
+);
+
+/** Same as Guard but also blocks non-coach-completed students */
+const StudentGuard = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute roles={["STUDENT"]}>
+    <CoachGuard>
+      <Suspense fallback={<PageLoader />}>{children}</Suspense>
+    </CoachGuard>
   </ProtectedRoute>
 );
 
@@ -94,16 +102,15 @@ export const router = createBrowserRouter([
   },
 
   // Student Routes
-  { path: "/student", element: <Guard roles={["STUDENT"]}><StudentDashboard /></Guard> },
-  { path: "/student/test-niveau", element: <Guard roles={["STUDENT"]}><StudentLevelTest /></Guard> },
-  { path: "/student/courses", element: <Guard roles={["STUDENT"]}><StudentCourses /></Guard> },
-  { path: "/student/course/:courseId", element: <Guard roles={["STUDENT"]}><StudentCourseView /></Guard> },
-  { path: "/student/quiz/:courseId", element: <Guard roles={["STUDENT"]}><StudentQuiz /></Guard> },
-  { path: "/student/quiz/:courseId/:lessonId", element: <Guard roles={["STUDENT"]}><StudentQuiz /></Guard> },
-  { path: "/student/projects/:courseId", element: <Guard roles={["STUDENT"]}><StudentProjects /></Guard> },
-  { path: "/student/messages", element: <Guard roles={["STUDENT"]}><StudentMessages /></Guard> },
-  { path: "/student/certificates", element: <Guard roles={["STUDENT"]}><StudentCertificates /></Guard> },
-  { path: "/student/certificates/:id", element: <Guard roles={["STUDENT"]}><StudentCertificateDetail /></Guard> },
+  { path: "/student", element: <StudentGuard><StudentDashboard /></StudentGuard> },
+  { path: "/student/courses", element: <StudentGuard><StudentCourses /></StudentGuard> },
+  { path: "/student/course/:courseId", element: <StudentGuard><StudentCourseView /></StudentGuard> },
+  { path: "/student/quiz/:courseId", element: <StudentGuard><StudentQuiz /></StudentGuard> },
+  { path: "/student/quiz/:courseId/:lessonId", element: <StudentGuard><StudentQuiz /></StudentGuard> },
+  { path: "/student/projects/:courseId", element: <StudentGuard><StudentProjects /></StudentGuard> },
+  { path: "/student/messages", element: <StudentGuard><StudentMessages /></StudentGuard> },
+  { path: "/student/certificates", element: <StudentGuard><StudentCertificates /></StudentGuard> },
+  { path: "/student/certificates/:id", element: <StudentGuard><StudentCertificateDetail /></StudentGuard> },
   { path: "/student/career", element: <Guard roles={["STUDENT"]}><CareerChatbot /></Guard> },
 
   // Teacher Routes
@@ -113,7 +120,6 @@ export const router = createBrowserRouter([
   { path: "/teacher/courses", element: <Guard roles={["TEACHER"]}><TeacherCourses /></Guard> },
   { path: "/teacher/course/:courseId", element: <Guard roles={["TEACHER"]}><TeacherCourseView /></Guard> },
   { path: "/teacher/projects", element: <Guard roles={["TEACHER"]}><TeacherProjects /></Guard> },
-  { path: "/teacher/comments", element: <Guard roles={["TEACHER"]}><TeacherComments /></Guard> },
 
   // Admin Routes
   { path: "/admin/create-course", element: <Guard roles={["ADMIN"]}><AdminCreateCourse /></Guard> },

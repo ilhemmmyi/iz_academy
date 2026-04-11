@@ -1,5 +1,6 @@
 ﻿import { StudentLayout } from '../../components/StudentLayout';
 import { useParams, Link, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import {
   CheckCircle,
   Lock,
@@ -57,9 +58,10 @@ export function StudentCourseView() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState<any>(null);
-  const [progress, setProgress] = useState<{ completedLessonIds: string[]; videoProgress: VideoProgressMap }>({
+  const [progress, setProgress] = useState<{ completedLessonIds: string[]; videoProgress: VideoProgressMap; passedQuizLessonIds: string[] }>({
     completedLessonIds: [],
     videoProgress: {},
+    passedQuizLessonIds: [],
   });
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -92,6 +94,7 @@ export function StudentCourseView() {
       setProgress({
         completedLessonIds: p.completedLessonIds || [],
         videoProgress: p.videoProgress || {},
+        passedQuizLessonIds: p.passedQuizLessonIds || [],
       });
     } catch {}
   }, [courseId]);
@@ -116,7 +119,7 @@ export function StudentCourseView() {
       resourcesApi.getResources(courseId).catch(() => []),
     ]).then(([c, p, res]) => {
       setCourse(c);
-      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {} });
+      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [] });
       setCourseResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
       if (firstLesson) {
@@ -237,7 +240,12 @@ export function StudentCourseView() {
   /* ── lesson selection ─────────────────────────────────────── */
 
   const handleSelectLesson = (lesson: any) => {
-    if (!isUnlockedHelper(lesson.id)) return;
+    if (!isUnlockedHelper(lesson.id)) {
+      if (isQuizBlockedHelper(lesson.id)) {
+        toast.error('Vous devez réussir le quiz de la leçon précédente pour continuer');
+      }
+      return;
+    }
     // Flush save for the previous lesson immediately
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -309,7 +317,20 @@ export function StudentCourseView() {
   const isUnlockedHelper = (lessonId: string): boolean => {
     const idx = allLessons.findIndex(l => l.id === lessonId);
     if (idx <= 0) return true;
-    return progress.completedLessonIds.includes(allLessons[idx - 1].id);
+    const prev = allLessons[idx - 1];
+    if (!progress.completedLessonIds.includes(prev.id)) return false;
+    // If the previous lesson has a quiz, the student must have passed it
+    if (prev.quizId && !progress.passedQuizLessonIds.includes(prev.id)) return false;
+    return true;
+  };
+
+  /** True when the lesson is locked specifically because the previous lesson's quiz was not passed. */
+  const isQuizBlockedHelper = (lessonId: string): boolean => {
+    const idx = allLessons.findIndex(l => l.id === lessonId);
+    if (idx <= 0) return false;
+    const prev = allLessons[idx - 1];
+    if (!progress.completedLessonIds.includes(prev.id)) return false; // locked for video reason, not quiz
+    return !!prev.quizId && !progress.passedQuizLessonIds.includes(prev.id);
   };
 
   const toggleSection = (moduleId: string) => {
@@ -547,18 +568,24 @@ export function StudentCourseView() {
                             }
                           }
 
+                          const quizBlocked = !unlocked && isQuizBlockedHelper(lesson.id);
+
                           return (
                             <button
                               key={lesson.id}
                               onClick={() => handleSelectLesson(lesson)}
                               disabled={!unlocked}
-                              className={`w-full p-4 flex items-center gap-3 hover:bg-accent transition text-left
+                              className={`w-full p-4 flex items-start gap-3 hover:bg-accent transition text-left
                                 ${active ? 'bg-accent' : ''}
-                                ${!unlocked ? 'opacity-50 cursor-not-allowed' : ''}
+                                ${!unlocked ? 'opacity-60 cursor-not-allowed' : ''}
                               `}
                             >
                               {!unlocked ? (
-                                <Lock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                                quizBlocked ? (
+                                  <FileQuestion className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                ) : (
+                                  <Lock className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                )
                               ) : (
                                 <ProgressRing pct={ringPct} completed={completed} active={active} />
                               )}
@@ -566,6 +593,11 @@ export function StudentCourseView() {
                                 <div className="font-medium truncate">{lesson.title}</div>
                                 {lesson.duration && (
                                   <div className="text-sm text-muted-foreground">{lesson.duration}</div>
+                                )}
+                                {quizBlocked && (
+                                  <div className="text-xs text-amber-600 mt-1">
+                                    Réussissez le quiz de la leçon précédente
+                                  </div>
                                 )}
                               </div>
                               {lesson.quiz && completed && (

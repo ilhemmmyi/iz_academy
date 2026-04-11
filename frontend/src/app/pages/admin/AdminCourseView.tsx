@@ -7,9 +7,6 @@ import {
   Video,
   FileText,
   Download,
-  Paperclip,
-  Trash2,
-  X,
   BookOpen,
   Edit,
   Globe,
@@ -20,13 +17,11 @@ import {
   DollarSign,
   ExternalLink,
 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
 
@@ -43,10 +38,6 @@ export function AdminCourseView() {
   // Resources
   const [resources, setResources] = useState<CourseResource[]>([]);
   const [lessonResources, setLessonResources] = useState<LessonRes[]>([]);
-  const [resourceTitle, setResourceTitle] = useState('');
-  const [resourceFile, setResourceFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Active tab
   const [activeTab, setActiveTab] = useState<'info' | 'resources'>('info');
@@ -91,33 +82,6 @@ export function AdminCourseView() {
     );
   };
 
-  const handleAddResource = async () => {
-    if (!courseId || !resourceTitle.trim() || !resourceFile || uploading) return;
-    setUploading(true);
-    try {
-      const created = await resourcesApi.uploadResource(courseId, resourceTitle.trim(), resourceFile);
-      setResources(prev => [created, ...prev]);
-      setResourceTitle('');
-      setResourceFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      toast.success('Ressource ajoutée');
-    } catch (err: any) {
-      toast.error(err.message || "Erreur lors de l'ajout");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDeleteResource = async (id: string) => {
-    try {
-      await resourcesApi.deleteResource(id);
-      setResources(prev => prev.filter(r => r.id !== id));
-      toast.success('Ressource supprimée');
-    } catch {
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
   const handleTogglePublish = async () => {
     if (!courseId) return;
     try {
@@ -128,6 +92,7 @@ export function AdminCourseView() {
       toast.error('Erreur lors de la publication');
     }
   };
+
 
   if (loading) {
     return (
@@ -337,56 +302,6 @@ export function AdminCourseView() {
               {/* Resources tab */}
               {activeTab === 'resources' && (
                 <div className="p-6 space-y-4">
-                  {/* Upload form */}
-                  <div className="border border-indigo-100 rounded-lg p-4 space-y-3 bg-indigo-50/30">
-                    <h4 className="font-medium text-sm">Ajouter une ressource</h4>
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label>Titre</Label>
-                        <Input
-                          value={resourceTitle}
-                          onChange={e => setResourceTitle(e.target.value)}
-                          placeholder="Nom de la ressource"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>Fichier</Label>
-                        <div className="flex items-center gap-2">
-                          <label className="flex-1 cursor-pointer flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-accent transition text-sm">
-                            <Paperclip className="w-4 h-4 text-muted-foreground" />
-                            <span className="truncate text-muted-foreground text-xs">
-                              {resourceFile ? resourceFile.name : 'Choisir un fichier'}
-                            </span>
-                            <input
-                              ref={fileInputRef}
-                              type="file"
-                              className="hidden"
-                              onChange={e => setResourceFile(e.target.files?.[0] || null)}
-                            />
-                          </label>
-                          {resourceFile && (
-                            <button
-                              type="button"
-                              onClick={() => { setResourceFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                              className="p-1.5 hover:bg-accent rounded transition"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleAddResource}
-                      disabled={!resourceTitle.trim() || !resourceFile || uploading}
-                    >
-                      <FileText className="w-4 h-4 mr-2" />
-                      {uploading ? 'Upload...' : 'Ajouter'}
-                    </Button>
-                  </div>
-
                   {/* Lesson resources */}
                   {lessonResources.length > 0 && (
                     <div className="space-y-2">
@@ -416,7 +331,7 @@ export function AdminCourseView() {
                   )}
 
                   {/* Course resource list */}
-                  {resources.length === 0 ? (
+                  {resources.length === 0 && lessonResources.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Aucune ressource pour ce cours.</p>
@@ -441,14 +356,6 @@ export function AdminCourseView() {
                           >
                             <Download className="w-4 h-4" />
                           </a>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteResource(r.id)}
-                            className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       ))}
                     </div>

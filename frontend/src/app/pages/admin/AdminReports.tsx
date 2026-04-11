@@ -28,6 +28,7 @@ type ReportedMessage = {
   id: string;
   content: string;
   senderId: string;
+  sender: { id: string; name: string; email: string; role: string } | null;
 } | null;
 
 type ReportedComment = {
@@ -35,6 +36,7 @@ type ReportedComment = {
   content: string;
   authorId: string;
   lessonId: string;
+  author: { id: string; name: string; email: string; role: string } | null;
 } | null;
 
 type Report = {
@@ -234,8 +236,31 @@ export function AdminReports() {
 
                 {/* Reported content preview */}
                 {(report.message || report.comment) && (
-                  <div className="mt-2 bg-accent/40 border border-border rounded-lg px-4 py-2.5">
-                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Contenu signalé</p>
+                  <div className="mt-2 bg-accent/40 border border-border rounded-lg px-4 py-2.5 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-medium text-muted-foreground">Contenu signalé</p>
+                      {/* Author of the reported content */}
+                      {(report.message?.sender || report.comment?.author) && (() => {
+                        const person = report.message?.sender ?? report.comment?.author;
+                        return (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                            <span className="w-4 h-4 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[9px] font-bold shrink-0">
+                              {person!.name.charAt(0).toUpperCase()}
+                            </span>
+                            {person!.name}
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-muted-foreground">{person!.email}</span>
+                            <Badge className={`text-[10px] ml-0.5 ${
+                              person!.role === 'STUDENT'
+                                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                : 'bg-teal-50 text-teal-700 border-teal-200'
+                            }`}>
+                              {person!.role === 'STUDENT' ? 'Étudiant' : 'Formateur'}
+                            </Badge>
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <p className="text-sm text-foreground line-clamp-3">
                       {report.message?.content ?? report.comment?.content ?? '—'}
                     </p>

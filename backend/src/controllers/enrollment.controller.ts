@@ -5,6 +5,9 @@ import { EnrollmentService } from '../services/enrollment.service';
 export const EnrollmentController = {
 
   async request(req: AuthRequest, res: Response) {
+    if (req.user!.role !== 'STUDENT') {
+      return res.status(403).json({ message: 'Seuls les étudiants peuvent s\'inscrire' });
+    }
     try {
       const { courseId, message } = req.body;
       const enrollment = await EnrollmentService.request(req.user!.userId, courseId, message);

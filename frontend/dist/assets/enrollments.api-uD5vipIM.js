@@ -1,1 +1,0 @@
-import{g as e}from"./index-C_vc_aOj.js";const l={request:(t,n)=>e("/enrollments",{method:"POST",body:JSON.stringify({courseId:t,message:n})}),getAll:()=>e("/enrollments"),getMine:()=>e("/enrollments/me"),updateStatus:(t,n)=>e(`/enrollments/${t}`,{method:"PUT",body:JSON.stringify({status:n})}),getTeacherStudents:()=>e("/enrollments/teacher/students")};export{l as e};

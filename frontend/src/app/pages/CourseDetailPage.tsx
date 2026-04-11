@@ -225,7 +225,11 @@ export function CourseDetailPage() {
                     </div>
                   </div>
 
-                  {enrollmentStatus === 'APPROVED' ? (
+                  {user && user.role !== 'STUDENT' ? (
+                    <div className="text-center text-sm text-muted-foreground py-2">
+                      Les formateurs et administrateurs ne peuvent pas s'inscrire aux formations.
+                    </div>
+                  ) : enrollmentStatus === 'APPROVED' ? (
                     <Button className="w-full" onClick={() => navigate(`/student/course/${id}`)}>
                       <Play className="w-5 h-5 mr-2" />
                       Accéder au cours

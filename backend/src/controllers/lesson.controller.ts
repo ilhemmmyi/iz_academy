@@ -61,6 +61,9 @@ export const LessonController = {
       if (err.message === 'NOT_YOUR_COURSE' || err.message === 'NOT_ENROLLED') {
         return res.status(403).json({ message: err.message === 'NOT_YOUR_COURSE' ? 'Not your course' : 'Not enrolled' });
       }
+      if (err.message === 'QUIZ_REQUIRED') {
+        return res.status(403).json({ message: 'QUIZ_REQUIRED' });
+      }
       res.status(500).json({ message: 'Failed to get video URL' });
     }
   },

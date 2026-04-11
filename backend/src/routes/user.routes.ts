@@ -6,6 +6,7 @@ import { requireRole } from '../middlewares/rbac.middleware';
 export const userRouter = Router();
 
 userRouter.get('/me', authenticate, UserController.getMe);
+userRouter.patch('/me/complete-coach', authenticate, UserController.completeCoach);
 userRouter.put('/me', authenticate, UserController.updateMe);
 userRouter.get('/me/certificates', authenticate, UserController.getMyCertificates);
 userRouter.get('/me/certificates/:id/pdf', authenticate, UserController.streamCertificatePdf);

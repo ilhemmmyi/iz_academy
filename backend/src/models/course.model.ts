@@ -68,7 +68,9 @@ export const CourseModel = {
       modules: {
         include: {
           lessons: {
-            include: { quiz: { include: { questions: true } } },
+            include: {
+              quiz: { include: { questions: true } },
+            },
             orderBy: { order: 'asc' },
           },
         },
@@ -89,7 +91,7 @@ export const CourseModel = {
       where: { id: courseId },
       include: { modules: { include: { lessons: true } } },
     });
-    if (!course) return { total: 0, completed: 0, percentage: 0, completedLessonIds: [], videoProgress: {} };
+    if (!course) return { total: 0, completed: 0, percentage: 0, completedLessonIds: [], videoProgress: {}, passedQuizLessonIds: [] };
     const allLessons = course.modules.flatMap(m => m.lessons);
     const totalLessons = allLessons.length;
     const allProgress = await prisma.lessonProgress.findMany({
@@ -100,12 +102,32 @@ export const CourseModel = {
     for (const p of allProgress) {
       videoProgress[p.lessonId] = { watchedSeconds: p.watchedSeconds, durationSeconds: p.durationSeconds };
     }
+
+    // Determine which lessons' quizzes the student has passed
+    const passedQuizLessonIds: string[] = [];
+    const lessonsWithQuizzes = allLessons.filter(l => l.quizId);
+    if (lessonsWithQuizzes.length > 0) {
+      const quizIds = lessonsWithQuizzes.map(l => l.quizId as string);
+      const passedAttempts = await prisma.quizAttempt.findMany({
+        where: { userId, quizId: { in: quizIds }, passed: true },
+        select: { quizId: true },
+        distinct: ['quizId'],
+      });
+      const passedQuizIds = new Set(passedAttempts.map(a => a.quizId));
+      for (const lesson of lessonsWithQuizzes) {
+        if (lesson.quizId && passedQuizIds.has(lesson.quizId)) {
+          passedQuizLessonIds.push(lesson.id);
+        }
+      }
+    }
+
     return {
       total: totalLessons,
       completed: completedLessonIds.length,
       percentage: totalLessons > 0 ? Math.round((completedLessonIds.length / totalLessons) * 100) : 0,
       completedLessonIds,
       videoProgress,
+      passedQuizLessonIds,
     };
   },
 };

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { TeacherLayout } from '../../components/TeacherLayout';
-import { MessageSquare, Send, Search, Clock } from 'lucide-react';
+import { MessageSquare, Send, Search, Clock, Flag, X } from 'lucide-react';
 import { messagesApi } from '../../../api/messages.api';
+import { apiClient } from '../../../api/client';
 import { useAuth } from '../../../context/AuthContext';
 
 export function TeacherMessages() {
@@ -13,6 +14,12 @@ export function TeacherMessages() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // ── Report state ─────────────────────────────────────────────────────────
+  const [reportTarget, setReportTarget] = useState<{ id: string; content: string } | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSending, setReportSending] = useState(false);
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     messagesApi.getAll()
@@ -82,8 +89,30 @@ export function TeacherMessages() {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleReport = async () => {
+    if (!reportTarget || !reportReason.trim() || reportSending) return;
+    setReportSending(true);
+    try {
+      await apiClient('/reports', {
+        method: 'POST',
+        body: JSON.stringify({ reason: reportReason.trim(), messageId: reportTarget.id }),
+      });
+      setReportedIds((prev) => new Set(prev).add(reportTarget.id));
+      setReportTarget(null);
+      setReportReason('');
+    } catch (err: any) {
+      // Already reported — still close modal silently
+      if (err?.status === 409) {
+        setReportedIds((prev) => new Set(prev).add(reportTarget.id));
+      }
+      setReportTarget(null);
+      setReportReason('');
+    } finally {
+      setReportSending(false);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {    e.preventDefault();
     if (!newMessage.trim() || !selectedPartnerId || sending) return;
     setSending(true);
     try {
@@ -252,6 +281,7 @@ export function TeacherMessages() {
               ) : (
                 currentMessages.map((message: any) => {
                   const isMine = message.senderId === user?.id;
+                  const alreadyReported = reportedIds.has(message.id);
                   return (
                     <div key={message.id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
                       {!isMine && (
@@ -269,9 +299,24 @@ export function TeacherMessages() {
                         >
                           {message.content}
                         </div>
-                        <div className={`text-[10px] text-gray-400 flex items-center gap-1 px-1 ${isMine ? 'justify-end' : ''}`}>
+                        <div className={`text-[10px] text-gray-400 flex items-center gap-1.5 px-1 ${isMine ? 'justify-end' : ''}`}>
                           <Clock className="w-2.5 h-2.5" />
                           {new Date(message.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                          {/* Report button — only on received messages */}
+                          {!isMine && (
+                            <button
+                              onClick={() => setReportTarget({ id: message.id, content: message.content })}
+                              disabled={alreadyReported}
+                              title={alreadyReported ? 'Déjà signalé' : 'Signaler ce message'}
+                              className={`ml-1 p-0.5 rounded transition ${
+                                alreadyReported
+                                  ? 'text-red-400 cursor-default'
+                                  : 'text-gray-300 hover:text-red-400 hover:bg-red-50'
+                              }`}
+                            >
+                              <Flag className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -307,6 +352,68 @@ export function TeacherMessages() {
           </div>
         </div>
       </div>
+
+      {/* ── Report modal ─────────────────────────────────────────────────── */}
+      {reportTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="font-semibold text-base flex items-center gap-2">
+                  <Flag className="w-4 h-4 text-red-500" />
+                  Signaler un message
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ce signalement sera transmis aux administrateurs.
+                </p>
+              </div>
+              <button
+                onClick={() => { setReportTarget(null); setReportReason(''); }}
+                className="p-1 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Message preview */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 italic line-clamp-3">
+              "{reportTarget.content}"
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Raison du signalement</label>
+              <textarea
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="Ex: Contenu inapproprié, harcèlement, spam…"
+                rows={3}
+                maxLength={500}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+              />
+              <p className="text-xs text-muted-foreground text-right mt-0.5">{reportReason.length}/500</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setReportTarget(null); setReportReason(''); }}
+                className="px-4 py-2 text-sm rounded-lg border border-border hover:bg-gray-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={!reportReason.trim() || reportSending}
+                className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 transition disabled:opacity-40 flex items-center gap-2"
+              >
+                <Flag className="w-3.5 h-3.5" />
+                {reportSending ? 'Envoi…' : 'Signaler'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </TeacherLayout>
   );
 }

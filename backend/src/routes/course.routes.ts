@@ -18,6 +18,7 @@ courseRouter.get('/mine', authenticate, requireRole('ADMIN', 'TEACHER'), CourseC
 courseRouter.get('/', CourseController.getAll);
 courseRouter.get('/:id', CourseController.getById);
 courseRouter.get('/:id/projects', CourseController.getProjects);
+courseRouter.get('/:id/project-submissions', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.getCourseSubmissions);
 courseRouter.get('/:id/progress', authenticate, CourseController.getProgress);
 courseRouter.get('/:id/reviews', CourseController.getReviews);
 courseRouter.post('/:id/reviews', authenticate, CourseController.submitReview);

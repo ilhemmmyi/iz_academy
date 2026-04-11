@@ -27,6 +27,12 @@ export interface RecommendationResult {
   cvParsed: boolean;
 }
 
+export interface SavedCoachData {
+  answers: CareerQuestionnaire;
+  recommendations: RecommendationResult;
+  updatedAt: string;
+}
+
 export const careerApi = {
   async getRecommendation(
     questionnaire: CareerQuestionnaire,
@@ -55,5 +61,19 @@ export const careerApi = {
       });
     }
     return res.json();
+  },
+
+  async getMyCoachData(accessToken?: string | null): Promise<SavedCoachData | null> {
+    const headers: Record<string, string> = {};
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    const res = await fetch(`${BASE_URL}/ai/my-coach`, { headers, credentials: 'include' });
+    if (!res.ok) return null;
+    return res.json();
+  },
+
+  async deleteMyCoachData(accessToken?: string | null): Promise<void> {
+    const headers: Record<string, string> = {};
+    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    await fetch(`${BASE_URL}/ai/my-coach`, { method: 'DELETE', headers, credentials: 'include' });
   },
 };

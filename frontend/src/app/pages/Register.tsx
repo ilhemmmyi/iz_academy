@@ -29,7 +29,7 @@ export function Register() {
       toast.success('Compte créé avec succès !');
       // Auto-login after registration
       const res = await login(formData.email, formData.password);
-      if (res.user.role === 'STUDENT') navigate('/courses');
+      if (res.user.role === 'STUDENT') navigate('/student');
       else if (res.user.role === 'TEACHER') navigate('/teacher');
       else navigate('/admin');
     } catch (err: any) {

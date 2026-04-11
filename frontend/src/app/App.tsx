@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from '../context/AuthContext';
+import { FloatingChatWidget } from './components/FloatingChatWidget';
 import { Component, ErrorInfo, ReactNode } from 'react';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -27,6 +28,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <RouterProvider router={router} />
+        <FloatingChatWidget />
         <Toaster />
       </AuthProvider>
     </ErrorBoundary>

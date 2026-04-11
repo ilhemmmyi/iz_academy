@@ -10,9 +10,10 @@ import {
   Paperclip,
   Trash2,
   X,
-  FolderGit2,
   BookOpen,
   ExternalLink,
+  FolderKanban,
+  ArrowLeft,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { coursesApi } from '../../../api/courses.api';
@@ -46,9 +47,10 @@ export function TeacherCourseView() {
   // Active tab: 'comments' | 'resources' | 'projects'
   const [activeTab, setActiveTab] = useState<'comments' | 'resources' | 'projects'>('comments');
 
-  // Project submissions for this course
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  // Project catalog for this course
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
 
   const loadVideo = async (lesson: any) => {
     if (!lesson?.videoUrl) { setVideoSrc(null); return; }
@@ -78,15 +80,15 @@ export function TeacherCourseView() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [courseId]);
 
-  // Lazy-load project submissions when that tab is opened
+  // Lazy-load project catalog when that tab is opened
   useEffect(() => {
-    if (activeTab !== 'projects' || !courseId || submissions.length > 0) return;
-    setSubmissionsLoading(true);
+    if (activeTab !== 'projects' || !courseId || projects.length > 0) return;
+    setProjectsLoading(true);
     import('../../../api/projects.api').then(({ projectsApi }) =>
-      projectsApi.teacherSubmissions()
-    ).then((data: any[]) => {
-      setSubmissions(data.filter((s: any) => s.courseId === courseId));
-    }).catch(() => {}).finally(() => setSubmissionsLoading(false));
+      projectsApi.getByCourse(courseId)
+    ).then((data: any[]) => setProjects(data))
+    .catch(() => {})
+    .finally(() => setProjectsLoading(false));
   }, [activeTab, courseId]);
 
   const handleSelectLesson = (lesson: any) => {
@@ -236,14 +238,14 @@ export function TeacherCourseView() {
                 {(['comments', 'resources', 'projects'] as const).map(tab => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => { setActiveTab(tab); setSelectedProject(null); }}
                     className={`flex-1 py-3 text-sm font-medium transition border-b-2 -mb-px ${
                       activeTab === tab
                         ? 'border-primary text-primary'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {tab === 'comments' ? 'Commentaires' : tab === 'resources' ? 'Ressources' : 'Projets étudiants'}
+                    {tab === 'comments' ? 'Commentaires' : tab === 'resources' ? 'Ressources' : 'Projets'}
                   </button>
                 ))}
               </div>
@@ -341,61 +343,55 @@ export function TeacherCourseView() {
               {/* Projects tab */}
               {activeTab === 'projects' && (
                 <div className="p-4">
-                  {submissionsLoading ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">Chargement…</p>
-                  ) : submissions.length === 0 ? (
+                  {projectsLoading ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Chargement\u2026</p>
+                  ) : projects.length === 0 ? (
                     <div className="text-center py-8">
-                      <FolderGit2 className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-                      <p className="text-sm text-muted-foreground">Aucun projet soumis pour ce cours.</p>
-                      <Link
-                        to="/teacher/projects"
-                        className="mt-3 inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                      <FolderKanban className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm text-muted-foreground">Aucun projet pour ce cours.</p>
+                    </div>
+                  ) : selectedProject ? (
+                    <div className="space-y-4">
+                      <button
+                        onClick={() => setSelectedProject(null)}
+                        className="text-primary hover:underline inline-flex items-center gap-1 text-sm"
                       >
-                        Voir tous les projets →
-                      </Link>
+                        <ArrowLeft className="w-4 h-4" /> Retour aux projets
+                      </button>
+                      <h2 className="text-lg font-semibold">{selectedProject.title}</h2>
+                      <p className="text-muted-foreground text-sm">{selectedProject.description}</p>
+                      <div className="border-t border-border pt-4">
+                        <h3 className="font-semibold mb-2 text-sm">Instructions</h3>
+                        <p className="text-sm whitespace-pre-wrap">{selectedProject.instructions}</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {submissions.map(sub => (
-                        <div key={sub.id} className="border border-border rounded-lg p-4 space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="font-medium text-sm">{sub.project?.title}</p>
-                              <p className="text-xs text-muted-foreground">Par {sub.student?.name}</p>
+                      {projects.map((project: any, index: number) => (
+                        <button
+                          key={project.id}
+                          onClick={() => setSelectedProject(project)}
+                          className="w-full text-left border border-border rounded-xl p-4 hover:border-primary hover:bg-accent/30 transition space-y-1"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 text-sm font-bold flex items-center justify-center flex-shrink-0">
+                              {index + 1}
                             </div>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              sub.status === 'VALIDATED'
-                                ? 'bg-green-100 text-green-700'
-                                : sub.status === 'NEEDS_IMPROVEMENT'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}>
-                              {sub.status === 'VALIDATED' ? 'Validé' : sub.status === 'NEEDS_IMPROVEMENT' ? 'À améliorer' : 'En attente'}
-                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm truncate">{project.title}</p>
+                              {project.description && (
+                                <p className="text-xs text-muted-foreground truncate mt-0.5">{project.description}</p>
+                              )}
+                            </div>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           </div>
-                          <a
-                            href={sub.githubUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline break-all"
-                          >
-                            {sub.githubUrl}
-                          </a>
-                          {sub.feedback && (
-                            <p className="text-xs text-muted-foreground bg-accent/50 rounded p-2">{sub.feedback}</p>
-                          )}
-                        </div>
+                        </button>
                       ))}
-                      <Link
-                        to="/teacher/projects"
-                        className="block text-center text-sm text-primary hover:underline mt-2"
-                      >
-                        Gérer tous les projets →
-                      </Link>
                     </div>
                   )}
                 </div>
               )}
+
             </div>
           </div>
 

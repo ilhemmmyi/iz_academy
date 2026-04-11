@@ -98,17 +98,14 @@ export const LessonService = {
   },
 
   async canUnlock(lessonId: string, userId: string) {
-    const lesson = await LessonModel.findByIdWithModule(lessonId);
-    if (!lesson) return null;
-    if (lesson.order <= 0) return true;
+    const prevLesson = await LessonModel.findPreviousGlobal(lessonId);
+    if (prevLesson === undefined) return null; // lesson not found
+    if (prevLesson === null) return true;      // first lesson → always accessible
 
-    const prevLesson = await LessonModel.findPrevious(lesson.moduleId, lesson.order);
-    if (!prevLesson) return true;
+    const prevProgress = await LessonModel.getProgress(userId, prevLesson.id);
+    if (!prevProgress?.completed) return false;
 
-    const progress = await LessonModel.getProgress(userId, prevLesson.id);
-    if (!progress?.completed) return false;
-
-    // If the previous lesson has a quiz the student must have scored ≥ threshold
+    // Previous lesson has a quiz → student must have passed it
     if (prevLesson.quizId) {
       const bestAttempt = await prisma.quizAttempt.findFirst({
         where: { userId, quizId: prevLesson.quizId },
@@ -134,6 +131,10 @@ export const LessonService = {
       } else {
         const enrolled = await EnrollmentModel.findApproved(userId, courseId);
         if (!enrolled) throw new Error('NOT_ENROLLED');
+
+        // Enforce sequential quiz progression lock
+        const canAccess = await LessonService.canUnlock(lessonId, userId);
+        if (!canAccess) throw new Error('QUIZ_REQUIRED');
       }
     }
 
