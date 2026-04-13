@@ -174,11 +174,7 @@ export function StudentDashboard() {
                       </div>
                     </div>
                   );
-                  return item.link ? (
-                    <Link key={item.id} to={item.link}>{content}</Link>
-                  ) : (
-                    <div key={item.id}>{content}</div>
-                  );
+                  return <div key={item.id}>{content}</div>;
                 })}
               </div>
             )}

@@ -54,4 +54,13 @@ export const EnrollmentController = {
       res.status(500).json({ message: 'Failed to fetch teacher students' });
     }
   },
+
+  async deleteEnrollment(req: AuthRequest, res: Response) {
+    try {
+      await EnrollmentService.delete(String(req.params.id));
+      res.status(204).send();
+    } catch {
+      res.status(500).json({ message: 'Failed to delete enrollment' });
+    }
+  },
 };

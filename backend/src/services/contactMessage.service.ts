@@ -75,6 +75,7 @@ export const ContactMessageService = {
       to: updated.email,
       name: updated.name,
       subject: updated.subject,
+      originalMessage: updated.message,
       replyMessage: trimmedReply,
     }).catch((err) => console.error('Email queue error:', err));
 

@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import { emailQueue } from '../queues/email.queue';
 import { EnrollmentModel } from '../models/enrollment.model';
 import { LessonModel } from '../models/lesson.model';
+import { ActivityModel } from '../models/activity.model';
 
 export const EnrollmentService = {
 
@@ -35,12 +36,100 @@ export const EnrollmentService = {
       courseName: enrollment.course.title,
       status,
     }).catch((err) => console.error('Email queue error:', err));
+
+    if (status === 'APPROVED') {
+      ActivityModel.create(
+        enrollment.userId,
+        'ENROLLMENT_APPROVED',
+        `Votre demande d'inscription au cours "${enrollment.course.title}" a été acceptée`,
+        `/student/course/${enrollment.courseId}`,
+      ).catch((err) => console.error('Activity create error:', err));
+    }
+
     return enrollment;
   },
 
   getAll: () => EnrollmentModel.findAll(),
 
-  getByUser: (userId: string) => EnrollmentModel.findByUser(userId),
+  delete: (id: string) => EnrollmentModel.delete(id),
+
+  async getByUser(userId: string) {
+    const enrollments = await EnrollmentModel.findByUser(userId);
+
+    // Only compute progress for approved enrollments
+    const approvedCourseIds = enrollments
+      .filter(e => e.status === 'APPROVED')
+      .map(e => e.courseId);
+
+    if (approvedCourseIds.length === 0) return enrollments.map(e => ({ ...e, progress: null }));
+
+    // Fetch total lesson counts per course
+    const courses = await prisma.course.findMany({
+      where: { id: { in: approvedCourseIds } },
+      include: { modules: { include: { lessons: { select: { id: true } } } } },
+    });
+    const totalLessonsMap: Record<string, number> = {};
+    courses.forEach(c => {
+      totalLessonsMap[c.id] = c.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+    });
+
+    // Fetch completed lesson counts per course for this user
+    const lessonProgress = await prisma.lessonProgress.findMany({
+      where: {
+        userId,
+        completed: true,
+        lesson: { module: { courseId: { in: approvedCourseIds } } },
+      },
+      include: { lesson: { include: { module: { select: { courseId: true } } } } },
+    });
+    const completedLessonsMap: Record<string, number> = {};
+    lessonProgress.forEach(p => {
+      const cId = p.lesson.module.courseId;
+      completedLessonsMap[cId] = (completedLessonsMap[cId] || 0) + 1;
+    });
+
+    // Fetch project submissions for this user
+    const submissions = await prisma.projectSubmission.findMany({
+      where: { studentId: userId, courseId: { in: approvedCourseIds } },
+      select: { courseId: true, status: true },
+    });
+    const submissionMap: Record<string, string> = {};
+    submissions.forEach(s => { submissionMap[s.courseId] = s.status; });
+
+    // Fetch certificates for this user
+    const certificates = await prisma.certificate.findMany({
+      where: { userId, courseId: { in: approvedCourseIds } },
+      select: { id: true, courseId: true, fileUrl: true },
+    });
+    const certMap: Record<string, { id: string; fileUrl: string | null }> = {};
+    certificates.forEach(c => { certMap[c.courseId] = { id: c.id, fileUrl: c.fileUrl }; });
+
+    return enrollments.map(e => {
+      if (e.status !== 'APPROVED') return { ...e, progress: null };
+
+      const totalLessons = totalLessonsMap[e.courseId] || 0;
+      const completedLessons = completedLessonsMap[e.courseId] || 0;
+      const lessonPct = totalLessons > 0 ? (completedLessons / totalLessons) * 70 : 0;
+
+      const projectStatus = submissionMap[e.courseId] ?? null;
+      let projectPct = 0;
+      if (projectStatus && projectStatus !== 'PENDING') projectPct = 20;
+      if (projectStatus === 'VALIDATED') projectPct = 30;
+
+      const percentage = Math.round(lessonPct + projectPct);
+
+      return {
+        ...e,
+        progress: {
+          totalLessons,
+          completedLessons,
+          projectStatus,
+          percentage,
+          certificate: certMap[e.courseId] ?? null,
+        },
+      };
+    });
+  },
 
   async getTeacherStudents(teacherId: string) {
     // Get all courses by this teacher

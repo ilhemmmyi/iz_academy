@@ -24,6 +24,9 @@ export const EnrollmentModel = {
       include: { user: true, course: true },
     }),
 
+  delete: (id: string) =>
+    prisma.enrollment.delete({ where: { id } }),
+
   findAll: () =>
     prisma.enrollment.findMany({
       include: {

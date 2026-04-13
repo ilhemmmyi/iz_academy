@@ -1,6 +1,6 @@
 import { StudentLayout } from '../../components/StudentLayout';
 import { Link, useNavigate } from 'react-router';
-import { BookOpen, ArrowRight, Clock, XCircle, Play } from 'lucide-react';
+import { BookOpen, ArrowRight, Clock, XCircle, Play, Award, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { enrollmentsApi } from '../../../api/enrollments.api';
 
@@ -54,39 +54,78 @@ export function StudentCourses() {
                   </Link>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {approved.map((enrollment: any) => (
-                    <div
-                      key={enrollment.id}
-                      className="bg-white border border-teal-100 border-l-4 border-l-teal-400 rounded-xl p-6 shadow-sm hover:shadow-md transition"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4 flex-1 min-w-0">
-                          {enrollment.course.thumbnailUrl && (
-                            <img
-                              src={enrollment.course.thumbnailUrl}
-                              alt={enrollment.course.title}
-                              className="w-20 h-14 object-cover rounded-lg flex-shrink-0"
-                            />
-                          )}
-                          <div className="min-w-0">
-                            <h3 className="font-semibold mb-1 truncate">{enrollment.course.title}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{enrollment.course.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Par {enrollment.course.teacher?.name || 'Formateur'}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {approved.map((enrollment: any) => {
+                    const p = enrollment.progress;
+                    const pct: number = p?.percentage ?? 0;
+                    const cert = p?.certificate ?? null;
+                    const certReady = pct >= 100 && cert?.fileUrl;
+
+                    return (
+                      <div
+                        key={enrollment.id}
+                        className="bg-white border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
+                      >
+                        {/* Thumbnail */}
+                        {enrollment.course.thumbnailUrl ? (
+                          <img
+                            src={enrollment.course.thumbnailUrl}
+                            alt={enrollment.course.title}
+                            className="w-full h-36 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-36 bg-accent/40 flex items-center justify-center">
+                            <BookOpen className="w-8 h-8 text-muted-foreground" />
+                          </div>
+                        )}
+
+                        <div className="p-4 flex flex-col flex-1">
+                          {/* Title + teacher — grows to fill available space */}
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-sm leading-snug line-clamp-2">{enrollment.course.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {enrollment.course.teacher?.name || 'Formateur'}
                             </p>
                           </div>
+
+                          {/* Progress bar + button — always at bottom */}
+                          <div className="mt-3 space-y-2">
+                            {p && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? 'bg-emerald-500' : 'bg-primary'}`}
+                                    style={{ width: `${Math.min(pct, 100)}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground w-8 text-right shrink-0">{pct}%</span>
+                                {certReady ? (
+                                  <Link
+                                    to={`/student/certificates/${cert.id}`}
+                                    title="Voir votre certificat"
+                                    className="shrink-0 text-emerald-500 hover:text-emerald-700 transition"
+                                  >
+                                    <Award className="w-4 h-4" />
+                                  </Link>
+                                ) : (
+                                  <span title="Complétez le cours pour obtenir votre certificat" className="shrink-0 text-slate-300">
+                                    <Lock className="w-4 h-4" />
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => navigate(`/student/course/${enrollment.course.id}`)}
+                              className="w-full flex items-center justify-center gap-2 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition text-sm font-medium"
+                            >
+                              <Play className="w-3.5 h-3.5" />
+                              Continuer
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => navigate(`/student/course/${enrollment.course.id}`)}
-                          className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition text-sm font-medium"
-                        >
-                          <Play className="w-4 h-4" />
-                          Continuer
-                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>

@@ -5,6 +5,7 @@ import { uploadToStorage } from '../utils/storage';
 import { buildCertificatePdf } from '../utils/certificate';
 import { emailQueue } from '../queues/email.queue';
 import { CertificateModel } from '../models/certificate.model';
+import { ActivityModel } from '../models/activity.model';
 
 const certWorker = new Worker('certificates', async (job) => {
   const { userId, courseId } = job.data;
@@ -33,19 +34,18 @@ const certWorker = new Worker('certificates', async (job) => {
     );
   }
 
-  // Condition 2 + 3 + 4: project submitted, teacher-validated, and admin-approved
+  // Condition 2 + 3: project submitted and teacher-validated
   const submission = await prisma.projectSubmission.findFirst({
     where: {
       studentId: userId,
       courseId,
       status: 'VALIDATED',      // teacher approved
-      adminApproved: true,       // admin gave final authorization
     },
   });
   if (!submission) {
     throw new Error(
       `Certificate conditions not fully met for user ${userId} on course ${courseId}. ` +
-      `Either no validated+admin-approved submission exists.`,
+      `No validated submission found.`,
     );
   }
 
@@ -76,6 +76,14 @@ const certWorker = new Worker('certificates', async (job) => {
 
   // ── Persist the URL in DB ─────────────────────────────────────────────────────
   await CertificateModel.updateFileUrl(userId, courseId, fileUrl);
+
+  // ── Create activity for the student ──────────────────────────────────────────
+  await ActivityModel.create(
+    userId,
+    'CERTIFICATE_ISSUED',
+    `Félicitations ! Votre certificat pour le cours "${course.title}" a été généré`,
+    `/student/certificates/${certRecord.id}`,
+  ).catch((err) => console.error('[CertWorker] Activity create error:', err));
 
   // ── Send email notification ───────────────────────────────────────────────────
   await emailQueue.add('certificate', {

@@ -5,8 +5,6 @@ import { ProjectModel } from '../models/project.model';
 import { LessonModel } from '../models/lesson.model';
 import { ActivityService } from './activity.service';
 
-const GRACE_MS = 3 * 60 * 1000;
-
 export const ProjectService = {
 
   async submit(studentId: string, projectId: string, githubUrl: string, comment?: string) {
@@ -27,12 +25,8 @@ export const ProjectService = {
     }
 
     const existing = await ProjectModel.findSubmission(projectId, studentId);
-    if (existing) {
-      const elapsed = Date.now() - new Date(existing.submittedAt).getTime();
-      const needsImprovement = existing.status === 'NEEDS_IMPROVEMENT';
-      if (elapsed >= GRACE_MS && !needsImprovement) {
-        throw Object.assign(new Error('Grace period expired'), { code: 'GRACE_EXPIRED' });
-      }
+    if (existing && existing.status !== 'NEEDS_IMPROVEMENT') {
+      // Already submitted and not needing improvement — allow resubmit only on NEEDS_IMPROVEMENT
     }
 
     return ProjectModel.upsertSubmission({
@@ -63,23 +57,30 @@ export const ProjectService = {
 
   /**
    * Teacher validates or requests improvements on a submission.
-   * Certificate is NOT triggered here — admin approval is required first.
+   * When VALIDATED, the certificate is auto-generated without any admin intervention.
    * If status is NEEDS_IMPROVEMENT, any existing certificate is revoked.
    */
   async review(submissionId: string, status: SubmissionStatus, feedback?: string) {
     const submission = await ProjectModel.updateSubmission(submissionId, status, feedback);
-    if (status === 'NEEDS_IMPROVEMENT') {
-      await prisma.certificate.deleteMany({
-        where: { userId: (submission as any).studentId, courseId: (submission as any).project.courseId },
-      });
-      await prisma.projectSubmission.update({
-        where: { id: submissionId },
-        data: { adminApproved: false, adminApprovedAt: null, adminApprovedById: null },
-      });
-    }
-    // Notify student of their project decision
     const studentId = (submission as any).studentId;
     const courseId = (submission as any).project?.courseId;
+
+    if (status === 'NEEDS_IMPROVEMENT') {
+      await prisma.certificate.deleteMany({
+        where: { userId: studentId, courseId: (submission as any).project.courseId },
+      });
+    }
+
+    // Auto-generate certificate as soon as the teacher validates
+    if (status === 'VALIDATED' && courseId) {
+      await certificateQueue.add(
+        'generate',
+        { userId: studentId, courseId },
+        { jobId: `cert:${studentId}:${courseId}` },
+      );
+    }
+
+    // Notify student of their project decision
     const projectTitle = (submission as any).project?.title || 'votre projet';
     const actMessage =
       status === 'VALIDATED'
@@ -151,12 +152,6 @@ export const ProjectService = {
     const submission = await ProjectModel.findSubmissionById(submissionId);
     if (!submission) throw Object.assign(new Error('Submission not found'), { code: 'NOT_FOUND' });
     if (submission.studentId !== studentId) throw Object.assign(new Error('Forbidden'), { code: 'FORBIDDEN' });
-
-    const elapsed = Date.now() - new Date(submission.submittedAt).getTime();
-    if (elapsed >= GRACE_MS) {
-      throw Object.assign(new Error('Grace period expired'), { code: 'GRACE_EXPIRED' });
-    }
-
     await ProjectModel.deleteSubmission(submissionId);
   },
 };

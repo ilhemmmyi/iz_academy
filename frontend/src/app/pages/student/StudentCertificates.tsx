@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { StudentLayout } from '../../components/StudentLayout';
-import { Award, Calendar, Download, ExternalLink, RefreshCw, Eye } from 'lucide-react';
+import { Award, Download, ExternalLink, RefreshCw, Eye } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { certificatesApi, Certificate } from '../../../api/certificates.api';
 
@@ -74,41 +74,6 @@ export function StudentCertificates() {
           <p className="text-muted-foreground">
             Consultez et téléchargez vos certificats de formation
           </p>
-        </div>
-
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border-l-4 border-l-amber-400 border-amber-100 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-amber-600 mb-1">
-                    {loading ? '…' : certificates.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Certificats obtenus</div>
-                </div>
-                <div className="p-3 bg-amber-50 rounded-lg">
-                  <Award className="w-8 h-8 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-teal-400 border-teal-100 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-teal-600 mb-1">
-                    {loading ? '…' : certificates.filter(c => c.fileUrl).length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Disponibles au téléchargement</div>
-                </div>
-                <div className="p-3 bg-teal-50 rounded-lg">
-                  <Calendar className="w-8 h-8 text-teal-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Certificats obtenus */}

@@ -11,5 +11,8 @@ export const enrollmentsApi = {
   updateStatus: (id: string, status: 'APPROVED' | 'REJECTED') =>
     apiClient(`/enrollments/${id}`, { method: 'PUT', body: JSON.stringify({ status }) }),
 
+  delete: (id: string) =>
+    apiClient(`/enrollments/${id}`, { method: 'DELETE' }),
+
   getTeacherStudents: () => apiClient('/enrollments/teacher/students'),
 };

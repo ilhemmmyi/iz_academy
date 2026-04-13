@@ -73,7 +73,7 @@ export function AdminReports() {
     setMarkingId(report.id);
     try {
       const updated = await reportsApi.markReviewed(report.id) as Report;
-      setReports(prev => prev.map(r => r.id === report.id ? { ...r, status: updated.status } : r));
+      setReports(prev => prev.map(r => r.id === report.id ? updated : r));
       toast.success('Signalement marqué comme traité.');
     } catch {
       toast.error('Erreur lors de la mise à jour.');

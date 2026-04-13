@@ -1,5 +1,5 @@
 import { StudentLayout } from '../../components/StudentLayout';
-import { FolderKanban, ArrowLeft, Send, CheckCircle, AlertCircle, Clock, ExternalLink, Trash2, Lock } from 'lucide-react';
+import { FolderKanban, ArrowLeft, Send, CheckCircle, AlertCircle, Clock, ExternalLink } from 'lucide-react';
 import { Link, useParams } from 'react-router';
 import { useEffect, useState } from 'react';
 import { projectsApi } from '../../../api/projects.api';
@@ -34,26 +34,7 @@ export function StudentProjects() {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
   const [showResubmitForm, setShowResubmitForm] = useState(false);
-  const [now, setNow] = useState(Date.now());
-
-  // Tick every second to drive countdowns
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const GRACE_MS = 3 * 60 * 1000;
-  const isLocked = (sub: Submission) => (now - new Date(sub.submittedAt).getTime()) >= GRACE_MS;
-  const remainingMs = (sub: Submission) => Math.max(0, GRACE_MS - (now - new Date(sub.submittedAt).getTime()));
-  const fmtCountdown = (ms: number) => {
-    const m = Math.floor(ms / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    return `${m}:${String(s).padStart(2, '0')}`;
-  };
 
   useEffect(() => {
     if (!courseId) { setLoading(false); return; }
@@ -86,7 +67,7 @@ export function StudentProjects() {
     }
   };
 
-  const handleSubmitConfirm = (e: React.FormEvent) => {
+  const handleSubmitConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected || !githubUrl.trim()) return;
     if (!isGithubUrl(githubUrl)) {
@@ -94,13 +75,7 @@ export function StudentProjects() {
       return;
     }
     setSubmitError('');
-    setShowConfirm(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!selected) return;
     setSubmitting(true);
-    setSubmitError('');
     try {
       const sub = await projectsApi.submit(selected.id, { githubUrl: githubUrl.trim(), comment: comment.trim() || undefined });
       setSubmissions(prev => {
@@ -109,28 +84,13 @@ export function StudentProjects() {
         return [...prev, sub];
       });
       setShowSubmitForm(false);
-      setShowEditForm(false);
       setShowResubmitForm(false);
-      setShowConfirm(false);
       setGithubUrl('');
       setComment('');
     } catch (err: any) {
       setSubmitError(err.message || 'Erreur lors de la soumission.');
-      setShowConfirm(false);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (submissionId: string) => {
-    setDeleting(true);
-    try {
-      await projectsApi.deleteSubmission(submissionId);
-      setSubmissions(prev => prev.filter(s => s.id !== submissionId));
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la suppression.');
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -156,33 +116,6 @@ export function StudentProjects() {
     <StudentLayout>
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* ── Confirmation dialog ── */}
-        {showConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
-              <h3 className="text-lg font-semibold">Confirmer l'envoi</h3>
-              <p className="text-sm text-muted-foreground">
-                Votre projet sera enregistré maintenant. Vous aurez <strong>15 minutes</strong> pour le modifier ou le supprimer avant qu'il soit envoyé définitivement à votre formateur.
-              </p>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="px-4 py-2 border border-border rounded-lg hover:bg-accent transition text-sm"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition flex items-center gap-2 text-sm disabled:opacity-60"
-                >
-                  <Send className="w-4 h-4" />
-                  {submitting ? 'Envoi...' : 'Oui, envoyer'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
         <div>
           {courseId && (
             <Link to={`/student/course/${courseId}`} className="text-primary hover:underline inline-flex items-center gap-1 mb-2 text-sm">
@@ -248,100 +181,14 @@ export function StudentProjects() {
                     </div>
                   )}
 
-                  {/* Grace period zone */}
-                  <div className="border-t border-border pt-3">
-                    {isLocked(getSubmission(selected.id)!) ? (
+                  {getSubmission(selected.id)!.status === 'PENDING' && (
+                    <div className="border-t border-border pt-3">
                       <div className="inline-flex items-center gap-1.5 text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
-                        <Lock className="w-3.5 h-3.5" />
+                        <CheckCircle className="w-3.5 h-3.5" />
                         Envoyé au formateur
                       </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="inline-flex items-center gap-1.5 text-sm text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg">
-                            <Clock className="w-3.5 h-3.5" />
-                            Envoi au formateur dans{' '}
-                            <strong>{fmtCountdown(remainingMs(getSubmission(selected.id)!))}</strong>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {!showEditForm && (
-                              <button
-                                onClick={() => {
-                                  setGithubUrl(getSubmission(selected.id)!.githubUrl);
-                                  setComment(getSubmission(selected.id)!.comment || '');
-                                  setSubmitError('');
-                                  setShowEditForm(true);
-                                }}
-                                className="text-sm text-primary hover:underline font-medium"
-                              >
-                                Modifier
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDelete(getSubmission(selected.id)!.id)}
-                              disabled={deleting}
-                              className="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 disabled:opacity-50 transition"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              {deleting ? 'Suppression...' : 'Supprimer'}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Inline edit form */}
-                        {showEditForm && (
-                          <form onSubmit={handleSubmitConfirm} className="space-y-3 pt-2 border-t border-border">
-                            {submitError && (
-                              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{submitError}</div>
-                            )}
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Lien GitHub *</label>
-                              <input
-                                required
-                                type="url"
-                                value={githubUrl}
-                                onChange={e => { setGithubUrl(e.target.value); setSubmitError(''); }}
-                                placeholder="https://github.com/votre-repo"
-                                className={`w-full px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm ${
-                                  githubUrl && !isGithubUrl(githubUrl) ? 'border-red-400' : 'border-border'
-                                }`}
-                              />
-                              {githubUrl && !isGithubUrl(githubUrl) && (
-                                <p className="text-xs text-red-600 mt-1">Le lien doit être une URL GitHub (https://github.com/...)</p>
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Commentaire (optionnel)</label>
-                              <textarea
-                                rows={2}
-                                value={comment}
-                                onChange={e => setComment(e.target.value)}
-                                placeholder="Décrivez ce que vous avez réalisé..."
-                                className="w-full px-3 py-2 border border-border rounded-lg bg-white resize-none focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                type="submit"
-                                disabled={submitting || !isGithubUrl(githubUrl)}
-                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition flex items-center gap-2 text-sm disabled:opacity-60"
-                              >
-                                <Send className="w-4 h-4" />
-                                {submitting ? 'Envoi...' : 'Mettre à jour'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => { setShowEditForm(false); setSubmitError(''); }}
-                                className="px-4 py-2 border border-border rounded-lg hover:bg-accent transition text-sm"
-                              >
-                                Annuler
-                              </button>
-                            </div>
-                          </form>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

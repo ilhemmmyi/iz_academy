@@ -2,8 +2,8 @@
 import {
   Search, Trash2, Eye, UserPlus, Edit, Copy, CheckCheck,
   ChevronRight, BookOpen, FolderGit2, Award, CheckCircle2, Clock, XCircle,
-  ShieldCheck, Loader2, ExternalLink, AlertCircle, Trophy, HelpCircle,
-  Users, GraduationCap, Briefcase, ShieldAlert, KeyRound,
+  Loader2, ExternalLink, AlertCircle, Trophy, HelpCircle,
+  Users, GraduationCap, Briefcase, KeyRound,
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -24,7 +24,6 @@ import { Skeleton } from '../../components/ui/skeleton';
 import { toast } from 'sonner';
 import { usersApi } from '../../../api/users.api';
 import { coursesApi } from '../../../api/courses.api';
-import { projectsApi } from '../../../api/projects.api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,7 +83,7 @@ const SUBMISSION_STATUS = {
   NEEDS_IMPROVEMENT: { label: 'À améliorer',   color: 'bg-red-50 text-red-700 border-red-200',        icon: XCircle      },
 } as const;
 
-type CertStatus = 'NOT_ELIGIBLE' | 'WAITING_TEACHER' | 'REJECTED' | 'WAITING_ADMIN' | 'APPROVED' | 'GENERATED';
+type CertStatus = 'NOT_ELIGIBLE' | 'WAITING_TEACHER' | 'REJECTED' | 'APPROVED' | 'GENERATED';
 
 function getCertStatus(
   cp: CourseProgress,
@@ -96,8 +95,7 @@ function getCertStatus(
   if (cert) return 'APPROVED'; // cert record exists but no URL yet → generating
   const sub = submissions.find(s => s.project.courseId === cp.courseId);
   if (!sub || cp.percentage < 100) return 'NOT_ELIGIBLE';
-  if (sub.adminApproved) return 'APPROVED';
-  if (sub.status === 'VALIDATED') return 'WAITING_ADMIN';
+  if (sub.status === 'VALIDATED') return 'APPROVED';
   if (sub.status === 'NEEDS_IMPROVEMENT') return 'REJECTED';
   return 'WAITING_TEACHER';
 }
@@ -106,7 +104,6 @@ const CERT_STATUS_CONFIG: Record<CertStatus, { label: string; color: string; Ico
   NOT_ELIGIBLE:   { label: 'Non éligible',      color: 'bg-gray-50 text-gray-500 border-gray-200',         Icon: HelpCircle   },
   WAITING_TEACHER:{ label: 'Attente formateur',  color: 'bg-amber-50 text-amber-700 border-amber-200',      Icon: Clock        },
   REJECTED:       { label: 'À améliorer',        color: 'bg-red-50 text-red-700 border-red-200',            Icon: XCircle      },
-  WAITING_ADMIN:  { label: 'Attente admin',       color: 'bg-violet-50 text-violet-700 border-violet-200',  Icon: ShieldCheck  },
   APPROVED:       { label: 'En génération…',      color: 'bg-teal-50 text-teal-700 border-teal-200',        Icon: Loader2, spin: true },
   GENERATED:      { label: 'Certificat émis',     color: 'bg-green-50 text-green-700 border-green-200',     Icon: Trophy       },
 };
@@ -115,32 +112,25 @@ const CERT_STATUS_CONFIG: Record<CertStatus, { label: string; color: string; Ico
 
 function OverviewSkeleton() {
   return (
-    <div className="px-6 py-5 space-y-6">
-      <div className="space-y-3">
-        <Skeleton className="h-4 w-44" />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white border border-border rounded-xl p-4 space-y-3">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-2 w-full rounded-full" />
+    <div className="px-6 py-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-white border border-border rounded-xl p-5 space-y-4">
+            <Skeleton className="h-5 w-3/4" />
+            <div className="space-y-1.5">
               <div className="flex justify-between">
                 <Skeleton className="h-3 w-1/3" />
-                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-3 w-12" />
               </div>
+              <Skeleton className="h-2 w-full rounded-full" />
             </div>
-          ))}
-        </div>
-      </div>
-      <div className="space-y-3">
-        <Skeleton className="h-4 w-32" />
-        {[1, 2].map(i => (
-          <div key={i} className="bg-white border border-border rounded-xl p-4 space-y-2">
-            <div className="flex justify-between items-start">
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-              <Skeleton className="h-7 w-28 rounded-full ml-4" />
+            <div className="border-t border-border pt-3 space-y-2">
+              <Skeleton className="h-3 w-1/4" />
+              <Skeleton className="h-5 w-28 rounded-full" />
+            </div>
+            <div className="border-t border-border pt-3 space-y-2">
+              <Skeleton className="h-3 w-1/4" />
+              <Skeleton className="h-5 w-28 rounded-full" />
             </div>
           </div>
         ))}
@@ -149,203 +139,140 @@ function OverviewSkeleton() {
   );
 }
 
-function ProgressCard({
-  cp, submissions, certificates,
+function CourseCard({
+  cp, submissions, certificates, onRevoke, revoking,
 }: {
   cp: CourseProgress;
   submissions: Submission[];
   certificates: Certificate[];
-}) {
-  const certStatus = getCertStatus(cp, submissions, certificates);
-  const { label, color, Icon, spin } = CERT_STATUS_CONFIG[certStatus];
-
-  return (
-    <div className="bg-white border border-indigo-100 rounded-xl p-4 shadow-sm space-y-3">
-      <div className="font-medium text-sm truncate" title={cp.courseTitle}>{cp.courseTitle}</div>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 bg-indigo-100 rounded-full h-2">
-          <div
-            className="bg-indigo-500 h-2 rounded-full transition-all"
-            style={{ width: `${cp.percentage}%` }}
-          />
-        </div>
-        <span className="text-xs font-semibold text-indigo-700 w-10 text-right">{cp.percentage}%</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
-          {cp.completed} / {cp.total} leçons
-        </span>
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}>
-          <Icon className={`w-3 h-3 ${spin ? 'animate-spin' : ''}`} />
-          {label}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function SubmissionCard({
-  sub, onApprove, approvingId,
-}: {
-  sub: Submission;
-  onApprove: (sub: Submission) => void;
-  approvingId: string | null;
-}) {
-  const cfg = SUBMISSION_STATUS[sub.status] ?? SUBMISSION_STATUS.PENDING;
-  const StatusIcon = cfg.icon;
-  const canApprove = sub.status === 'VALIDATED' && !sub.adminApproved;
-
-  return (
-    <div className="bg-white border border-violet-100 rounded-xl p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-medium text-sm">{sub.project.title}</div>
-          <a
-            href={sub.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline mt-1"
-          >
-            <ExternalLink className="w-3 h-3" />
-            {sub.githubUrl}
-          </a>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.color}`}>
-            <StatusIcon className="w-3 h-3" />
-            {cfg.label}
-          </span>
-          {sub.adminApproved ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border bg-teal-50 text-teal-700 border-teal-200">
-              <ShieldCheck className="w-3 h-3" />
-              Certificat autorisé
-            </span>
-          ) : canApprove ? (
-            <button
-              onClick={() => onApprove(sub)}
-              disabled={approvingId === sub.id}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition disabled:opacity-60"
-            >
-              {approvingId === sub.id
-                ? <Loader2 className="w-3 h-3 animate-spin" />
-                : <ShieldCheck className="w-3 h-3" />
-              }
-              Autoriser le certificat
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {sub.feedback && (
-        <div className="mt-2 text-xs text-muted-foreground bg-accent/40 rounded-lg px-3 py-2">
-          <span className="font-medium">Retour formateur :</span> {sub.feedback}
-        </div>
-      )}
-      <div className="mt-2 text-xs text-muted-foreground">
-        Soumis le {new Date(sub.submittedAt).toLocaleDateString('fr-FR')}
-        {sub.adminApprovedAt && (
-          <> · Approuvé le {new Date(sub.adminApprovedAt).toLocaleDateString('fr-FR')}</>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CertificateCard({
-  cert, submissions, onRevoke, revoking,
-}: {
-  cert: Certificate;
-  submissions: Submission[];
   onRevoke: (cert: Certificate) => void;
   revoking: boolean;
 }) {
-  // Check validity: must have a VALIDATED + adminApproved submission for this course
-  const validSub = submissions.find(
-    s => s.project.courseId === cert.courseId && s.status === 'VALIDATED' && s.adminApproved,
-  );
-  const invalidSub = submissions.find(
-    s => s.project.courseId === cert.courseId && (s.status === 'NEEDS_IMPROVEMENT' || s.status === 'PENDING'),
-  );
-  const noSub = !submissions.find(s => s.project.courseId === cert.courseId);
-  const isInvalid = !validSub && (invalidSub || noSub);
+  const sub = submissions.find(s => s.project.courseId === cp.courseId);
+  const cert = certificates.find(c => c.courseId === cp.courseId);
+  const certStatus = getCertStatus(cp, submissions, certificates);
+  const { label: certLabel, color: certColor, Icon: CertIcon, spin: certSpin } = CERT_STATUS_CONFIG[certStatus];
 
   return (
-    <div className={`border rounded-xl p-4 shadow-sm space-y-2 ${isInvalid ? 'bg-red-50 border-red-200' : 'bg-white border-amber-100'}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-medium text-sm truncate" title={cert.course.title}>{cert.course.title}</div>
-          <div className="text-xs text-muted-foreground mt-0.5">Formateur : {cert.course.teacher.name}</div>
-          <div className="text-xs text-muted-foreground">Émis le {new Date(cert.issuedAt).toLocaleDateString('fr-FR')}</div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {cert.fileUrl && (
-            <a href={cert.fileUrl} target="_blank" rel="noopener noreferrer"
-              className="p-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition" title="Télécharger">
-              <ExternalLink className="w-4 h-4" />
-            </a>
-          )}
-          {!cert.fileUrl && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground bg-accent/50 rounded-lg">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Génération…
-            </span>
-          )}
-          <button
-            onClick={() => onRevoke(cert)}
-            disabled={revoking}
-            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition disabled:opacity-50"
-            title="Révoquer le certificat"
-          >
-            {revoking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-          </button>
+    <div className="bg-white border border-indigo-100 rounded-xl shadow-sm overflow-hidden">
+      {/* ── Header : nom du cours ─── */}
+      <div className="px-4 pt-3 pb-2 border-b border-indigo-50">
+        <div className="font-semibold text-sm text-slate-800 leading-tight" title={cp.courseTitle}>
+          {cp.courseTitle}
         </div>
       </div>
-      {isInvalid && (
-        <div className="flex items-center gap-2 text-xs text-red-700 bg-red-100 border border-red-200 rounded-lg px-3 py-2">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          {noSub
-            ? 'Certificat invalide : aucun projet soumis pour ce cours.'
-            : `Certificat invalide : projet "${invalidSub?.project?.title}" non validé (${invalidSub?.status === 'NEEDS_IMPROVEMENT' ? 'à améliorer' : 'en attente'}).`}
+
+      <div className="px-4 py-3 space-y-3">
+
+        {/* ── Progression ─── */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-indigo-600 uppercase tracking-wide">Progression</span>
+            <span className="text-xs font-bold text-indigo-700">{cp.percentage}%</span>
+          </div>
+          <div className="bg-indigo-100 rounded-full h-2">
+            <div
+              className="bg-indigo-500 h-2 rounded-full transition-all"
+              style={{ width: `${cp.percentage}%` }}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {cp.completed} / {cp.total} leçons complétées
+          </div>
         </div>
-      )}
+
+        {/* ── Projet ─── */}
+        <div className="space-y-2 border-t border-slate-100 pt-3">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-violet-600 uppercase tracking-wide">
+            <FolderGit2 className="w-3.5 h-3.5" />
+            Projet
+          </div>
+          {!sub ? (
+            <span className="text-xs text-muted-foreground">Aucun projet soumis</span>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-slate-700 truncate">{sub.project.title}</span>
+                {(() => {
+                  const cfg = SUBMISSION_STATUS[sub.status] ?? SUBMISSION_STATUS.PENDING;
+                  const StatusIcon = cfg.icon;
+                  return (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${cfg.color}`}>
+                      <StatusIcon className="w-3 h-3" />
+                      {cfg.label}
+                    </span>
+                  );
+                })()}
+              </div>
+              <a
+                href={sub.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:underline"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Voir le projet
+              </a>
+              {sub.feedback && (
+                <div className="text-xs text-muted-foreground bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <span className="font-medium text-slate-600">Retour formateur : </span>{sub.feedback}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground">
+                Soumis le {new Date(sub.submittedAt).toLocaleDateString('fr-FR')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Certificat ─── */}
+        <div className="space-y-2 border-t border-slate-100 pt-3">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-amber-600 uppercase tracking-wide">
+            <Award className="w-3.5 h-3.5" />
+            Certificat
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${certColor}`}>
+              <CertIcon className={`w-3 h-3 ${certSpin ? 'animate-spin' : ''}`} />
+              {certLabel}
+            </span>
+            {cert && (
+              <div className="flex items-center gap-1.5">
+                {cert.fileUrl && (
+                  <a
+                    href={cert.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-100 transition"
+                    title="Télécharger le certificat"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Télécharger
+                  </a>
+                )}
+                <button
+                  onClick={() => onRevoke(cert)}
+                  disabled={revoking}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition disabled:opacity-50"
+                  title="Révoquer"
+                >
+                  {revoking ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                  Révoquer
+                </button>
+              </div>
+            )}
+          </div>
+          {cert && (
+            <div className="text-xs text-muted-foreground">
+              Émis le {new Date(cert.issuedAt).toLocaleDateString('fr-FR')}
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }
-
-function ConfirmApproveModal({
-  submission, onConfirm, onCancel,
-}: {
-  submission: Submission | null;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <AlertDialog open={submission !== null}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Autoriser le certificat</AlertDialogTitle>
-          <AlertDialogDescription>
-            Confirmez-vous l&apos;autorisation du certificat pour le projet{' '}
-            <strong>{submission?.project.title}</strong> ?{' '}
-            Cette action déclenchera la génération du certificat pour l&apos;étudiant.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Annuler</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className="bg-teal-600 hover:bg-teal-700 text-white"
-          >
-            <ShieldCheck className="w-4 h-4 mr-1.5" />
-            Autoriser
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AdminUsers() {
@@ -373,11 +300,6 @@ export function AdminUsers() {
   const [overview, setOverview] = useState<StudentOverview | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState('');
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-
-  // Confirmation modal
-  const [pendingApproval, setPendingApproval] = useState<Submission | null>(null);
-
   // Certificate revocation
   const [revokingCertId, setRevokingCertId] = useState<string | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<Certificate | null>(null);
@@ -416,29 +338,6 @@ export function AdminUsers() {
       setOverviewLoading(false);
     }
   }, [expandedStudentId]);
-
-  const confirmApprove = async () => {
-    if (!pendingApproval) return;
-    const sub = pendingApproval;
-    setPendingApproval(null);
-    setApprovingId(sub.id);
-    try {
-      await projectsApi.adminApprove(sub.id);
-      toast.success('Certificat autorisé', {
-        description: `La génération du certificat pour "${sub.project.title}" a été déclenchée.`,
-      });
-      if (expandedStudentId) {
-        const data = await usersApi.getStudentOverview(expandedStudentId) as StudentOverview;
-        setOverview(data);
-      }
-    } catch (err: any) {
-      toast.error('Erreur', {
-        description: err?.message || "Impossible d'autoriser le certificat.",
-      });
-    } finally {
-      setApprovingId(null);
-    }
-  };
 
   const confirmRevoke = async () => {
     if (!pendingRevoke || !expandedStudentId) return;
@@ -573,6 +472,7 @@ export function AdminUsers() {
 
   const filteredUsers = users.filter(u => {
     const role = u.role.toLowerCase();
+    if (role === 'admin') return false;
     const matchRole = filterRole === 'all' || role === filterRole;
     const matchSearch =
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -584,7 +484,6 @@ export function AdminUsers() {
 
   const studentCount = users.filter(u => u.role.toLowerCase() === 'student').length;
   const teacherCount = users.filter(u => u.role.toLowerCase() === 'teacher').length;
-  const adminCount   = users.filter(u => u.role.toLowerCase() === 'admin').length;
 
   return (
     <AdminLayout>
@@ -623,14 +522,9 @@ export function AdminUsers() {
               <span className="text-sm font-medium text-teal-600">{teacherCount}</span>
               <span className="text-xs text-teal-400">Formateurs</span>
             </div>
-            <div className="flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-xl px-4 py-2">
-              <ShieldAlert className="w-4 h-4 text-violet-400" />
-              <span className="text-sm font-medium text-violet-600">{adminCount}</span>
-              <span className="text-xs text-violet-400">Admins</span>
-            </div>
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
               <Users className="w-4 h-4 text-slate-400" />
-              <span className="text-sm font-medium text-slate-600">{users.length}</span>
+              <span className="text-sm font-medium text-slate-600">{studentCount + teacherCount}</span>
               <span className="text-xs text-slate-400">Total</span>
             </div>
           </div>
@@ -664,7 +558,6 @@ export function AdminUsers() {
               <option value="all">Tous les utilisateurs</option>
               <option value="student">Étudiants</option>
               <option value="teacher">Formateurs</option>
-              <option value="admin">Administrateurs</option>
             </select>
           </div>
         </div>
@@ -789,75 +682,23 @@ export function AdminUsers() {
                               </div>
                             </div>
                           ) : overview && overview.user.id === u.id ? (
-                            <div className="px-6 py-5 space-y-6">
-
-                              {/* 1. Progression par cours */}
-                              <section>
-                                <h3 className="flex items-center gap-2 text-sm font-semibold text-indigo-700 mb-3">
-                                  <BookOpen className="w-4 h-4" />
-                                  Progression des cours
-                                </h3>
-                                {overview.progressByCourse.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground">Aucune inscription approuvée.</p>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                                    {overview.progressByCourse.map(cp => (
-                                      <ProgressCard
-                                        key={cp.courseId}
-                                        cp={cp}
-                                        submissions={overview.submissions}
-                                        certificates={overview.certificates}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                              </section>
-
-                              {/* 2. Projets soumis */}
-                              <section>
-                                <h3 className="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-3">
-                                  <FolderGit2 className="w-4 h-4" />
-                                  Projets soumis
-                                </h3>
-                                {overview.submissions.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground">Aucun projet soumis.</p>
-                                ) : (
-                                  <div className="space-y-3">
-                                    {overview.submissions.map(sub => (
-                                      <SubmissionCard
-                                        key={sub.id}
-                                        sub={sub}
-                                        onApprove={setPendingApproval}
-                                        approvingId={approvingId}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                              </section>
-
-                              {/* 3. Certificats */}
-                              <section>
-                                <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-700 mb-3">
-                                  <Award className="w-4 h-4" />
-                                  Certificats obtenus
-                                </h3>
-                                {overview.certificates.length === 0 ? (
-                                  <p className="text-sm text-muted-foreground">Aucun certificat pour l&apos;instant.</p>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                                    {overview.certificates.map(cert => (
-                                      <CertificateCard
-                                        key={cert.id}
-                                        cert={cert}
-                                        submissions={overview.submissions}
-                                        onRevoke={setPendingRevoke}
-                                        revoking={revokingCertId === cert.id}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                              </section>
-
+                            <div className="px-6 py-5">
+                              {overview.progressByCourse.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">Aucune inscription approuvée.</p>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {overview.progressByCourse.map(cp => (
+                                    <CourseCard
+                                      key={cp.courseId}
+                                      cp={cp}
+                                      submissions={overview.submissions}
+                                      certificates={overview.certificates}
+                                      onRevoke={setPendingRevoke}
+                                      revoking={revokingCertId === overview.certificates.find(c => c.courseId === cp.courseId)?.id}
+                                    />
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ) : null}
                         </td>
@@ -869,13 +710,6 @@ export function AdminUsers() {
             </tbody>
           </table>
         </div>
-
-        {/* ── Confirm Approve Modal ─────────────────────────────────────────── */}
-        <ConfirmApproveModal
-          submission={pendingApproval}
-          onConfirm={confirmApprove}
-          onCancel={() => setPendingApproval(null)}
-        />
 
         {/* ── Confirm Revoke Certificate Modal ──────────────────────────────── */}
         <AlertDialog open={pendingRevoke !== null}>

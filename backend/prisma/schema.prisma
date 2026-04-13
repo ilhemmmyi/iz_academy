@@ -42,6 +42,8 @@ enum ActivityType {
   COMMENT_REPLY
   MESSAGE
   PROJECT_UPDATE
+  ENROLLMENT_APPROVED
+  CERTIFICATE_ISSUED
 }
 
 enum LessonResourceType {

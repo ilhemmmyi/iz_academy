@@ -69,19 +69,25 @@ export const EmailService = {
     });
   },
 
-  async sendContactReply(data: { to: string; name: string; subject: string; replyMessage: string }) {
+  async sendContactReply(data: { to: string; name: string; subject: string; replyMessage: string; originalMessage?: string }) {
     await resend.emails.send({
       from: FROM,
       to: [data.to],
-      subject: `Réponse à votre message : ${esc(data.subject)}`,
+      subject: `Re: ${esc(data.subject)}`,
       html: `
         <p>Bonjour ${esc(data.name)},</p>
-        <p>Merci de nous avoir contactés. Voici notre réponse :</p>
+        <p>Voici la réponse de notre équipe&nbsp;:</p>
         <p>${nl2br(esc(data.replyMessage))}</p>
+        <br />
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0" />
+        <p style="color:#6b7280;font-size:13px"><strong>Message original&nbsp;:</strong><br />
+        <em>Sujet&nbsp;:</em> ${esc(data.subject)}<br />
+        <em>Message&nbsp;:</em> ${nl2br(esc(data.originalMessage ?? ''))}</p>
         <br />
         <p>Cordialement,<br />L'équipe Iz Academy</p>
       `,
     });
   },
+
 };
 

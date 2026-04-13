@@ -68,21 +68,18 @@ export function AdminEnrollmentRequests() {
     }
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleDelete = async (requestId: string) => {
     try {
-      await enrollmentsApi.updateStatus(requestId, 'REJECTED');
-      setRequests(requests.map(r =>
-        r.id === requestId ? { ...r, status: 'rejected' as const } : r
-      ));
-      toast.success('Demande rejetée');
+      await enrollmentsApi.delete(requestId);
+      setRequests(requests.filter(r => r.id !== requestId));
+      toast.success('Demande supprimée');
     } catch {
-      toast.error('Erreur lors du rejet');
+      toast.error('Erreur lors de la suppression');
     }
   };
 
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const approvedRequests = requests.filter(r => r.status === 'approved');
-  const rejectedRequests = requests.filter(r => r.status === 'rejected');
 
   const RequestCard = ({ request }: { request: EnrollmentRequest }) => (
     <Card>
@@ -145,10 +142,10 @@ export function AdminEnrollmentRequests() {
               <Button 
                 variant="destructive"
                 className="flex-1"
-                onClick={() => handleReject(request.id)}
+                onClick={() => handleDelete(request.id)}
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                Rejeter
+                Supprimer
               </Button>
             </div>
           )}
@@ -205,23 +202,7 @@ export function AdminEnrollmentRequests() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-red-400 border-red-100 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-red-600 mb-1">
-                    {rejectedRequests.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Rejetées
-                  </div>
-                </div>
-                <div className="p-3 bg-red-50 rounded-lg">
-                  <XCircle className="w-8 h-8 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
         </div>
 
         {/* Liste des demandes */}
@@ -233,9 +214,7 @@ export function AdminEnrollmentRequests() {
             <TabsTrigger value="approved">
               Approuvées ({approvedRequests.length})
             </TabsTrigger>
-            <TabsTrigger value="rejected">
-              Rejetées ({rejectedRequests.length})
-            </TabsTrigger>
+  
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4 mt-6">
@@ -266,13 +245,7 @@ export function AdminEnrollmentRequests() {
             </div>
           </TabsContent>
 
-          <TabsContent value="rejected" className="space-y-4 mt-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {rejectedRequests.map(request => (
-                <RequestCard key={request.id} request={request} />
-              ))}
-            </div>
-          </TabsContent>
+
         </Tabs>
       </div>
     </AdminLayout>

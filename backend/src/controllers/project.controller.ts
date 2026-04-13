@@ -18,7 +18,6 @@ export const ProjectController = {
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
       if (err.code === 'LESSONS_INCOMPLETE') return res.status(403).json({ message: 'Vous devez completer toutes les lecons avant de soumettre un projet.' });
-      if (err.code === 'GRACE_EXPIRED') return res.status(403).json({ message: 'La période de modification est terminée (15 minutes écoulées). Votre projet a été envoyé au formateur.' });
       res.status(500).json({ message: 'Failed to submit project' });
     }
   },
@@ -61,7 +60,6 @@ export const ProjectController = {
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Submission not found' });
       if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      if (err.code === 'GRACE_EXPIRED') return res.status(403).json({ message: 'La période de suppression est terminée (15 minutes écoulées). Votre projet a été envoyé au formateur.' });
       res.status(500).json({ message: 'Failed to delete submission' });
     }
   },

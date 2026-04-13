@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useParams, Link, useNavigate } from 'react-router';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
@@ -95,8 +96,12 @@ export function CourseDetailPage() {
     try {
       await enrollmentsApi.request(id!);
       setEnrollmentStatus('PENDING');
+      toast.success(
+        'Veuillez contacter notre équipe pour compléter le processus de paiement',
+        { duration: 6000 },
+      );
     } catch {
-      alert("Erreur lors de la demande d'inscription.");
+      toast.error("Erreur lors de la demande d'inscription.");
     }
   };
 

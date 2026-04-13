@@ -67,7 +67,6 @@ export const ProjectModel = {
     prisma.projectSubmission.findMany({
       where: {
         courseId: { in: courseIds },
-        submittedAt: { lte: new Date(Date.now() - 3 * 60 * 1000) },
       },
       include: {
         project: { select: { id: true, title: true } },

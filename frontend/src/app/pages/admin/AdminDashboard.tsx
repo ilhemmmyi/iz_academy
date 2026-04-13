@@ -1,6 +1,6 @@
 import { AdminLayout } from '../../components/AdminLayout';
 import { Link } from 'react-router';
-import { Users, BookOpen, UserPlus, GraduationCap, Eye, Bell } from 'lucide-react';
+import { Users, BookOpen, UserPlus, GraduationCap, Eye } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -111,17 +111,7 @@ export function AdminDashboard() {
             <h1 className="mb-2">Tableau de bord administrateur</h1>
             <p className="text-muted-foreground">Vue d'ensemble de la plateforme Iz Academy</p>
           </div>
-          <Link to="/admin/enrollment-requests">
-            <Button variant="outline" className="relative">
-              <Bell className="w-5 h-5 mr-2" />
-              Demandes d'inscription
-              {pendingRequests > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-                  {pendingRequests}
-                </span>
-              )}
-            </Button>
-          </Link>
+
         </div>
 
         {/* Statistiques */}

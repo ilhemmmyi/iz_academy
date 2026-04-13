@@ -1,6 +1,6 @@
 import { prisma } from '../config/prisma';
 
-export type ActivityTypeVal = 'COMMENT_REPLY' | 'MESSAGE' | 'PROJECT_UPDATE';
+export type ActivityTypeVal = 'COMMENT_REPLY' | 'MESSAGE' | 'PROJECT_UPDATE' | 'ENROLLMENT_APPROVED' | 'CERTIFICATE_ISSUED';
 
 export const ActivityModel = {
   create: (userId: string, type: ActivityTypeVal, message: string, link?: string) =>

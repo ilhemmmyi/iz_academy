@@ -12,3 +12,4 @@ enrollmentRouter.get('/', authenticate, requireRole('ADMIN'), EnrollmentControll
 enrollmentRouter.get('/me', authenticate, EnrollmentController.getMyEnrollments);
 enrollmentRouter.get('/teacher/students', authenticate, requireRole('TEACHER'), EnrollmentController.getTeacherStudents);
 enrollmentRouter.put('/:id', authenticate, requireRole('ADMIN'), validate(enrollmentStatusSchema), EnrollmentController.updateStatus);
+enrollmentRouter.delete('/:id', authenticate, requireRole('ADMIN'), EnrollmentController.deleteEnrollment);
