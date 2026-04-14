@@ -103,6 +103,25 @@ export const CourseModel = {
       videoProgress[p.lessonId] = { watchedSeconds: p.watchedSeconds, durationSeconds: p.durationSeconds };
     }
 
+    // Build a map of lesson durations from the Lesson table for ALL lessons (even unvisited)
+    // Also query LessonProgress across ALL users to find the best-known duration per lesson
+    // (Lesson.durationSeconds may still be 0 if the lesson was just created and no one has finished it)
+    const allKnownProgress = await prisma.lessonProgress.groupBy({
+      by: ['lessonId'],
+      where: { lesson: { module: { courseId } } },
+      _max: { durationSeconds: true },
+    });
+    const knownDurationsFromProgress: Record<string, number> = {};
+    for (const p of allKnownProgress) {
+      knownDurationsFromProgress[p.lessonId] = p._max.durationSeconds ?? 0;
+    }
+
+    const lessonDurations: Record<string, number> = {};
+    for (const l of allLessons) {
+      // Use the highest value from either the Lesson row or any user's progress record
+      lessonDurations[l.id] = Math.max(l.durationSeconds ?? 0, knownDurationsFromProgress[l.id] ?? 0);
+    }
+
     // Determine which lessons' quizzes the student has passed
     const passedQuizLessonIds: string[] = [];
     const lessonsWithQuizzes = allLessons.filter(l => l.quizId);
@@ -128,6 +147,7 @@ export const CourseModel = {
       completedLessonIds,
       videoProgress,
       passedQuizLessonIds,
+      lessonDurations,
     };
   },
 };

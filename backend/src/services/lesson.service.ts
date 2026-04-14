@@ -5,7 +5,7 @@ import { config } from '../config';
 import { LessonModel } from '../models/lesson.model';
 import { EnrollmentModel } from '../models/enrollment.model';
 
-const LESSON_COMPLETE_THRESHOLD = 0.9;
+const LESSON_COMPLETE_THRESHOLD = 1.0;
 const COMPLETE_THRESHOLD_EPSILON = 0.001;
 
 /** Shared helper: check if course is fully complete and emit certificate if so. */
@@ -89,6 +89,14 @@ export const LessonService = {
     await LessonModel.upsertProgress(userId, lessonId, updateData);
     console.log(`[Backend Progress Saved] Lesson ${lessonId} progress upserted`);
 
+    // Persist the real video duration on the Lesson row so future progress
+    // calculations can use it without relying on individual LessonProgress records
+    if (normalizedDuration > 0 && normalizedDuration > (lesson.durationSeconds ?? 0)) {
+      await prisma.lesson.update({
+        where: { id: lessonId },
+        data: { durationSeconds: normalizedDuration },
+      }).catch(() => {}); // non-fatal
+    }
     // If newly completed via video progress, also check certificate eligibility
     if (isNewCompletion) {
       checkAndIssueCertificate(userId, lessonId).catch((err) =>

@@ -63,4 +63,13 @@ export const EnrollmentController = {
       res.status(500).json({ message: 'Failed to delete enrollment' });
     }
   },
+
+  async getWatchStats(req: AuthRequest, res: Response) {
+    try {
+      const data = await EnrollmentService.getWatchStats(req.user!.userId);
+      res.json(data);
+    } catch {
+      res.status(500).json({ message: 'Failed to fetch watch stats' });
+    }
+  },
 };

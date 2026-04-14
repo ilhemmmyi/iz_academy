@@ -1,0 +1,1 @@
+import{g as r}from"./index-CpZSoyBR.js";const o={create:e=>r("/reports",{method:"POST",body:JSON.stringify(e)}),getAll:()=>r("/reports"),markReviewed:e=>r(`/reports/${e}/review`,{method:"PUT"})};export{o as r};

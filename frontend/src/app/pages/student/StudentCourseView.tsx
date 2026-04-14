@@ -58,10 +58,11 @@ export function StudentCourseView() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState<any>(null);
-  const [progress, setProgress] = useState<{ completedLessonIds: string[]; videoProgress: VideoProgressMap; passedQuizLessonIds: string[] }>({
+  const [progress, setProgress] = useState<{ completedLessonIds: string[]; videoProgress: VideoProgressMap; passedQuizLessonIds: string[]; lessonDurations: Record<string, number> }>({
     completedLessonIds: [],
     videoProgress: {},
     passedQuizLessonIds: [],
+    lessonDurations: {},
   });
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -91,11 +92,13 @@ export function StudentCourseView() {
     if (!courseId) return;
     try {
       const p = await coursesApi.getProgress(courseId);
-      setProgress({
+      setProgress(prev => ({
         completedLessonIds: p.completedLessonIds || [],
         videoProgress: p.videoProgress || {},
         passedQuizLessonIds: p.passedQuizLessonIds || [],
-      });
+        // Merge lessonDurations: keep previously known durations so totalDuration never collapses
+        lessonDurations: { ...(prev.lessonDurations || {}), ...(p.lessonDurations || {}) },
+      }));
     } catch {}
   }, [courseId]);
 
@@ -119,7 +122,7 @@ export function StudentCourseView() {
       resourcesApi.getResources(courseId).catch(() => []),
     ]).then(([c, p, res]) => {
       setCourse(c);
-      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [] });
+      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [], lessonDurations: p.lessonDurations || {} });
       setCourseResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
       if (firstLesson) {
@@ -163,7 +166,28 @@ export function StudentCourseView() {
 
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
-    if (!video) return;
+    const lesson = selectedLessonRef.current;
+    if (!video || !lesson) return;
+
+    // Record the real video duration in state so totalDuration is accurate for ALL lessons
+    // not just lessons the user has watched (fixes global course progress calculation)
+    if (video.duration && !isNaN(video.duration) && video.duration > 0) {
+      setProgress(prev => ({
+        ...prev,
+        lessonDurations: {
+          ...prev.lessonDurations,
+          [lesson.id]: Math.max(prev.lessonDurations[lesson.id] ?? 0, video.duration),
+        },
+        videoProgress: {
+          ...prev.videoProgress,
+          [lesson.id]: {
+            watchedSeconds: prev.videoProgress[lesson.id]?.watchedSeconds ?? 0,
+            durationSeconds: Math.max(prev.videoProgress[lesson.id]?.durationSeconds ?? 0, video.duration),
+          },
+        },
+      }));
+    }
+
     const saved = maxWatchedRef.current;
     if (saved > 0 && saved < video.duration) {
       video.currentTime = saved;
@@ -224,11 +248,11 @@ export function StudentCourseView() {
       }));
     }
 
-    // ── Auto-complete at 90% ────────────────────────────────────────────────
+    // ── Auto-complete at 100% ───────────────────────────────────────────────
     if (
       !hasAutoCompletedRef.current &&
       !isCompleted(lesson.id) &&
-      maxWatchedRef.current / duration >= 0.9
+      maxWatchedRef.current / duration >= 1.0
     ) {
       hasAutoCompletedRef.current = true;
       lessonsApi.complete(lesson.id)
@@ -312,7 +336,38 @@ export function StudentCourseView() {
   const allLessons: any[] = (course.modules || []).flatMap((m: any) => m.lessons || []);
   const totalLessons = allLessons.length;
   const completedCount = progress.completedLessonIds.length;
-  const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+  // Duration-based progress
+  // Priority: 1) videoProgress[id].durationSeconds (from active session) 2) lessonDurations[id] (from Lesson table, all lessons) 3) l.durationSeconds (from course data)
+  const getLessonDuration = (l: any): number =>
+    progress.videoProgress?.[l.id]?.durationSeconds
+    || progress.lessonDurations?.[l.id]
+    || l.durationSeconds
+    || 0;
+
+  const totalDuration = allLessons.reduce((acc: number, l: any) => acc + getLessonDuration(l), 0);
+
+  // Watch-time based: sum actual watched seconds (capped at lesson duration, not just completed lessons)
+  const watchedDuration = allLessons.reduce((acc: number, l: any) => {
+    const watched = progress.videoProgress[l.id]?.watchedSeconds || 0;
+    const cap = getLessonDuration(l);
+    return acc + (cap > 0 ? Math.min(watched, cap) : watched);
+  }, 0);
+
+  // If ALL lessons are marked completed → force 100% (handles rounding / threshold gaps)
+  const allLessonsCompleted = totalLessons > 0 && completedCount >= totalLessons;
+  const progressPct = allLessonsCompleted
+    ? 100
+    : totalDuration > 0 ? Math.round((watchedDuration / totalDuration) * 100) : 0;
+
+  // Format seconds → "X min Y sec"
+  const fmtDuration = (sec: number) => {
+    const totalSec = Math.floor(sec);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    if (m === 0) return `${s} sec`;
+    return s > 0 ? `${m} min ${s} sec` : `${m} min`;
+  };
 
   const isUnlockedHelper = (lessonId: string): boolean => {
     const idx = allLessons.findIndex(l => l.id === lessonId);
@@ -615,7 +670,7 @@ export function StudentCourseView() {
               {/* Progression — inside Contenu du cours */}
               <div className="p-4 border-t border-indigo-100">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">{completedCount} / {totalLessons} leçons</span>
+                  <span className="text-muted-foreground">{fmtDuration(allLessonsCompleted ? totalDuration : watchedDuration)} / {fmtDuration(totalDuration)}</span>
                   <span className="font-semibold text-teal-600">{progressPct}%</span>
                 </div>
                 <div className="w-full h-2 bg-teal-100 rounded-full overflow-hidden">

@@ -51,7 +51,33 @@ export const EnrollmentService = {
 
   getAll: () => EnrollmentModel.findAll(),
 
-  delete: (id: string) => EnrollmentModel.delete(id),
+  async delete(id: string) {
+    // Fetch the enrollment first so we know user + course to wipe progress
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { id },
+      select: { userId: true, courseId: true },
+    });
+    if (!enrollment) return prisma.enrollment.delete({ where: { id } }); // let it throw naturally if not found
+
+    return prisma.$transaction([
+      // Delete all lesson progress for this student in this course
+      prisma.lessonProgress.deleteMany({
+        where: {
+          userId: enrollment.userId,
+          lesson: { module: { courseId: enrollment.courseId } },
+        },
+      }),
+      // Delete quiz attempts belonging to this course
+      prisma.quizAttempt.deleteMany({
+        where: {
+          userId: enrollment.userId,
+          quiz: { lessons: { some: { module: { courseId: enrollment.courseId } } } },
+        },
+      }),
+      // Delete the enrollment itself
+      prisma.enrollment.delete({ where: { id } }),
+    ]);
+  },
 
   async getByUser(userId: string) {
     const enrollments = await EnrollmentModel.findByUser(userId);
@@ -63,29 +89,37 @@ export const EnrollmentService = {
 
     if (approvedCourseIds.length === 0) return enrollments.map(e => ({ ...e, progress: null }));
 
-    // Fetch total lesson counts per course
+    // Fetch total lesson counts and durations per course
     const courses = await prisma.course.findMany({
       where: { id: { in: approvedCourseIds } },
-      include: { modules: { include: { lessons: { select: { id: true } } } } },
+      include: { modules: { include: { lessons: { select: { id: true, durationSeconds: true } } } } },
     });
     const totalLessonsMap: Record<string, number> = {};
+    const totalDurationMap: Record<string, number> = {};
     courses.forEach(c => {
       totalLessonsMap[c.id] = c.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+      // Use durationSeconds if set; fall back to 1s per lesson so courses without
+      // durations still produce a sensible 0–100% range (guarded against div/0)
+      totalDurationMap[c.id] = c.modules.reduce(
+        (acc, m) => acc + m.lessons.reduce((a, l) => a + (l.durationSeconds > 0 ? l.durationSeconds : 1), 0), 0,
+      );
     });
 
-    // Fetch completed lesson counts per course for this user
+    // Fetch completed lesson durations per course for this user
     const lessonProgress = await prisma.lessonProgress.findMany({
       where: {
         userId,
         completed: true,
         lesson: { module: { courseId: { in: approvedCourseIds } } },
       },
-      include: { lesson: { include: { module: { select: { courseId: true } } } } },
+      include: { lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } } },
     });
     const completedLessonsMap: Record<string, number> = {};
+    const completedDurationMap: Record<string, number> = {};
     lessonProgress.forEach(p => {
       const cId = p.lesson.module.courseId;
       completedLessonsMap[cId] = (completedLessonsMap[cId] || 0) + 1;
+      completedDurationMap[cId] = (completedDurationMap[cId] || 0) + (p.lesson.durationSeconds > 0 ? p.lesson.durationSeconds : 1);
     });
 
     // Fetch project submissions for this user
@@ -109,7 +143,10 @@ export const EnrollmentService = {
 
       const totalLessons = totalLessonsMap[e.courseId] || 0;
       const completedLessons = completedLessonsMap[e.courseId] || 0;
-      const lessonPct = totalLessons > 0 ? (completedLessons / totalLessons) * 70 : 0;
+      const totalDuration = totalDurationMap[e.courseId] || 0;
+      const completedDuration = completedDurationMap[e.courseId] || 0;
+      // Duration-based lesson progress (70% weight); safe against division by zero
+      const lessonPct = totalDuration > 0 ? (completedDuration / totalDuration) * 70 : 0;
 
       const projectStatus = submissionMap[e.courseId] ?? null;
       let projectPct = 0;
@@ -135,13 +172,17 @@ export const EnrollmentService = {
     // Get all courses by this teacher
     const courses = await prisma.course.findMany({
       where: { teacherId },
-      include: { modules: { include: { lessons: { select: { id: true } } } } },
+      include: { modules: { include: { lessons: { select: { id: true, durationSeconds: true } } } } },
     });
 
     const courseIds = courses.map(c => c.id);
     const totalLessonsMap: Record<string, number> = {};
+    const totalDurationMap: Record<string, number> = {};
     courses.forEach(c => {
       totalLessonsMap[c.id] = c.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+      totalDurationMap[c.id] = c.modules.reduce(
+        (acc, m) => acc + m.lessons.reduce((a, l) => a + (l.durationSeconds > 0 ? l.durationSeconds : 1), 0), 0,
+      );
     });
 
     // Get approved enrollments for those courses
@@ -151,17 +192,21 @@ export const EnrollmentService = {
     const studentIds = [...new Set(enrollments.map(e => e.userId))];
     const allProgress = await LessonModel.findCompletedByCourseIds(studentIds, courseIds);
 
-    // Group completed lessons by userId+courseId
+    // Group completed lessons by userId+courseId (count and duration)
     const completedMap: Record<string, number> = {};
+    const completedDurationMap: Record<string, number> = {};
     allProgress.forEach(p => {
       const key = `${p.userId}:${p.lesson.module.courseId}`;
       completedMap[key] = (completedMap[key] || 0) + 1;
+      completedDurationMap[key] = (completedDurationMap[key] || 0) + (p.lesson.durationSeconds > 0 ? p.lesson.durationSeconds : 1);
     });
 
     return enrollments.map(e => {
       const total = totalLessonsMap[e.courseId] || 0;
       const completed = completedMap[`${e.userId}:${e.courseId}`] || 0;
-      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+      const totalDuration = totalDurationMap[e.courseId] || 0;
+      const completedDuration = completedDurationMap[`${e.userId}:${e.courseId}`] || 0;
+      const percentage = totalDuration > 0 ? Math.round((completedDuration / totalDuration) * 100) : 0;
       return {
         id: e.id,
         student: e.user,
@@ -170,5 +215,35 @@ export const EnrollmentService = {
         progress: { total, completed, percentage },
       };
     });
+  },
+
+  /**
+   * Returns per-day watched seconds for the last `days` days (today first).
+   * Aggregates across ALL enrolled courses for this user.
+   */
+  async getWatchStats(userId: string, days = 10) {
+    const now = new Date();
+    const result: { day: string; seconds: number }[] = [];
+
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
+      const end   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+      // Sum watchedSeconds for LessonProgress rows updated on this day
+      const agg = await prisma.lessonProgress.aggregate({
+        where: {
+          userId,
+          updatedAt: { gte: start, lte: end },
+        },
+        _sum: { watchedSeconds: true },
+      });
+
+      const label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+      result.push({ day: label, seconds: agg._sum.watchedSeconds ?? 0 });
+    }
+
+    return result; // index 0 = today, index 1 = yesterday, …
   },
 };

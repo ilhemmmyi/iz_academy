@@ -88,7 +88,7 @@ export const LessonModel = {
         lesson: { module: { courseId: { in: courseIds } } },
         completed: true,
       },
-      include: { lesson: { select: { moduleId: true, module: { select: { courseId: true } } } } },
+      include: { lesson: { select: { moduleId: true, durationSeconds: true, module: { select: { courseId: true } } } } },
     }),
 
   updateQuizId: (id: string, quizId: string | null) =>

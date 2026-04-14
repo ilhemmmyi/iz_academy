@@ -134,9 +134,27 @@ export const UserService = {
   },
 
   async removeStudentCourseAccess(studentId: string, courseId: string) {
-    await prisma.enrollment.deleteMany({
-      where: { userId: studentId, courseId },
-    });
+    await prisma.$transaction([
+      // Delete all lesson progress for this student in this course
+      prisma.lessonProgress.deleteMany({
+        where: {
+          userId: studentId,
+          lesson: { module: { courseId } },
+        },
+      }),
+      // Delete quiz attempts for quizzes belonging to this course
+      prisma.quizAttempt.deleteMany({
+        where: {
+          userId: studentId,
+          quiz: { lessons: { some: { module: { courseId } } } },
+        },
+      }),
+      // Delete the enrollment itself
+      prisma.enrollment.deleteMany({
+        where: { userId: studentId, courseId },
+      }),
+    ]);
+    console.log(`[Admin] Removed access + progress for user ${studentId} on course ${courseId}`);
   },
 
   /**

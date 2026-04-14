@@ -15,4 +15,7 @@ export const enrollmentsApi = {
     apiClient(`/enrollments/${id}`, { method: 'DELETE' }),
 
   getTeacherStudents: () => apiClient('/enrollments/teacher/students'),
+
+  getWatchStats: () =>
+    apiClient('/enrollments/watch-stats') as Promise<{ day: string; seconds: number }[]>,
 };
