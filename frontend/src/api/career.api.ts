@@ -8,6 +8,7 @@ export interface CareerQuestionnaire {
   hoursPerWeek: string;
   learningStyle: string;
   shortTermGoal: string;
+  customAnswers?: Record<string, string>;
 }
 
 export interface RecommendedCourse {

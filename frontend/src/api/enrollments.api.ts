@@ -1,8 +1,15 @@
 import { apiClient } from './client';
 
+export interface EnrollmentExtraInfo {
+  phone: string;
+  address: string;
+  educationLevel: string;
+  studentStatus: string;
+}
+
 export const enrollmentsApi = {
-  request: (courseId: string, message?: string) =>
-    apiClient('/enrollments', { method: 'POST', body: JSON.stringify({ courseId, message }) }),
+  request: (courseId: string, message?: string, extraInfo?: EnrollmentExtraInfo) =>
+    apiClient('/enrollments', { method: 'POST', body: JSON.stringify({ courseId, message, ...extraInfo }) }),
 
   getAll: () => apiClient('/enrollments'),
 

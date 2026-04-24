@@ -27,7 +27,7 @@ import {
   AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import { coursesApi } from '../../api/courses.api';
-import { enrollmentsApi } from '../../api/enrollments.api';
+import { enrollmentsApi, EnrollmentExtraInfo } from '../../api/enrollments.api';
 import { useAuth } from '../../context/AuthContext';
 
 type EnrollmentStatus = 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -40,6 +40,12 @@ export function CourseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [enrollmentStatus, setEnrollmentStatus] = useState<EnrollmentStatus>('NONE');
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [showEnrollPopup, setShowEnrollPopup] = useState(false);
+  const [enrollForm, setEnrollForm] = useState<EnrollmentExtraInfo>({
+    phone: '', address: '', educationLevel: '', studentStatus: '',
+  });
+  const [enrollFormErrors, setEnrollFormErrors] = useState<Partial<EnrollmentExtraInfo>>({});
+  const [enrolling, setEnrolling] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -88,20 +94,38 @@ export function CourseDetailPage() {
     );
   }
 
-  const handleEnrollment = async () => {
+  const handleEnrollment = () => {
     if (!user) {
       setShowLoginDialog(true);
       return;
     }
+    setEnrollForm({ phone: '', address: '', educationLevel: '', studentStatus: '' });
+    setEnrollFormErrors({});
+    setShowEnrollPopup(true);
+  };
+
+  const handleEnrollSubmit = async () => {
+    // Validate
+    const errors: Partial<EnrollmentExtraInfo> = {};
+    if (!enrollForm.phone.trim()) errors.phone = 'Champ obligatoire';
+    if (!enrollForm.address.trim()) errors.address = 'Champ obligatoire';
+    if (!enrollForm.educationLevel.trim()) errors.educationLevel = 'Champ obligatoire';
+    if (!enrollForm.studentStatus.trim()) errors.studentStatus = 'Champ obligatoire';
+    if (Object.keys(errors).length > 0) { setEnrollFormErrors(errors); return; }
+
+    setEnrolling(true);
     try {
-      await enrollmentsApi.request(id!);
+      await enrollmentsApi.request(id!, undefined, enrollForm);
       setEnrollmentStatus('PENDING');
+      setShowEnrollPopup(false);
       toast.success(
-        'Veuillez contacter notre équipe pour compléter le processus de paiement',
+        'Demande envoyée ! Veuillez contacter notre équipe pour compléter le processus de paiement.',
         { duration: 6000 },
       );
     } catch {
       toast.error("Erreur lors de la demande d'inscription.");
+    } finally {
+      setEnrolling(false);
     }
   };
 
@@ -281,6 +305,95 @@ export function CourseDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Enrollment Extra Info Popup */}
+      {showEnrollPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h2 className="text-xl font-semibold">Informations complémentaires</h2>
+            <p className="text-sm text-muted-foreground">
+              Remplissez ces informations pour compléter votre demande d'inscription.
+            </p>
+
+            {/* Téléphone */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Numéro de téléphone <span className="text-destructive">*</span></label>
+              <input
+                type="tel"
+                placeholder="Ex : 55 123 456"
+                value={enrollForm.phone}
+                onChange={e => { setEnrollForm(f => ({ ...f, phone: e.target.value })); setEnrollFormErrors(er => ({ ...er, phone: '' })); }}
+                className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {enrollFormErrors.phone && <p className="text-xs text-destructive">{enrollFormErrors.phone}</p>}
+            </div>
+
+            {/* Adresse */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Adresse <span className="text-destructive">*</span></label>
+              <input
+                type="text"
+                placeholder="Ex : 12 Rue des Fleurs, Tunis"
+                value={enrollForm.address}
+                onChange={e => { setEnrollForm(f => ({ ...f, address: e.target.value })); setEnrollFormErrors(er => ({ ...er, address: '' })); }}
+                className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {enrollFormErrors.address && <p className="text-xs text-destructive">{enrollFormErrors.address}</p>}
+            </div>
+
+            {/* Niveau scolaire */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Niveau scolaire <span className="text-destructive">*</span></label>
+              <select
+                value={enrollForm.educationLevel}
+                onChange={e => { setEnrollForm(f => ({ ...f, educationLevel: e.target.value })); setEnrollFormErrors(er => ({ ...er, educationLevel: '' })); }}
+                className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="Bac">Bac</option>
+                <option value="Bac+2">Bac+2</option>
+                <option value="Bac+3">Bac+3</option>
+                <option value="Bac+4">Bac+4</option>
+                <option value="Bac+5 et plus">Bac+5 et plus</option>
+                <option value="Autre">Autre</option>
+              </select>
+              {enrollFormErrors.educationLevel && <p className="text-xs text-destructive">{enrollFormErrors.educationLevel}</p>}
+            </div>
+
+            {/* Statut */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Statut <span className="text-destructive">*</span></label>
+              <select
+                value={enrollForm.studentStatus}
+                onChange={e => { setEnrollForm(f => ({ ...f, studentStatus: e.target.value })); setEnrollFormErrors(er => ({ ...er, studentStatus: '' })); }}
+                className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="Étudiant">Étudiant</option>
+                <option value="Employé">Employé</option>
+                <option value="Autre">Autre</option>
+              </select>
+              {enrollFormErrors.studentStatus && <p className="text-xs text-destructive">{enrollFormErrors.studentStatus}</p>}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowEnrollPopup(false)}
+                className="flex-1 border border-input rounded-lg px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleEnrollSubmit}
+                disabled={enrolling}
+                className="flex-1 bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                {enrolling ? 'Envoi...' : 'Valider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login Dialog */}
       <AlertDialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>

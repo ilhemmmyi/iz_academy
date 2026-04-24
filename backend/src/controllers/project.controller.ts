@@ -18,6 +18,7 @@ export const ProjectController = {
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
       if (err.code === 'LESSONS_INCOMPLETE') return res.status(403).json({ message: 'Vous devez completer toutes les lecons avant de soumettre un projet.' });
+      if (err.code === 'ALREADY_SUBMITTED') return res.status(409).json({ message: err.message });
       res.status(500).json({ message: 'Failed to submit project' });
     }
   },

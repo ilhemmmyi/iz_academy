@@ -65,8 +65,11 @@ model User {
   formation           String?
   duree               String?
   hasCompletedCoach   Boolean          @default(false)
-  
-  
+  phone               String?
+  address             String?
+  educationLevel      String?
+  studentStatus       String?
+
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   refreshTokens    RefreshToken[]
@@ -213,6 +216,10 @@ model Enrollment {
   courseId    String
   status      EnrollmentStatus @default(PENDING)
   message     String?
+  phone       String?
+  address     String?
+  educationLevel String?
+  studentStatus  String?
   isCompleted Boolean          @default(false)
   completedAt DateTime?
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -18,7 +18,7 @@ export function StudentLayout({ children }: StudentLayoutProps) {
     { name: 'Mes cours', href: '/student/courses', icon: BookOpen },
     { name: 'Certificats', href: '/student/certificates', icon: Award },
     { name: 'Messages', href: '/student/messages', icon: MessageSquare },
-    { name: 'Coach Carrière IA', href: '/student/career', icon: Bot },
+    { name: 'Assistant virtuel', href: '/student/career', icon: Bot },
   ];
 
   return (
@@ -77,7 +77,7 @@ export function StudentLayout({ children }: StudentLayoutProps) {
               return locked ? (
                 <span
                   key={item.name}
-                  title="Complète le Coach IA pour débloquer"
+                  title="Complète l'assistant virtuel pour débloquer"
                   className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-not-allowed opacity-40 text-foreground select-none"
                 >
                   <item.icon className="w-5 h-5" />

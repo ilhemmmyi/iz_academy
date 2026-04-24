@@ -13,6 +13,10 @@ interface User {
   role: string;
   avatarUrl?: string;
   hasCompletedCoach: boolean;
+  phone?: string;
+  address?: string;
+  educationLevel?: string;
+  studentStatus?: string;
 }
 
 interface AuthContextType {

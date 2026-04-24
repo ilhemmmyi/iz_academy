@@ -6,10 +6,15 @@ import { ActivityModel } from '../models/activity.model';
 
 export const EnrollmentService = {
 
-  async request(userId: string, courseId: string, message?: string) {
+  async request(
+    userId: string,
+    courseId: string,
+    message?: string,
+    extraInfo?: { phone?: string; address?: string; educationLevel?: string; studentStatus?: string },
+  ) {
     const existing = await EnrollmentModel.findByUserAndCourse(userId, courseId);
     if (existing) throw new Error('ALREADY_ENROLLED');
-    return EnrollmentModel.create(userId, courseId, message);
+    return EnrollmentModel.create(userId, courseId, message, extraInfo);
   },
 
   async updateStatus(id: string, status: 'APPROVED' | 'REJECTED') {
@@ -28,6 +33,15 @@ export const EnrollmentService = {
             status: 'COMPLETED',
           },
         });
+      }
+      // Copy extra info from enrollment to user profile
+      const profileUpdate: Record<string, string> = {};
+      if ((enrollment as any).phone)          profileUpdate.phone          = (enrollment as any).phone;
+      if ((enrollment as any).address)        profileUpdate.address        = (enrollment as any).address;
+      if ((enrollment as any).educationLevel) profileUpdate.educationLevel = (enrollment as any).educationLevel;
+      if ((enrollment as any).studentStatus)  profileUpdate.studentStatus  = (enrollment as any).studentStatus;
+      if (Object.keys(profileUpdate).length > 0) {
+        await prisma.user.update({ where: { id: enrollment.userId }, data: profileUpdate });
       }
     }
     emailQueue.add('enrollment-status', {

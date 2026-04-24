@@ -24,9 +24,20 @@ export const ProjectService = {
       throw Object.assign(new Error('Lessons incomplete'), { code: 'LESSONS_INCOMPLETE' });
     }
 
-    const existing = await ProjectModel.findSubmission(projectId, studentId);
-    if (existing && existing.status !== 'NEEDS_IMPROVEMENT') {
-      // Already submitted and not needing improvement — allow resubmit only on NEEDS_IMPROVEMENT
+    // One submission per COURSE (not per project).
+    // Find any existing submission for this student in this course.
+    const existingForCourse = await prisma.projectSubmission.findFirst({
+      where: { studentId, courseId },
+    });
+
+    if (existingForCourse) {
+      // Allow resubmission only when the teacher asked for improvements
+      if (existingForCourse.status !== 'NEEDS_IMPROVEMENT') {
+        throw Object.assign(
+          new Error('Vous avez déjà soumis un projet pour ce cours.'),
+          { code: 'ALREADY_SUBMITTED' },
+        );
+      }
     }
 
     return ProjectModel.upsertSubmission({

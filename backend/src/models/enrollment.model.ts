@@ -12,9 +12,14 @@ export const EnrollmentModel = {
       where: { userId, courseId, status: 'APPROVED' },
     }),
 
-  create: (userId: string, courseId: string, message?: string) =>
+  create: (
+    userId: string,
+    courseId: string,
+    message?: string,
+    extraInfo?: { phone?: string; address?: string; educationLevel?: string; studentStatus?: string },
+  ) =>
     prisma.enrollment.create({
-      data: { userId, courseId, message, status: 'PENDING' },
+      data: { userId, courseId, message, status: 'PENDING', ...extraInfo },
     }),
 
   updateStatus: (id: string, status: 'APPROVED' | 'REJECTED') =>
@@ -34,7 +39,14 @@ export const EnrollmentModel = {
         course: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: 'desc' },
-    }),
+    }) as Promise<Array<{
+      id: string; userId: string; courseId: string; status: string;
+      message: string | null; phone: string | null; address: string | null;
+      educationLevel: string | null; studentStatus: string | null;
+      isCompleted: boolean; createdAt: Date; updatedAt: Date;
+      user: { id: string; name: string; email: string };
+      course: { id: string; title: string };
+    }>>,
 
   findByUser: (userId: string) =>
     prisma.enrollment.findMany({

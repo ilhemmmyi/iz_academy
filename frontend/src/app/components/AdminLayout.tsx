@@ -7,6 +7,7 @@ import {
   Mail,
   CreditCard,
   Settings,
+  ChevronDown,
   GraduationCap,
   Menu,
   LogOut,
@@ -29,6 +30,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
 
+  const configurationNavigation = [
+    { name: 'Catégories', href: '/admin/categories', icon: FolderTree },
+    { name: 'Messages de contact', href: '/admin/contact-messages', icon: Mail },
+    { name: 'Signalements', href: '/admin/reports', icon: Flag },
+    { name: 'Paiements', href: '/admin/payments', icon: CreditCard },
+    { name: 'Paramètres', href: '/admin/settings', icon: Settings },
+  ];
+
+  const isConfigurationRoute = configurationNavigation.some((item) => location.pathname === item.href);
+  const [isConfigurationOpen, setIsConfigurationOpen] = useState(isConfigurationRoute);
+
   useEffect(() => {
     enrollmentsApi.getAll()
       .then((data: any[]) => setPendingCount(data.filter((e: any) => e.status === 'PENDING').length))
@@ -40,11 +52,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Demandes d\'inscription', href: '/admin/enrollment-requests', icon: Bell, badge: pendingCount },
     { name: 'Utilisateurs', href: '/admin/users', icon: Users },
     { name: 'Cours', href: '/admin/courses', icon: BookOpen },
-    { name: 'Catégories', href: '/admin/categories', icon: FolderTree },
-    { name: 'Messages contact', href: '/admin/contact-messages', icon: Mail },
-    { name: 'Signalements', href: '/admin/reports', icon: Flag },
-    { name: 'Paiements', href: '/admin/payments', icon: CreditCard },
-    { name: 'Paramètres', href: '/admin/settings', icon: Settings },
   ];
 
   return (
@@ -123,6 +130,43 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </Link>
               );
             })}
+
+            <div>
+              <button
+                type="button"
+                onClick={() => setIsConfigurationOpen((open) => !open)}
+                className={`
+                  flex w-full items-center gap-3 px-4 py-3 rounded-lg text-left transition
+                  text-foreground hover:bg-accent
+                `}
+              >
+                <Settings className="w-5 h-5" />
+                <span className="flex-1">Configuration</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isConfigurationOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isConfigurationOpen ? (
+                <div className="mt-2 space-y-1">
+                  {configurationNavigation.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`
+                          flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm transition
+                          ${isActive ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-accent'}
+                        `}
+                        onClick={() => setIsSidebarOpen(false)}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           </nav>
         </aside>
 

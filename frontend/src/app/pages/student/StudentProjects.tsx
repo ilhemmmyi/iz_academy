@@ -58,6 +58,11 @@ export function StudentProjects() {
 
   const getSubmission = (projectId: string) => submissions.find(s => s.projectId === projectId);
 
+  // True if the student already has ANY submission for this course (regardless of which project)
+  // Resubmission is only allowed when the existing submission is NEEDS_IMPROVEMENT
+  const courseSubmission = submissions.length > 0 ? submissions[0] : null;
+  const hasBlockingCourseSubmission = courseSubmission !== null && courseSubmission.status !== 'NEEDS_IMPROVEMENT';
+
   const isGithubUrl = (url: string) => {
     try {
       const parsed = new URL(url.trim());
@@ -269,10 +274,16 @@ export function StudentProjects() {
               </div>
             )}
 
-            {/* Submit form — only shown when no submission exists yet */}
+            {/* Submit form — only shown when no submission exists for THIS project yet */}
             {allLessonsCompleted && !getSubmission(selected.id) && (
               <div className="border-t border-border pt-4">
-                {!showSubmitForm ? (
+                {hasBlockingCourseSubmission ? (
+                  /* Student already submitted a different project for this course */
+                  <div className="inline-flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    Vous avez déjà soumis un projet pour ce cours. Une seule soumission est autorisée.
+                  </div>
+                ) : !showSubmitForm ? (
                   <button
                     onClick={() => setShowSubmitForm(true)}
                     className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition flex items-center gap-2 text-sm"

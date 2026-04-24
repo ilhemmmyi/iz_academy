@@ -9,8 +9,9 @@ export const EnrollmentController = {
       return res.status(403).json({ message: 'Seuls les étudiants peuvent s\'inscrire' });
     }
     try {
-      const { courseId, message } = req.body;
-      const enrollment = await EnrollmentService.request(req.user!.userId, courseId, message);
+      const { courseId, message, phone, address, educationLevel, studentStatus } = req.body;
+      const extraInfo = { phone, address, educationLevel, studentStatus };
+      const enrollment = await EnrollmentService.request(req.user!.userId, courseId, message, extraInfo);
       res.status(201).json(enrollment);
     } catch (err: any) {
       if (err.message === 'ALREADY_ENROLLED') return res.status(409).json({ message: 'Already enrolled' });

@@ -13,6 +13,12 @@ import {
   FileText,
   CheckCircle2,
   RefreshCw,
+  PenLine,
+  TrendingUp,
+  AlertTriangle,
+  Target,
+  BookOpen,
+  Trophy,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { careerApi, CareerQuestionnaire, RecommendationResult } from '../../../api/career.api';
@@ -80,6 +86,7 @@ const EMPTY: CareerQuestionnaire = {
   hoursPerWeek: '',
   learningStyle: '',
   shortTermGoal: '',
+  customAnswers: {},
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -96,6 +103,12 @@ export function CareerChatbot() {
   const [error, setError] = useState<string | null>(null);
   const [retryCountdown, setRetryCountdown] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── "Autre" popup state ─────────────────────────────────────────────────
+  const [showAutrePopup, setShowAutrePopup] = useState(false);
+  const [autreInput, setAutreInput] = useState('');
+  const [autreKey, setAutreKey] = useState<keyof CareerQuestionnaire | null>(null);
+  const [autreIsMulti, setAutreIsMulti] = useState(false);
 
   // ── Load saved coach data from DB on mount ──────────────────────────────
   useEffect(() => {
@@ -125,6 +138,16 @@ export function CareerChatbot() {
   // ── Navigate steps ──────────────────────────────────────────────────────
   const handleSelect = (option: string) => {
     const key = currentStepDef.key;
+
+    // Open "Autre" popup
+    if (option === 'Autre') {
+      setAutreKey(key);
+      setAutreIsMulti(!!currentStepDef.multi);
+      setAutreInput('');
+      setShowAutrePopup(true);
+      return;
+    }
+
     if (currentStepDef.multi) {
       const current = (answers[key] as string[]) || [];
       const updated = current.includes(option)
@@ -139,6 +162,42 @@ export function CareerChatbot() {
         else setStep(totalSteps); // go to CV step
       }, 200);
     }
+  };
+
+  const handleAutreConfirm = () => {
+    const trimmed = autreInput.trim();
+    if (!trimmed || !autreKey) return;
+
+    // Store the custom text in customAnswers
+    setAnswers((prev) => ({
+      ...prev,
+      customAnswers: { ...(prev.customAnswers || {}), [autreKey]: trimmed },
+    }));
+
+    // Also inject as selected value
+    if (autreIsMulti) {
+      const current = (answers[autreKey] as string[]) || [];
+      setAnswers((prev) => ({
+        ...prev,
+        [autreKey]: [...current, `Autre: ${trimmed}`],
+        customAnswers: { ...(prev.customAnswers || {}), [autreKey]: trimmed },
+      }));
+    } else {
+      setAnswers((prev) => ({
+        ...prev,
+        [autreKey]: `Autre: ${trimmed}`,
+        customAnswers: { ...(prev.customAnswers || {}), [autreKey]: trimmed },
+      }));
+      // Auto-advance for single-select
+      setTimeout(() => {
+        if (step < totalSteps - 1) setStep((s) => s + 1);
+        else setStep(totalSteps);
+      }, 200);
+    }
+
+    setShowAutrePopup(false);
+    setAutreInput('');
+    setAutreKey(null);
   };
 
   const handleNext = () => {
@@ -201,6 +260,8 @@ export function CareerChatbot() {
     setAiResult(null);
     setError(null);
     setRetryCountdown(0);
+    setShowAutrePopup(false);
+    setAutreInput('');
     // Delete from DB (fire-and-forget)
     const token = getAccessToken();
     careerApi.deleteMyCoachData(token).catch(() => { /* ignore */ });
@@ -263,23 +324,100 @@ export function CareerChatbot() {
             </div>
           </div>
 
-          {/* Tagline */}
-          <p className="text-center text-indigo-600 font-semibold text-sm">
-            🎯 Every course in this path was selected just for YOU.
-          </p>
+          {/* Analysis title */}
+          <div className="flex items-center gap-3">
+            <Trophy className="w-5 h-5 text-indigo-500" />
+            <h2 className="text-base font-bold text-foreground">Ton analyse personnalisée</h2>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+
+          {/* ── Strengths & Weaknesses ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-emerald-100 rounded-lg">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                </div>
+                <p className="text-sm font-bold text-emerald-800">Points forts</p>
+              </div>
+              <ul className="space-y-2">
+                {strengths.map((s, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-emerald-900">
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-500 shrink-0" />
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-amber-100 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                </div>
+                <p className="text-sm font-bold text-amber-800">Points à améliorer</p>
+              </div>
+              <ul className="space-y-2">
+                {weaknesses.map((w, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
+                    <span className="mt-1.5 w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    {w}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* ── Focus Areas ── */}
+          {focusAreas.length > 0 && (
+            <div className="bg-white border border-border rounded-xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-100 rounded-lg">
+                  <Target className="w-4 h-4 text-indigo-600" />
+                </div>
+                <p className="text-sm font-bold text-indigo-800">Priorités d'apprentissage</p>
+              </div>
+              <ol className="space-y-2">
+                {focusAreas.map((area, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span className="text-sm text-indigo-900 font-medium">{area}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* ── Learning Plan ── */}
+          {learningPlan && (
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-100 rounded-lg">
+                  <BookOpen className="w-4 h-4 text-indigo-600" />
+                </div>
+                <p className="text-sm font-bold text-indigo-800">Ton plan d'apprentissage personnalisé</p>
+              </div>
+              <p className="text-sm text-indigo-900 leading-relaxed">{learningPlan}</p>
+            </div>
+          )}
 
           {/* ── Recommended courses ── */}
           {recommendedCourses.length > 0 && (
             <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold flex items-center gap-2 text-indigo-700">
-                <Sparkles className="w-5 h-5" />
-                Cours recommandés ({recommendedCourses.length})
-              </h2>
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-100 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                </div>
+                <p className="text-sm font-bold text-indigo-800">
+                  Cours recommandés pour toi ({recommendedCourses.length})
+                </p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {recommendedCourses.map((course) => (
                   <Link
                     key={course.id}
-                  to={`/course/${course.id}`}
+                    to={`/course/${course.id}`}
                     className="group flex flex-col gap-1.5 border border-indigo-200 rounded-xl p-4 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-400 transition"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -299,58 +437,6 @@ export function CareerChatbot() {
                   </Link>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* ── Strengths & Weaknesses ── */}
-          {(strengths.length > 0 || weaknesses.length > 0) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {strengths.length > 0 && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
-                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">✅ Points forts</p>
-                  <ul className="space-y-1">
-                    {strengths.map((s, i) => (
-                      <li key={i} className="text-sm text-emerald-800 flex items-start gap-2">
-                        <span className="mt-0.5 text-emerald-500">•</span>{s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {weaknesses.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">⚠️ Points à améliorer</p>
-                  <ul className="space-y-1">
-                    {weaknesses.map((w, i) => (
-                      <li key={i} className="text-sm text-red-800 flex items-start gap-2">
-                        <span className="mt-0.5 text-red-400">•</span>{w}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Focus Areas ── */}
-          {focusAreas.length > 0 && (
-            <div className="bg-white border border-border rounded-xl p-4 shadow-sm">
-              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">🎯 Priorités d'apprentissage</p>
-              <div className="flex flex-wrap gap-2">
-                {focusAreas.map((area, i) => (
-                  <span key={i} className="px-3 py-1.5 bg-indigo-100 text-indigo-800 text-sm font-medium rounded-full border border-indigo-200">
-                    {area}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Learning Plan ── */}
-          {learningPlan && (
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5 shadow-sm">
-              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-2">📋 Ton plan d'apprentissage</p>
-              <p className="text-sm text-indigo-900 leading-relaxed">{learningPlan}</p>
             </div>
           )}
 
@@ -463,10 +549,57 @@ export function CareerChatbot() {
   // ── Render: Questionnaire ────────────────────────────────────────────────
   const progress = ((step + 1) / totalSteps) * 100;
   const currentVal = answers[currentStepDef.key];
-  const selectedOptions = Array.isArray(currentVal) ? currentVal : currentVal ? [currentVal] : [];
+  const selectedOptions: string[] = Array.isArray(currentVal) ? (currentVal as string[]) : typeof currentVal === 'string' ? [currentVal] : [];
 
   return (
     <CoachOnboardingLayout>
+      {/* ── Popup "Autre" ────────────────────────────────────────────────── */}
+      {showAutrePopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-base flex items-center gap-2">
+                <PenLine className="w-4 h-4 text-indigo-600" />
+                Précise ta réponse
+              </h3>
+              <button
+                type="button"
+                onClick={() => { setShowAutrePopup(false); setAutreInput(''); }}
+                className="p-1 hover:bg-accent rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <input
+              autoFocus
+              type="text"
+              value={autreInput}
+              onChange={(e) => setAutreInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAutreConfirm(); }}
+              placeholder="Écris ta réponse personnalisée..."
+              className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => { setShowAutrePopup(false); setAutreInput(''); }}
+                className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-accent transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleAutreConfirm}
+                disabled={!autreInput.trim()}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition disabled:opacity-50"
+              >
+                Valider
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
@@ -518,6 +651,21 @@ export function CareerChatbot() {
                 </button>
               );
             })}
+            {/* ── Autre button ── */}
+            <button
+              type="button"
+              onClick={() => handleSelect('Autre')}
+              className={`px-4 py-3 rounded-lg border text-sm font-medium transition text-left flex items-center gap-2 ${
+                selectedOptions.some(o => o.startsWith('Autre:')) || answers.customAnswers?.[currentStepDef.key]
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                  : 'border-dashed border-indigo-300 bg-indigo-50/50 text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50'
+              }`}
+            >
+              <PenLine className="w-3.5 h-3.5 flex-shrink-0" />
+              {answers.customAnswers?.[currentStepDef.key]
+                ? `Autre: ${answers.customAnswers[currentStepDef.key]}`
+                : 'Autre...'}
+            </button>
           </div>
         </div>
 

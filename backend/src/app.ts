@@ -30,7 +30,7 @@ Sentry.init({ dsn: config.sentryDsn, environment: process.env.NODE_ENV });
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: config.frontendUrl, credentials: true }));
+app.use(cors({ origin: [config.frontendUrl, 'http://localhost:5173', 'http://localhost:5174'], credentials: true }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { User, Mail, Save, LogOut, ArrowLeft } from 'lucide-react';
+import { User, Mail, Save, LogOut, ArrowLeft, Phone, MapPin, GraduationCap, Briefcase } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api/users.api';
 import { toast } from 'sonner';
@@ -132,6 +132,51 @@ export function UserProfile() {
               </button>
             </form>
           </div>
+
+          {/* Student profile info (filled at enrollment) */}
+          {user.role === 'STUDENT' && (user.phone || user.address || user.educationLevel || user.studentStatus) && (
+            <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
+              <h2 className="font-semibold mb-4">Informations de profil</h2>
+              <div className="space-y-3">
+                {user.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Téléphone</p>
+                      <p className="font-medium">{user.phone}</p>
+                    </div>
+                  </div>
+                )}
+                {user.address && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Adresse</p>
+                      <p className="font-medium">{user.address}</p>
+                    </div>
+                  </div>
+                )}
+                {user.educationLevel && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <GraduationCap className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Niveau scolaire</p>
+                      <p className="font-medium">{user.educationLevel}</p>
+                    </div>
+                  </div>
+                )}
+                {user.studentStatus && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Briefcase className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Statut</p>
+                      <p className="font-medium">{user.studentStatus}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Logout */}
           <div className="bg-white border border-border rounded-xl p-6 shadow-sm">

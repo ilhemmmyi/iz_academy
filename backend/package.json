@@ -4,7 +4,7 @@
   "description": "IZ Academy Backend API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "npx kill-port 5000 && npx nodemon --watch src --watch .env --ext ts,json,env --exec \"npx ts-node src/server.ts\"",
+    "dev": "npx nodemon --watch src --watch .env --ext ts,json,env --exec \"npx kill-port 5000 && npx ts-node src/server.ts\"",
     "build": "tsc",
     "start": "node dist/server.js",
     "db:migrate": "prisma migrate dev",
