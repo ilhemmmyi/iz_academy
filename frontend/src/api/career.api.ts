@@ -17,6 +17,7 @@ export interface RecommendedCourse {
   shortDescription: string;
   level: string;
   score: number;
+  thumbnailUrl?: string | null;
 }
 
 export interface RecommendationResult {
@@ -25,7 +26,6 @@ export interface RecommendationResult {
   weaknesses: string[];
   focusAreas: string[];
   learningPlan: string;
-  cvParsed: boolean;
 }
 
 export interface SavedCoachData {
@@ -37,20 +37,16 @@ export interface SavedCoachData {
 export const careerApi = {
   async getRecommendation(
     questionnaire: CareerQuestionnaire,
-    cvFile?: File | null,
     accessToken?: string | null,
   ): Promise<RecommendationResult> {
-    const formData = new FormData();
-    formData.append('questionnaire', JSON.stringify(questionnaire));
-    if (cvFile) formData.append('cv', cvFile);
-
     const headers: Record<string, string> = {};
+    headers['Content-Type'] = 'application/json';
     if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
     const res = await fetch(`${BASE_URL}/ai/recommendation`, {
       method: 'POST',
       headers,
-      body: formData,
+      body: JSON.stringify({ questionnaire }),
       credentials: 'include',
     });
 

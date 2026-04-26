@@ -5,7 +5,7 @@ import { contactApi } from '../../api/contact.api';
 import { toast } from 'sonner';
 
 export function FloatingChatWidget() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -13,8 +13,8 @@ export function FloatingChatWidget() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  // Admins are the support team — hide for them
-  if (user?.role === 'ADMIN') return null;
+  // Contact chat is reserved for visitors only.
+  if (loading || user) return null;
 
   const handleOpen = () => {
     setSent(false);

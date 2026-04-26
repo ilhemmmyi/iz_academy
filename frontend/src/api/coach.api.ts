@@ -23,14 +23,6 @@ async function callCoach<T = unknown>(endpoint: string, body: Record<string, unk
 export interface Skill { name: string; level: string }
 export interface SkillGap { skill: string; reason: string; priority: string }
 
-export interface CVAnalysisResult {
-  student_id: string;
-  extracted_skills: Skill[];
-  skill_gaps: SkillGap[];
-  profile_summary: string;
-  recommended_roles: string[];
-}
-
 export interface WeekPlan { week: number; focus: string; courses: string[]; project: string; hours: number }
 
 export interface RoadmapResult {
@@ -48,33 +40,6 @@ export interface ChatResult {
 }
 
 export const coachApi = {
-  analyzeCVFile(studentId: string, file: File, targetCountry = 'France', careerGoals: string[] = []) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('student_id', studentId);
-    formData.append('target_country', targetCountry);
-    formData.append('career_goals', careerGoals.join(','));
-    return fetch(`${COACH_API_URL}/analyze_cv/upload`, {
-      method: 'POST',
-      body: formData,
-    }).then(async (res) => {
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: 'Coach unavailable' }));
-        throw new Error(err.detail || err.message || `Coach error ${res.status}`);
-      }
-      return res.json() as Promise<CVAnalysisResult>;
-    });
-  },
-
-  analyzeCV(studentId: string, cvText: string, targetCountry = 'France', careerGoals: string[] = []) {
-    return callCoach<CVAnalysisResult>('/analyze_cv', {
-      student_id: studentId,
-      cv_text: cvText,
-      target_country: targetCountry,
-      career_goals: careerGoals,
-    });
-  },
-
   generateRoadmap(
     studentId: string,
     skills: Skill[],

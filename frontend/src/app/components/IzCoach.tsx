@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, X, Upload, Loader2, Sparkles, ChevronDown } from 'lucide-react';
+import { Bot, Send, X, Loader2, Sparkles, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { coachApi, ChatMessage, CVAnalysisResult } from '../../api/coach.api';
+import { coachApi, ChatMessage } from '../../api/coach.api';
 
 export function IzCoach() {
   const { user } = useAuth();
@@ -9,10 +9,8 @@ export function IzCoach() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [cvAnalysis, setCvAnalysis] = useState<CVAnalysisResult | null>(null);
-  const [activeTab, setActiveTab] = useState<'chat' | 'cv' | 'roadmap'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'roadmap'>('chat');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -27,39 +25,12 @@ export function IzCoach() {
     setLoading(true);
 
     try {
-      const context: Record<string, unknown> = {};
-      if (cvAnalysis) {
-        context.profile_summary = cvAnalysis.profile_summary;
-        context.extracted_skills = cvAnalysis.extracted_skills;
-        context.skill_gaps = cvAnalysis.skill_gaps;
-      }
-      const result = await coachApi.chat(user.id, userMsg.content, messages, context);
+      const result = await coachApi.chat(user.id, userMsg.content, messages);
       setMessages(prev => [...prev, { role: 'assistant', content: result.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: "Désolé, je n'ai pas pu répondre. Réessaie dans un instant." }]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // ── CV Upload ───────────────────────────────────────────────────────────
-  const handleCVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-    setLoading(true);
-    try {
-      const result = await coachApi.analyzeCVFile(user.id, file);
-      setCvAnalysis(result);
-      setActiveTab('cv');
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: `✅ J'ai analysé ton CV ! Voici un résumé :\n\n${result.profile_summary}\n\nJ'ai trouvé ${result.extracted_skills.length} compétences et ${result.skill_gaps.length} lacunes à combler. Consulte l'onglet "CV" pour les détails.` },
-      ]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Erreur lors de l'analyse du CV. Vérifie le format (PDF, DOCX ou TXT) et réessaie." }]);
-    } finally {
-      setLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -102,13 +73,13 @@ export function IzCoach() {
 
       {/* Tabs */}
       <div className="flex border-b border-border shrink-0">
-        {(['chat', 'cv', 'roadmap'] as const).map(tab => (
+        {(['chat', 'roadmap'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-2 text-xs font-medium transition ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            {tab === 'chat' ? '💬 Chat' : tab === 'cv' ? '📄 CV' : '🗺️ Roadmap'}
+            {tab === 'chat' ? '💬 Chat' : '🗺️ Roadmap'}
           </button>
         ))}
       </div>
@@ -122,7 +93,7 @@ export function IzCoach() {
                 <Bot className="w-12 h-12 mx-auto text-blue-400 mb-3" />
                 <p className="text-sm font-medium mb-1">Bienvenue sur IZ Coach !</p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Je suis ton coach carrière IA. Pose-moi une question ou upload ton CV pour commencer.
+                  Je suis ton coach carrière IA. Pose-moi une question pour commencer.
                 </p>
                 <div className="space-y-2">
                   {[
@@ -155,61 +126,10 @@ export function IzCoach() {
           </div>
         )}
 
-        {activeTab === 'cv' && (
-          <div className="space-y-4">
-            {!cvAnalysis ? (
-              <div className="text-center py-8">
-                <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm mb-2">Upload ton CV pour une analyse complète</p>
-                <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Choisir un fichier'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="bg-blue-50 rounded-lg p-3">
-                  <h4 className="text-xs font-semibold text-blue-700 mb-1">Résumé du profil</h4>
-                  <p className="text-xs text-blue-900">{cvAnalysis.profile_summary}</p>
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold mb-2">Compétences détectées ({cvAnalysis.extracted_skills.length})</h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cvAnalysis.extracted_skills.map((s, i) => (
-                      <span key={i} className={`text-xs px-2 py-1 rounded-full ${s.level === 'advanced' ? 'bg-green-100 text-green-700' : s.level === 'intermediate' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {s.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold mb-2">Lacunes à combler ({cvAnalysis.skill_gaps.length})</h4>
-                  <div className="space-y-1.5">
-                    {cvAnalysis.skill_gaps.map((g, i) => (
-                      <div key={i} className={`text-xs p-2 rounded-lg ${g.priority === 'high' ? 'bg-red-50 border border-red-200' : g.priority === 'medium' ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
-                        <span className="font-medium">{g.skill}</span> — {g.reason}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold mb-2">Rôles recommandés</h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {cvAnalysis.recommended_roles.map((r, i) => (
-                      <span key={i} className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">{r}</span>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
         {activeTab === 'roadmap' && (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">
-              {cvAnalysis
-                ? "Demande-moi de générer ta roadmap dans le chat !"
-                : "Upload d'abord ton CV pour que je puisse créer ta roadmap personnalisée."}
+              Demande-moi de générer ta roadmap dans le chat !
             </p>
           </div>
         )}
@@ -218,10 +138,6 @@ export function IzCoach() {
       {/* Input area */}
       <div className="border-t border-border p-3 shrink-0">
         <div className="flex items-center gap-2">
-          <input ref={fileInputRef} type="file" accept=".txt,.pdf,.doc,.docx" onChange={handleCVUpload} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} className="p-2 text-muted-foreground hover:text-blue-600 transition" title="Upload CV">
-            <Upload className="w-4 h-4" />
-          </button>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}

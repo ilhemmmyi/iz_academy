@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { StudentLayout } from '../../components/StudentLayout';
 import { CoachOnboardingLayout } from '../../components/CoachOnboardingLayout';
@@ -6,11 +6,9 @@ import {
   Bot,
   ChevronRight,
   ChevronLeft,
-  Upload,
   X,
   Loader2,
   Sparkles,
-  FileText,
   CheckCircle2,
   RefreshCw,
   PenLine,
@@ -89,20 +87,36 @@ const EMPTY: CareerQuestionnaire = {
   customAnswers: {},
 };
 
+function getCourseThumbnailUrl(course: unknown): string | null {
+  const courseRecord = course && typeof course === 'object' ? course as Record<string, unknown> : {};
+  const thumbnailCandidates = [
+    courseRecord.thumbnailUrl,
+    courseRecord.thumbnail,
+    courseRecord.imageUrl,
+    courseRecord.image,
+  ];
+
+  for (const candidate of thumbnailCandidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function CareerChatbot() {
   const { markCoachCompleted } = useAuth();
   const [step, setStep] = useState<number>(0);
   const [answers, setAnswers] = useState<CareerQuestionnaire>(EMPTY);
-  const [cvFile, setCvFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [aiResult, setAiResult] = useState<RecommendationResult | null>(null);
   const [savedAnswers, setSavedAnswers] = useState<CareerQuestionnaire>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [retryCountdown, setRetryCountdown] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── "Autre" popup state ─────────────────────────────────────────────────
   const [showAutrePopup, setShowAutrePopup] = useState(false);
@@ -132,8 +146,21 @@ export function CareerChatbot() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV || !aiResult?.recommendedCourses?.length) return;
+
+    const firstCourse = aiResult.recommendedCourses[0] as Record<string, unknown>;
+    console.debug('[CareerChatbot] recommended course thumbnail fields', {
+      keys: Object.keys(firstCourse),
+      thumbnailUrl: firstCourse.thumbnailUrl,
+      thumbnail: firstCourse.thumbnail,
+      imageUrl: firstCourse.imageUrl,
+      image: firstCourse.image,
+    });
+  }, [aiResult]);
+
   const currentStepDef = STEPS[step];
-  const totalSteps = STEPS.length; // 7 question steps
+  const totalSteps = STEPS.length;
 
   // ── Navigate steps ──────────────────────────────────────────────────────
   const handleSelect = (option: string) => {
@@ -159,7 +186,7 @@ export function CareerChatbot() {
       // Auto-advance for single-select
       setTimeout(() => {
         if (step < totalSteps - 1) setStep((s) => s + 1);
-        else setStep(totalSteps); // go to CV step
+        else setStep(totalSteps); // go to final confirmation step
       }, 200);
     }
   };
@@ -202,7 +229,7 @@ export function CareerChatbot() {
 
   const handleNext = () => {
     if (step < totalSteps - 1) setStep((s) => s + 1);
-    else setStep(totalSteps); // CV step
+    else setStep(totalSteps); // final confirmation step
   };
 
   const handleBack = () => {
@@ -223,7 +250,7 @@ export function CareerChatbot() {
     setError(null);
     try {
       const token = getAccessToken();
-      const res = await careerApi.getRecommendation(answers, cvFile, token);
+      const res = await careerApi.getRecommendation(answers, token);
       setAiResult(res);
       const nextStep = totalSteps + 1;
       setStep(nextStep);
@@ -256,7 +283,6 @@ export function CareerChatbot() {
     setStep(0);
     setAnswers(EMPTY);
     setSavedAnswers(EMPTY);
-    setCvFile(null);
     setAiResult(null);
     setError(null);
     setRetryCountdown(0);
@@ -285,7 +311,7 @@ export function CareerChatbot() {
 
   // ── Render: Result page (full layout — coach is done) ───────────────────
   if (step === totalSteps + 1 && aiResult) {
-    const { recommendedCourses, strengths, weaknesses, focusAreas, learningPlan, cvParsed } = aiResult;
+    const { recommendedCourses, strengths, weaknesses, focusAreas, learningPlan } = aiResult;
     // Use savedAnswers (loaded from DB) or current answers (just submitted)
     const displayAnswers = savedAnswers.goal ? savedAnswers : answers;
     return (
@@ -299,14 +325,7 @@ export function CareerChatbot() {
                 <Bot className="w-7 h-7 text-indigo-600" />
                 Ton Coaching IA
               </h1>
-              <p className="text-muted-foreground text-sm">
-                Résultat personnalisé selon ton profil
-                {cvParsed && (
-                  <span className="ml-2 inline-flex items-center gap-1 text-teal-600 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> CV analysé
-                  </span>
-                )}
-              </p>
+              <p className="text-muted-foreground text-sm">Résultat personnalisé selon ton profil</p>
             </div>
             <Button variant="outline" size="sm" onClick={handleReset} className="flex items-center gap-2">
               <RefreshCw className="w-4 h-4" />
@@ -324,13 +343,79 @@ export function CareerChatbot() {
             </div>
           </div>
 
+          {/* ── Recommended courses ── */}
+          {recommendedCourses.length > 0 && (
+            <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-100 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                </div>
+                <p className="text-sm font-bold text-indigo-800">
+                  Cours recommandés pour toi ({recommendedCourses.length})
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {recommendedCourses.map((course) => {
+                  const thumbnailUrl = getCourseThumbnailUrl(course);
+
+                  return (
+                    <Link
+                      key={course.id}
+                      to={`/course/${course.id}`}
+                      className="group flex gap-4 border border-indigo-200 rounded-xl p-4 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-400 transition w-full"
+                    >
+                      {/* Thumbnail */}
+                      <div className="w-24 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200">
+                        {thumbnailUrl ? (
+                          <img
+                            src={thumbnailUrl}
+                            alt={course.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                            No image
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex flex-col flex-1 gap-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-semibold text-sm text-indigo-900 leading-snug group-hover:text-indigo-700">
+                            {course.title}
+                          </p>
+                          <span className="flex-shrink-0 text-xs bg-white border border-indigo-200 text-indigo-600 px-2 py-0.5 rounded-full capitalize">
+                            {course.level}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                          {course.shortDescription}
+                        </p>
+
+                        <span className="text-xs text-indigo-600 font-medium mt-1 group-hover:underline">
+                          Voir le cours →
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Analysis title */}
-          <div className="flex items-center gap-3">
-            <Trophy className="w-5 h-5 text-indigo-500" />
-            <h2 className="text-base font-bold text-foreground">Ton analyse personnalisée</h2>
-            <div className="flex-1 h-px bg-border" />
+        <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-4">  
+
+          <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-indigo-100 rounded-lg">
+                  <Trophy className="w-5 h-5 text-indigo-500" />
+                </div>
+                <p className="text-sm font-bold text-indigo-800">Ton analyse personnalisée</p>
           </div>
 
+          
           {/* ── Strengths & Weaknesses ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 space-y-3">
@@ -367,6 +452,8 @@ export function CareerChatbot() {
             </div>
           </div>
 
+        </div>
+
           {/* ── Focus Areas ── */}
           {focusAreas.length > 0 && (
             <div className="bg-white border border-border rounded-xl p-5 shadow-sm space-y-3">
@@ -389,72 +476,36 @@ export function CareerChatbot() {
             </div>
           )}
 
-          {/* ── Learning Plan ── */}
           {learningPlan && (
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-5 shadow-sm space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-lg">
-                  <BookOpen className="w-4 h-4 text-indigo-600" />
-                </div>
-                <p className="text-sm font-bold text-indigo-800">Ton plan d'apprentissage personnalisé</p>
-              </div>
-              <p className="text-sm text-indigo-900 leading-relaxed">{learningPlan}</p>
-            </div>
-          )}
-
-          {/* ── Recommended courses ── */}
-          {recommendedCourses.length > 0 && (
-            <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-indigo-100 rounded-lg">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                </div>
-                <p className="text-sm font-bold text-indigo-800">
-                  Cours recommandés pour toi ({recommendedCourses.length})
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {recommendedCourses.map((course) => (
-                  <Link
-                    key={course.id}
-                    to={`/course/${course.id}`}
-                    className="group flex flex-col gap-1.5 border border-indigo-200 rounded-xl p-4 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-400 transition"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold text-sm text-indigo-900 leading-snug group-hover:text-indigo-700">
-                        {course.title}
-                      </p>
-                      <span className="flex-shrink-0 text-xs bg-white border border-indigo-200 text-indigo-600 px-2 py-0.5 rounded-full capitalize">
-                        {course.level}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                      {course.shortDescription}
-                    </p>
-                    <span className="text-xs text-indigo-600 font-medium mt-1 group-hover:underline">
-                      Voir le cours →
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-      </StudentLayout>
-    );
+  <div className="bg-white border border-border rounded-xl p-5 shadow-sm space-y-3">
+    <div className="flex items-center gap-2">
+      <div className="p-1.5 bg-indigo-100 rounded-lg">
+        <BookOpen className="w-4 h-4 text-indigo-600" />
+      </div>
+      <p className="text-sm font-bold text-indigo-800">
+        Ton plan d'apprentissage personnalisé
+      </p>
+    </div>
+    <p className="text-sm text-indigo-900 leading-relaxed">
+      {learningPlan}
+    </p>
+  </div>
+)}
+</div>
+</StudentLayout>
+);
   }
 
-  // ── Render: CV Upload step ───────────────────────────────────────────────
+  // ── Render: Final confirmation step ──────────────────────────────────────
   if (step === totalSteps) {
     return (
       <CoachOnboardingLayout>
         <div className="max-w-xl mx-auto space-y-6">
           <div className="text-center">
             <Bot className="w-12 h-12 mx-auto text-indigo-600 mb-3" />
-            <h1 className="mb-1">Ajouter ton CV (optionnel)</h1>
+            <h1 className="mb-1">Générer ton roadmap</h1>
             <p className="text-muted-foreground text-sm">
-              Uploade ton CV en PDF pour une analyse encore plus personnalisée.
+              Nous allons créer ton analyse personnalisée à partir de tes réponses.
             </p>
           </div>
 
@@ -466,42 +517,11 @@ export function CareerChatbot() {
             <div className="w-3 h-3 rounded-full border-2 border-indigo-500 bg-indigo-100" />
           </div>
 
-          {/* Upload box */}
-          <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-              cvFile ? 'border-teal-300 bg-teal-50' : 'border-border hover:border-indigo-300 hover:bg-indigo-50/30'
-            }`}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e) => setCvFile(e.target.files?.[0] || null)}
-            />
-            {cvFile ? (
-              <div className="flex items-center justify-center gap-3">
-                <FileText className="w-8 h-8 text-teal-600" />
-                <div className="text-left">
-                  <p className="font-medium text-sm text-teal-700">{cvFile.name}</p>
-                  <p className="text-xs text-muted-foreground">{(cvFile.size / 1024).toFixed(0)} KB</p>
-                </div>
-                <button
-                  type="button"
-                  className="ml-2 p-1 hover:bg-teal-100 rounded"
-                  onClick={(e) => { e.stopPropagation(); setCvFile(null); }}
-                >
-                  <X className="w-4 h-4 text-teal-700" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm font-medium">Clique pour uploader un PDF</p>
-                <p className="text-xs text-muted-foreground mt-1">Max 10 MB • PDF uniquement</p>
-              </>
-            )}
+          <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-3">
+            <p className="text-sm font-medium text-foreground">Tout est prêt.</p>
+            <p className="text-sm text-muted-foreground">
+              Le coach utilisera uniquement tes réponses au questionnaire pour générer tes recommandations.
+            </p>
           </div>
 
           {/* Error */}
@@ -537,10 +557,6 @@ export function CareerChatbot() {
               )}
             </Button>
           </div>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Pas de CV ? Pas de problème — on génère le roadmap sans.
-          </p>
         </div>
       </CoachOnboardingLayout>
     );

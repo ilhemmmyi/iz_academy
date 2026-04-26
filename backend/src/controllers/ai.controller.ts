@@ -1,7 +1,5 @@
 ﻿import { Response } from 'express';
 import axios from 'axios';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require('pdf-parse') as (buffer: Buffer) => Promise<{ text: string }>;
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../config/prisma';
 
@@ -26,10 +24,53 @@ interface DbCourse {
   title: string;
   shortDescription: string;
   level: string;
+  thumbnailUrl: string | null;
 }
 
 interface ScoredCourse extends DbCourse {
   score: number;
+}
+
+const QUESTIONNAIRE_KEYS = [
+  'goal',
+  'field',
+  'level',
+  'skills',
+  'hoursPerWeek',
+  'learningStyle',
+  'shortTermGoal',
+] as const;
+
+function sanitizeQuestionnaire(input: unknown): Questionnaire {
+  const source = input && typeof input === 'object' ? input as Record<string, unknown> : {};
+  const customAnswersSource =
+    source.customAnswers && typeof source.customAnswers === 'object'
+      ? source.customAnswers as Record<string, unknown>
+      : {};
+
+  const customAnswers = QUESTIONNAIRE_KEYS.reduce<Record<string, string>>((acc, key) => {
+    const value = customAnswersSource[key];
+    if (typeof value === 'string' && value.trim()) {
+      acc[key] = value.trim();
+    }
+    return acc;
+  }, {});
+
+  return {
+    goal: typeof source.goal === 'string' ? source.goal.trim() : '',
+    field: typeof source.field === 'string' ? source.field.trim() : '',
+    level: typeof source.level === 'string' ? source.level.trim() : '',
+    skills: Array.isArray(source.skills)
+      ? source.skills
+          .filter((skill): skill is string => typeof skill === 'string')
+          .map((skill) => skill.trim())
+          .filter(Boolean)
+      : [],
+    hoursPerWeek: typeof source.hoursPerWeek === 'string' ? source.hoursPerWeek.trim() : '',
+    learningStyle: typeof source.learningStyle === 'string' ? source.learningStyle.trim() : '',
+    shortTermGoal: typeof source.shortTermGoal === 'string' ? source.shortTermGoal.trim() : '',
+    customAnswers,
+  };
 }
 
 // --- Keyword scoring ----------------------------------------------------------
@@ -146,10 +187,8 @@ function buildFallbackAnalysis(q: Questionnaire, topCourses: ScoredCourse[]): {
 
 function buildAnalysisMessages(
   q: Questionnaire,
-  cvText: string | undefined,
   topCourses: ScoredCourse[],
 ) {
-  const cvSection = cvText ? cvText.substring(0, 1500) : 'Non fourni.';
   const courseList =
     topCourses.length > 0
       ? topCourses.map((c, i) => `${i + 1}. "${c.title}" (${c.level})`).join('\n')
@@ -170,9 +209,6 @@ function buildAnalysisMessages(
 - Temps disponible/semaine : ${q.hoursPerWeek}
 - Style d'apprentissage préféré : ${q.learningStyle}${customSection}
 
-### Extrait CV :
-${cvSection}
-
 ### Cours pré-sélectionnés correspondant à ce profil :
 ${courseList}
 
@@ -180,7 +216,7 @@ ${courseList}
 
 Retourne UNIQUEMENT ce JSON exact (pas de balises markdown, pas de texte supplémentaire) :
 {
-  "strengths": ["point fort concret 1 basé sur les compétences/CV", "point fort concret 2"],
+  "strengths": ["point fort concret 1 basé sur les réponses de l'étudiant", "point fort concret 2"],
   "weaknesses": ["lacune spécifique 1 par rapport à l'objectif", "lacune spécifique 2"],
   "focusAreas": ["priorité d'apprentissage 1", "priorité 2", "priorité 3"],
   "learningPlan": "2-3 phrases directes et personnalisées utilisant les cours pré-sélectionnés, en français"
@@ -201,15 +237,17 @@ Retourne UNIQUEMENT ce JSON exact (pas de balises markdown, pas de texte supplé
 export const getRecommendation = async (req: AuthRequest, res: Response) => {
   try {
     // -- 1. Parse & validate questionnaire ----------------------------------
-    let questionnaire: Questionnaire;
+    let rawQuestionnaire: unknown;
     try {
-      questionnaire =
+      rawQuestionnaire =
         typeof req.body.questionnaire === 'string'
           ? JSON.parse(req.body.questionnaire)
-          : req.body.questionnaire;
+          : req.body.questionnaire ?? req.body;
     } catch {
       return res.status(400).json({ message: 'Invalid questionnaire format (not valid JSON).' });
     }
+
+    const questionnaire = sanitizeQuestionnaire(rawQuestionnaire);
 
     if (!questionnaire?.goal || !questionnaire?.field || !questionnaire?.level) {
       return res
@@ -217,38 +255,27 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
         .json({ message: 'Missing required questionnaire fields: goal, field, level.' });
     }
 
-    // -- 2. Extract CV text from uploaded PDF (optional) --------------------
-    let cvText: string | undefined;
-    if (req.file?.buffer) {
-      try {
-        const parsed = await pdfParse(req.file.buffer);
-        cvText = parsed.text?.trim() || undefined;
-      } catch {
-        console.warn('[AI] CV PDF parse failed, continuing without CV.');
-      }
-    }
-
-    // -- 3. Fetch published courses from DB --------------------------------
+    // -- 2. Fetch published courses from DB --------------------------------
     const dbCourses = await prisma.course.findMany({
       where: { isPublished: true },
-      select: { id: true, title: true, shortDescription: true, level: true },
+      select: { id: true, title: true, shortDescription: true, level: true, thumbnailUrl: true },
       orderBy: { createdAt: 'asc' },
     });
 
-    // -- 4. Score & rank courses using keyword matching --------------------
+    // -- 3. Score & rank courses using keyword matching --------------------
     const profileText = [
       questionnaire.goal,
       questionnaire.field,
       questionnaire.shortTermGoal,
       questionnaire.skills.join(' '),
       questionnaire.learningStyle,
-      cvText ?? '',
+      ...Object.values(questionnaire.customAnswers ?? {}),
     ].join(' ');
 
     const userKeywords = extractKeywords(profileText);
     const topCourses = scoreCourses(dbCourses, userKeywords, questionnaire.level);
 
-    // -- 5. Call AI for qualitative analysis only --------------------------
+    // -- 4. Call AI for qualitative analysis only --------------------------
     const apiKey = process.env.HUGGINGFACE_API_KEY;
 
     let strengths: string[] = [];
@@ -258,7 +285,7 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
 
     if (apiKey) {
       try {
-        const messages = buildAnalysisMessages(questionnaire, cvText, topCourses);
+        const messages = buildAnalysisMessages(questionnaire, topCourses);
 
         const { data } = await axios.post(
           HF_BASE_URL,
@@ -295,7 +322,7 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
       console.warn('[AI] No HUGGINGFACE_API_KEY — returning scored courses only.');
     }
 
-    // -- 5b. Fallback: generate qualitative analysis if AI returned nothing --
+    // -- 4b. Fallback: generate qualitative analysis if AI returned nothing --
     if (strengths.length === 0 && weaknesses.length === 0 && focusAreas.length === 0 && !learningPlan) {
       const fallback = buildFallbackAnalysis(questionnaire, topCourses);
       strengths = fallback.strengths;
@@ -304,17 +331,16 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
       learningPlan = fallback.learningPlan;
     }
 
-    // -- 6. Build response object ------------------------------------------
+    // -- 5. Build response object ------------------------------------------
     const result = {
       recommendedCourses: topCourses,
       strengths,
       weaknesses,
       focusAreas,
       learningPlan,
-      cvParsed: !!cvText,
     };
 
-    // -- 7. Persist to DB (upsert so re-runs overwrite old data) -----------
+    // -- 6. Persist to DB (upsert so re-runs overwrite old data) -----------
     if (req.user?.userId) {
       await prisma.careerCoachData.upsert({
         where: { userId: req.user.userId },
