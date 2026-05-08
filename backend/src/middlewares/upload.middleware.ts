@@ -2,6 +2,13 @@ import multer from 'multer';
 
 const storage = multer.memoryStorage();
 
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+});
+
 export const uploadVideo = multer({
   storage,
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB

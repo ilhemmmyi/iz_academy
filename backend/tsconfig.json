@@ -14,6 +14,6 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/middlewares/validate.middleware.ts"],
   "exclude": ["node_modules", "dist"]
 }

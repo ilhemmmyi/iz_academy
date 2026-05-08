@@ -52,6 +52,31 @@ export const UserController = {
       res.status(500).json({ message: 'Failed to fetch users' });
     }
   },
+   async updateAvatar(req: AuthRequest, res: Response) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      const user = await UserService.updateAvatar(
+        req.user!.userId,
+        req.file
+      );
+
+      res.json(user);
+    } catch {
+      res.status(500).json({ message: 'Avatar upload failed' });
+    }
+  },
+
+  async deleteAvatar(req: AuthRequest, res: Response) {
+    try {
+      const user = await UserService.deleteAvatar(req.user!.userId);
+      res.json(user);
+    } catch {
+      res.status(500).json({ message: 'Avatar delete failed' });
+    }
+  },
 
   async deleteUser(req: AuthRequest, res: Response) {
     try {

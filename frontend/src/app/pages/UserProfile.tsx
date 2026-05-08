@@ -1,8 +1,19 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
-import { User, Mail, Save, LogOut, ArrowLeft, Phone, MapPin, GraduationCap, Briefcase } from 'lucide-react';
+import {
+  User,
+  Mail,
+  Save,
+  LogOut,
+  ArrowLeft,
+  Phone,
+  MapPin,
+  GraduationCap,
+  Briefcase,
+  Camera
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api/users.api';
 import { toast } from 'sonner';
@@ -22,20 +33,30 @@ function getRoleAvatarColor(role: string) {
 export function UserProfile() {
   const { user, setUser, logout } = useAuth();
   const navigate = useNavigate();
+
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
+
+  // avatar states
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   if (!user) {
     navigate('/login');
     return null;
   }
 
+  /* =========================
+     SAVE NAME
+  ========================= */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
       toast.error('Le nom ne peut pas être vide');
       return;
     }
+
     setSaving(true);
     try {
       const updated = await usersApi.updateMe({ name: name.trim() });
@@ -48,6 +69,38 @@ export function UserProfile() {
     }
   };
 
+  /* =========================
+     AVATAR UPLOAD
+  ========================= */
+  const handleAvatarChange = async (file: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only images are allowed');
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('avatar',file);
+
+      const updated = await usersApi.updateAvatar(file);
+
+      setUser({ ...user, avatarUrl: updated.avatarUrl });
+
+      toast.success('Photo de profil mise à jour');
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  /* =========================
+     LOGOUT
+  ========================= */
   const handleLogout = async () => {
     await logout();
     navigate('/');
@@ -60,7 +113,7 @@ export function UserProfile() {
       <div className="flex-1 py-12 px-4 bg-accent/30">
         <div className="max-w-lg mx-auto space-y-6">
 
-          {/* Back link */}
+          {/* Back */}
           <button
             onClick={() => navigate(getDashboardPath(user.role))}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
@@ -71,28 +124,74 @@ export function UserProfile() {
 
           <h1 className="text-2xl font-bold">Mon profil</h1>
 
-          {/* Avatar + name card */}
+          {/* =========================
+              AVATAR BLOCK (FIXED)
+          ========================= */}
           <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-400 rounded-xl p-6 flex items-center gap-5 shadow-sm">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full object-cover" />
-            ) : (
-              <div className={`w-16 h-16 rounded-full ${getRoleAvatarColor(user.role)} text-white flex items-center justify-center text-2xl font-bold`}>
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+
+            <div className="relative w-16 h-16">
+
+              {/* Avatar */}
+              {user.avatarUrl || avatarPreview ? (
+                <img
+                  src={avatarPreview || user.avatarUrl}
+                  alt={user.name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className={`w-16 h-16 rounded-full ${getRoleAvatarColor(user.role)} text-white flex items-center justify-center text-2xl font-bold`}>
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {/* Camera button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 bg-black/70 text-white p-1.5 rounded-full hover:bg-black transition"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+
+              {/* hidden input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  if (file) {
+                    setAvatarPreview(URL.createObjectURL(file));
+                    handleAvatarChange(file);
+                  }
+                }}
+              />
+            </div>
+
+            {/* User info */}
             <div>
               <p className="font-semibold text-lg">{user.name}</p>
               <p className="text-sm text-muted-foreground">{user.email}</p>
+
               <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full text-xs font-medium">
-                {user.role === 'STUDENT' ? 'Étudiant' : user.role === 'TEACHER' ? 'Formateur' : 'Administrateur'}
+                {user.role === 'STUDENT'
+                  ? 'Étudiant'
+                  : user.role === 'TEACHER'
+                  ? 'Formateur'
+                  : 'Administrateur'}
               </span>
             </div>
           </div>
 
-          {/* Edit form */}
+          {/* =========================
+              EDIT FORM
+          ========================= */}
           <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
             <h2 className="font-semibold mb-5">Modifier mes informations</h2>
+
             <form onSubmit={handleSave} className="space-y-5">
+
               <div>
                 <label className="block text-sm font-medium mb-1.5">Nom complet</label>
                 <div className="relative">
@@ -119,7 +218,9 @@ export function UserProfile() {
                     className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg bg-accent text-muted-foreground text-sm cursor-not-allowed"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">L'adresse e-mail ne peut pas être modifiée.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  L'adresse e-mail ne peut pas être modifiée.
+                </p>
               </div>
 
               <button
@@ -133,57 +234,15 @@ export function UserProfile() {
             </form>
           </div>
 
-          {/* Student profile info (filled at enrollment) */}
-          {user.role === 'STUDENT' && (user.phone || user.address || user.educationLevel || user.studentStatus) && (
-            <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
-              <h2 className="font-semibold mb-4">Informations de profil</h2>
-              <div className="space-y-3">
-                {user.phone && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Téléphone</p>
-                      <p className="font-medium">{user.phone}</p>
-                    </div>
-                  </div>
-                )}
-                {user.address && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Adresse</p>
-                      <p className="font-medium">{user.address}</p>
-                    </div>
-                  </div>
-                )}
-                {user.educationLevel && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <GraduationCap className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Niveau scolaire</p>
-                      <p className="font-medium">{user.educationLevel}</p>
-                    </div>
-                  </div>
-                )}
-                {user.studentStatus && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <Briefcase className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Statut</p>
-                      <p className="font-medium">{user.studentStatus}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Logout */}
+          {/* =========================
+              LOGOUT
+          ========================= */}
           <div className="bg-white border border-border rounded-xl p-6 shadow-sm">
             <h2 className="font-semibold mb-2">Session</h2>
             <p className="text-sm text-muted-foreground mb-4">
               Vous êtes connecté en tant que <strong>{user.name}</strong>.
             </p>
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2.5 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition text-sm font-medium"

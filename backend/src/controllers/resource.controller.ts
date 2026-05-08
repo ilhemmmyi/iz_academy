@@ -23,7 +23,7 @@ export const ResourceController = {
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
       if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to create resource' });
+      res.status(400).json({ message: 'Failed to create resource' });
     }
   },
 
@@ -34,7 +34,7 @@ export const ResourceController = {
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Resource not found' });
       if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to delete resource' });
+      res.status(400).json({ message: 'Failed to delete resource' });
     }
   },
 };

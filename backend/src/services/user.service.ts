@@ -4,7 +4,14 @@ import { UserModel, toSafeUser } from '../models/user.model';
 import { CertificateModel } from '../models/certificate.model';
 import { ProjectModel } from '../models/project.model';
 import { certificateQueue } from '../queues/certificate.queue';
+import { uploadToStorage, deleteFromStorage } from '../utils/storage';
 import { buildCertificatePdf } from '../utils/certificate';
+import {
+  calculateCourseProgressPercentage,
+  getLessonProgressPercentage,
+  getCertificateProgressPercentage,
+  getProjectProgressPercentage,
+} from '../utils/courseProgress';
 
 export const UserService = {
 
@@ -160,6 +167,35 @@ export const UserService = {
   /**
    * Admin view of a single student: progress per course, project submissions, certificates.
    */
+
+  async updateAvatar(userId: string, file: Express.Multer.File) {
+    const url = await uploadToStorage(
+      file.buffer,
+      file.mimetype,
+      'avatars'
+    );
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: url },
+    });
+
+    return user;
+  },
+
+  async deleteAvatar(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+      if (user?.avatarUrl) {
+    await deleteFromStorage(user.avatarUrl); //
+  }
+    return prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: null },
+    });
+  },
   async getStudentOverview(studentId: string) {
     const user = await UserModel.findById(studentId);
     if (!user) throw Object.assign(new Error('User not found'), { code: 'NOT_FOUND' });
@@ -173,7 +209,7 @@ export const UserService = {
             id: true,
             title: true,
             thumbnailUrl: true,
-            modules: { include: { lessons: { select: { id: true } } } },
+            modules: { include: { lessons: { select: { id: true, durationSeconds: true } } } },
           },
         },
       },
@@ -185,30 +221,39 @@ export const UserService = {
       e.course.modules.flatMap((m) => m.lessons.map((l) => l.id)),
     );
 
-    // Completed lesson progress for this student
-    const completedProgress = await prisma.lessonProgress.findMany({
-      where: { userId: studentId, lessonId: { in: allLessonIds }, completed: true },
-      select: { lessonId: true, lesson: { select: { module: { select: { courseId: true } } } } },
+    const totalDurationByCourse = enrollments.reduce<Record<string, number>>((acc, enrollment) => {
+      acc[enrollment.course.id] = enrollment.course.modules.reduce(
+        (courseAcc, module) => courseAcc + module.lessons.reduce(
+          (lessonAcc, lesson) => lessonAcc + (lesson.durationSeconds > 0 ? lesson.durationSeconds : 1),
+          0,
+        ),
+        0,
+      );
+      return acc;
+    }, {});
+
+    // Lesson progress for this student so partial watch progress counts too
+    const lessonProgress = await prisma.lessonProgress.findMany({
+      where: { userId: studentId, lessonId: { in: allLessonIds } },
+      select: {
+        completed: true,
+        watchedSeconds: true,
+        durationSeconds: true,
+        lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } },
+      },
     });
 
     const completedByCourse: Record<string, number> = {};
-    for (const p of completedProgress) {
+    const watchedDurationByCourse: Record<string, number> = {};
+    for (const p of lessonProgress) {
       const cid = p.lesson.module.courseId;
-      completedByCourse[cid] = (completedByCourse[cid] ?? 0) + 1;
+      const lessonDuration = Math.max(p.durationSeconds || 0, p.lesson.durationSeconds || 0, 1);
+      const watchedDuration = Math.min(Math.max(p.watchedSeconds || 0, 0), lessonDuration);
+      watchedDurationByCourse[cid] = (watchedDurationByCourse[cid] ?? 0) + watchedDuration;
+      if (p.completed) {
+        completedByCourse[cid] = (completedByCourse[cid] ?? 0) + 1;
+      }
     }
-
-    const progressByCourse = enrollments.map((e) => {
-      const total = e.course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
-      const completed = completedByCourse[e.course.id] ?? 0;
-      return {
-        courseId: e.course.id,
-        courseTitle: e.course.title,
-        thumbnailUrl: e.course.thumbnailUrl,
-        total,
-        completed,
-        percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
-      };
-    });
 
     // Project submissions
     const submissions = await prisma.projectSubmission.findMany({
@@ -217,6 +262,40 @@ export const UserService = {
         project: { select: { id: true, title: true, courseId: true } },
       },
       orderBy: { submittedAt: 'desc' },
+    });
+
+    const submissionStatusByCourse: Record<string, string> = {};
+    submissions.forEach((submission) => {
+      const courseId = submission.project.courseId;
+      if (!(courseId in submissionStatusByCourse)) {
+        submissionStatusByCourse[courseId] = submission.status;
+      }
+    });
+
+    const progressByCourse = enrollments.map((e) => {
+      const total = e.course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+      const completed = completedByCourse[e.course.id] ?? 0;
+      const totalDuration = totalDurationByCourse[e.course.id] ?? 0;
+      const watchedDuration = watchedDurationByCourse[e.course.id] ?? 0;
+      const lessonProgress = getLessonProgressPercentage({
+        completedLessons: completed,
+        totalLessons: total,
+        watchedDuration,
+        totalDuration,
+      });
+      const projectStatus = submissionStatusByCourse[e.course.id] ?? null;
+      return {
+        courseId: e.course.id,
+        courseTitle: e.course.title,
+        thumbnailUrl: e.course.thumbnailUrl,
+        total,
+        completed,
+        percentage: calculateCourseProgressPercentage({
+          lessonProgress,
+          projectProgress: getProjectProgressPercentage(projectStatus),
+          certificateProgress: getCertificateProgressPercentage(projectStatus),
+        }),
+      };
     });
 
     // Certificates

@@ -104,21 +104,57 @@ export function TeacherCourseView() {
   };
 
   const handleAddResource = async () => {
-    if (!courseId || !resourceTitle.trim() || !resourceFile || uploading) return;
-    setUploading(true);
-    try {
-      const created = await resourcesApi.uploadResource(courseId, resourceTitle.trim(), resourceFile);
-      setResources(prev => [created, ...prev]);
-      setResourceTitle('');
-      setResourceFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      toast.success('Ressource ajoutée');
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur lors de l\'ajout');
-    } finally {
-      setUploading(false);
-    }
-  };
+  if (!courseId || !resourceTitle.trim() || !resourceFile || uploading) return;
+
+  const forbiddenTypes = ['audio/', 'video/'];
+
+  if (forbiddenTypes.some(type => resourceFile.type.startsWith(type))) {
+    toast.error('Audio and video files are not allowed in resources');
+    return;
+  }
+
+  const allowedTypes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+  ];
+
+  if (!allowedTypes.includes(resourceFile.type)) {
+    toast.error('File type not allowed');
+    return;
+  }
+
+  setUploading(true);
+
+  try {
+    const created = await resourcesApi.uploadResource(
+      courseId,
+      resourceTitle.trim(),
+      resourceFile
+    );
+
+    setResources(prev => [created, ...prev]);
+    setResourceTitle('');
+    setResourceFile(null);
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    toast.success('Ressource ajoutée');
+  } catch (err: any) {
+    toast.error(err.message || 'Erreur lors de l\'ajout');
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleDeleteResource = async (id: string) => {
     try {

@@ -149,7 +149,8 @@ export function CareerChatbot() {
   useEffect(() => {
     if (!import.meta.env.DEV || !aiResult?.recommendedCourses?.length) return;
 
-    const firstCourse = aiResult.recommendedCourses[0] as Record<string, unknown>;
+    const firstCourse = aiResult.recommendedCourses[0] as unknown as Record<string, unknown>;
+
     console.debug('[CareerChatbot] recommended course thumbnail fields', {
       keys: Object.keys(firstCourse),
       thumbnailUrl: firstCourse.thumbnailUrl,

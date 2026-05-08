@@ -26,6 +26,8 @@ export function Register() {
     setIsLoading(true);
     try {
       await authApi.register({ name: formData.name, email: formData.email, password: formData.password });
+
+      
       toast.success('Compte créé avec succès !');
       // Auto-login after registration
       const res = await login(formData.email, formData.password);

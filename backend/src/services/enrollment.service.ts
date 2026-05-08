@@ -1,8 +1,13 @@
 import { prisma } from '../config/prisma';
 import { emailQueue } from '../queues/email.queue';
 import { EnrollmentModel } from '../models/enrollment.model';
-import { LessonModel } from '../models/lesson.model';
 import { ActivityModel } from '../models/activity.model';
+import {
+  calculateCourseProgressPercentage,
+  getLessonProgressPercentage,
+  getCertificateProgressPercentage,
+  getProjectProgressPercentage,
+} from '../utils/courseProgress';
 
 export const EnrollmentService = {
 
@@ -119,21 +124,29 @@ export const EnrollmentService = {
       );
     });
 
-    // Fetch completed lesson durations per course for this user
+    // Fetch lesson progress per course for this user so partial watch progress counts too
     const lessonProgress = await prisma.lessonProgress.findMany({
       where: {
         userId,
-        completed: true,
         lesson: { module: { courseId: { in: approvedCourseIds } } },
       },
-      include: { lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } } },
+      select: {
+        completed: true,
+        watchedSeconds: true,
+        durationSeconds: true,
+        lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } },
+      },
     });
     const completedLessonsMap: Record<string, number> = {};
-    const completedDurationMap: Record<string, number> = {};
+    const watchedDurationMap: Record<string, number> = {};
     lessonProgress.forEach(p => {
       const cId = p.lesson.module.courseId;
-      completedLessonsMap[cId] = (completedLessonsMap[cId] || 0) + 1;
-      completedDurationMap[cId] = (completedDurationMap[cId] || 0) + (p.lesson.durationSeconds > 0 ? p.lesson.durationSeconds : 1);
+      const lessonDuration = Math.max(p.durationSeconds || 0, p.lesson.durationSeconds || 0, 1);
+      const watchedDuration = Math.min(Math.max(p.watchedSeconds || 0, 0), lessonDuration);
+      watchedDurationMap[cId] = (watchedDurationMap[cId] || 0) + watchedDuration;
+      if (p.completed) {
+        completedLessonsMap[cId] = (completedLessonsMap[cId] || 0) + 1;
+      }
     });
 
     // Fetch project submissions for this user
@@ -158,16 +171,20 @@ export const EnrollmentService = {
       const totalLessons = totalLessonsMap[e.courseId] || 0;
       const completedLessons = completedLessonsMap[e.courseId] || 0;
       const totalDuration = totalDurationMap[e.courseId] || 0;
-      const completedDuration = completedDurationMap[e.courseId] || 0;
-      // Duration-based lesson progress (70% weight); safe against division by zero
-      const lessonPct = totalDuration > 0 ? (completedDuration / totalDuration) * 70 : 0;
+      const watchedDuration = watchedDurationMap[e.courseId] || 0;
+      const lessonProgress = getLessonProgressPercentage({
+        completedLessons,
+        totalLessons,
+        watchedDuration,
+        totalDuration,
+      });
 
       const projectStatus = submissionMap[e.courseId] ?? null;
-      let projectPct = 0;
-      if (projectStatus && projectStatus !== 'PENDING') projectPct = 20;
-      if (projectStatus === 'VALIDATED') projectPct = 30;
-
-      const percentage = Math.round(lessonPct + projectPct);
+      const percentage = calculateCourseProgressPercentage({
+        lessonProgress,
+        projectProgress: getProjectProgressPercentage(projectStatus),
+        certificateProgress: getCertificateProgressPercentage(projectStatus),
+      });
 
       return {
         ...e,
@@ -202,25 +219,61 @@ export const EnrollmentService = {
     // Get approved enrollments for those courses
     const enrollments = await EnrollmentModel.findApprovedByCourseIds(courseIds);
 
-    // Fetch lesson progress for all enrolled students
+    // Fetch lesson progress for all enrolled students so partial watch progress counts too
     const studentIds = [...new Set(enrollments.map(e => e.userId))];
-    const allProgress = await LessonModel.findCompletedByCourseIds(studentIds, courseIds);
+    const allProgress = await prisma.lessonProgress.findMany({
+      where: {
+        userId: { in: studentIds },
+        lesson: { module: { courseId: { in: courseIds } } },
+      },
+      select: {
+        userId: true,
+        completed: true,
+        watchedSeconds: true,
+        durationSeconds: true,
+        lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } },
+      },
+    });
 
-    // Group completed lessons by userId+courseId (count and duration)
+    // Group lesson progress by userId+courseId
     const completedMap: Record<string, number> = {};
-    const completedDurationMap: Record<string, number> = {};
+    const watchedDurationMap: Record<string, number> = {};
     allProgress.forEach(p => {
       const key = `${p.userId}:${p.lesson.module.courseId}`;
-      completedMap[key] = (completedMap[key] || 0) + 1;
-      completedDurationMap[key] = (completedDurationMap[key] || 0) + (p.lesson.durationSeconds > 0 ? p.lesson.durationSeconds : 1);
+      const lessonDuration = Math.max(p.durationSeconds || 0, p.lesson.durationSeconds || 0, 1);
+      const watchedDuration = Math.min(Math.max(p.watchedSeconds || 0, 0), lessonDuration);
+      watchedDurationMap[key] = (watchedDurationMap[key] || 0) + watchedDuration;
+      if (p.completed) {
+        completedMap[key] = (completedMap[key] || 0) + 1;
+      }
+    });
+
+    const submissions = await prisma.projectSubmission.findMany({
+      where: { studentId: { in: studentIds }, courseId: { in: courseIds } },
+      select: { studentId: true, courseId: true, status: true },
+    });
+    const submissionMap: Record<string, string> = {};
+    submissions.forEach((submission) => {
+      submissionMap[`${submission.studentId}:${submission.courseId}`] = submission.status;
     });
 
     return enrollments.map(e => {
       const total = totalLessonsMap[e.courseId] || 0;
       const completed = completedMap[`${e.userId}:${e.courseId}`] || 0;
       const totalDuration = totalDurationMap[e.courseId] || 0;
-      const completedDuration = completedDurationMap[`${e.userId}:${e.courseId}`] || 0;
-      const percentage = totalDuration > 0 ? Math.round((completedDuration / totalDuration) * 100) : 0;
+      const watchedDuration = watchedDurationMap[`${e.userId}:${e.courseId}`] || 0;
+      const lessonProgress = getLessonProgressPercentage({
+        completedLessons: completed,
+        totalLessons: total,
+        watchedDuration,
+        totalDuration,
+      });
+      const projectStatus = submissionMap[`${e.userId}:${e.courseId}`] ?? null;
+      const percentage = calculateCourseProgressPercentage({
+        lessonProgress,
+        projectProgress: getProjectProgressPercentage(projectStatus),
+        certificateProgress: getCertificateProgressPercentage(projectStatus),
+      });
       return {
         id: e.id,
         student: e.user,

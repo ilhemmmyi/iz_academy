@@ -75,26 +75,4 @@ export const ProjectController = {
     }
   },
 
-  /**
-   * Admin: give final authorization for certificate generation.
-   * Triggers the certificate queue only when all 4 conditions are confirmed.
-   */
-  async adminApprove(req: AuthRequest, res: Response) {
-    try {
-      const submission = await ProjectService.adminApprove(
-        String(req.params.submissionId),
-        req.user!.userId,
-      );
-      res.json({ message: 'Certificate approved and queued for generation', submission });
-    } catch (err: any) {
-      if (err.code === 'NOT_FOUND_OR_NOT_VALIDATED') {
-        return res.status(404).json({ message: err.message });
-      }
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      if (err.code === 'LESSONS_INCOMPLETE') {
-        return res.status(403).json({ message: 'Student has not completed all lessons yet' });
-      }
-      res.status(500).json({ message: 'Failed to approve certificate' });
-    }
-  },
 };

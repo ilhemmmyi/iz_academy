@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
-
+import { upload } from '../middlewares/upload.middleware';
 export const userRouter = Router();
 
 userRouter.get('/me', authenticate, UserController.getMe);
@@ -21,3 +21,6 @@ userRouter.put('/:id', authenticate, requireRole('ADMIN'), UserController.update
 userRouter.post('/:id/reset-password', authenticate, requireRole('ADMIN'), UserController.resetPassword);
 userRouter.delete('/:id', authenticate, requireRole('ADMIN'), UserController.deleteUser);
 userRouter.delete('/:userId/certificates/:courseId', authenticate, requireRole('ADMIN'), UserController.revokecertificate);
+userRouter.put('/me/avatar',authenticate,upload.single('avatar'),UserController.updateAvatar);
+
+userRouter.delete('/me/avatar',authenticate,UserController.deleteAvatar);

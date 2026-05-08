@@ -22,7 +22,8 @@ courseRouter.get('/:id/project-submissions', authenticate, requireRole('ADMIN', 
 courseRouter.get('/:id/progress', authenticate, CourseController.getProgress);
 courseRouter.get('/:id/reviews', CourseController.getReviews);
 courseRouter.post('/:id/reviews', authenticate, CourseController.submitReview);
-courseRouter.post('/', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.create);
+
+courseRouter.post('/', authenticate, requireRole('ADMIN'), validate(createCourseSchema),CourseController.create);
 courseRouter.put('/:id', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.update);
 courseRouter.patch('/:id/publish', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.togglePublish);
 courseRouter.delete('/:id', authenticate, requireRole('ADMIN'), CourseController.delete);

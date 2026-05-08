@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (res.requires2FA) return res; // caller handles 2FA
     setAccessToken(res.accessToken);
     setUser(res.user);
-    return res;
+    return res;                            
   };
 
   const loginWithGoogle = async () => {
