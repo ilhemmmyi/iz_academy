@@ -46,6 +46,7 @@ const AdminSettings = lazy(() => import("./pages/admin/AdminSettings").then(m =>
 const AdminEnrollmentRequests = lazy(() => import("./pages/admin/AdminEnrollmentRequests").then(m => ({ default: m.AdminEnrollmentRequests })));
 const AdminContactMessages = lazy(() => import("./pages/admin/AdminContactMessages").then(m => ({ default: m.AdminContactMessages })));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports").then(m => ({ default: m.AdminReports })));
+const AdminConfiguration = lazy(() => import("./pages/admin/AdminConfiguration").then(m => ({ default: m.AdminConfiguration })));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -134,6 +135,7 @@ export const router = createBrowserRouter([
   { path: "/admin/payments", element: <Guard roles={["ADMIN"]}><AdminPayments /></Guard> },
   { path: "/admin/settings", element: <Guard roles={["ADMIN"]}><AdminSettings /></Guard> },
   { path: "/admin/enrollment-requests", element: <Guard roles={["ADMIN"]}><AdminEnrollmentRequests /></Guard> },
+  { path: "/admin/configuration", element: <Guard roles={["ADMIN"]}><AdminConfiguration /></Guard> },
 ]);
 
 

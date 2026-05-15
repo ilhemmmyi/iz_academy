@@ -3,9 +3,6 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  FolderTree,
-  Mail,
-  CreditCard,
   Settings,
   ChevronDown,
   GraduationCap,
@@ -13,7 +10,6 @@ import {
   LogOut,
   User,
   Bell,
-  Flag,
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -33,20 +29,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [pendingCount, setPendingCount] = useState(0);
-
-  const configurationNavigation = [
-    { name: 'Catégories', href: '/admin/categories', icon: FolderTree },
-    { name: 'Messages de contact', href: '/admin/contact-messages', icon: Mail },
-    { name: 'Signalements', href: '/admin/reports', icon: Flag },
-    { name: 'Paiements', href: '/admin/payments', icon: CreditCard },
-    { name: 'Paramètres', href: '/admin/settings', icon: Settings },
-  ];
-
-  const isConfigurationRoute = configurationNavigation.some(
-    (item) => location.pathname === item.href
-  );
-  const [isConfigurationOpen, setIsConfigurationOpen] =
-    useState(isConfigurationRoute);
 
   useEffect(() => {
     enrollmentsApi
@@ -218,43 +200,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             })}
 
             {/* CONFIG */}
-            <div className="pt-2">
-              <button
-                onClick={() => setIsConfigurationOpen(!isConfigurationOpen)}
-                className="flex w-full items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent"
-              >
-                <Settings className="w-5 h-5" />
-                <span className="flex-1">Configuration</span>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    isConfigurationOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {isConfigurationOpen && (
-                <div className="mt-2 space-y-1">
-                  {configurationNavigation.map((item) => {
-                    const isActive = location.pathname === item.href;
-
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className={`
-                          flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition
-                          ${isActive ? 'bg-primary text-white' : 'hover:bg-accent'}
-                        `}
-                        onClick={() => setIsSidebarOpen(false)}
-                      >
-                        <item.icon className="w-4 h-4" />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <Link
+              to="/admin/configuration"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                location.pathname.startsWith('/admin/configuration')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              }`}
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <Settings className="w-5 h-5" />
+              <span>Configuration</span>
+            </Link>
 
           </nav>
         </aside>
