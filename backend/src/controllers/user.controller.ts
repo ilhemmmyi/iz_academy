@@ -25,7 +25,6 @@ export const UserController = {
   async updateMe(req: AuthRequest, res: Response) {
     try {
       const { name, avatarUrl } = req.body;
-      // Validate avatarUrl is a proper HTTPS URL if provided
       if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
         try {
           const url = new URL(avatarUrl);
@@ -52,17 +51,13 @@ export const UserController = {
       res.status(500).json({ message: 'Failed to fetch users' });
     }
   },
-   async updateAvatar(req: AuthRequest, res: Response) {
+
+  async updateAvatar(req: AuthRequest, res: Response) {
     try {
       if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
       }
-
-      const user = await UserService.updateAvatar(
-        req.user!.userId,
-        req.file
-      );
-
+      const user = await UserService.updateAvatar(req.user!.userId, req.file);
       res.json(user);
     } catch {
       res.status(500).json({ message: 'Avatar upload failed' });
@@ -92,29 +87,19 @@ export const UserController = {
 
   async createUser(req: AuthRequest, res: Response) {
     try {
-<<<<<<< HEAD
       const { name, email, role, formation, duree, dateDebut, password } = req.body;
       if (!name || !email || !role || !password) {
         return res.status(400).json({ message: 'name, email, role and password are required' });
-=======
-      const { name, email, role, formation, duree, dateDebut } = req.body;
-      if (!name || !email || !role) {
-        return res.status(400).json({ message: 'name, email and role are required' });
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       }
       const normalizedRole = (role as string).toUpperCase() as 'STUDENT' | 'TEACHER';
       if (!['STUDENT', 'TEACHER'].includes(normalizedRole)) {
         return res.status(400).json({ message: 'Invalid role' });
       }
-<<<<<<< HEAD
       const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!strongPassword.test(password)) {
         return res.status(400).json({ message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character' });
       }
       const user = await UserService.createUser({ name, email, role: normalizedRole, formation, duree, dateDebut, password });
-=======
-      const user = await UserService.createUser({ name, email, role: normalizedRole, formation, duree, dateDebut });
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       res.status(201).json(user);
     } catch (err: any) {
       if (err.code === 'CONFLICT') return res.status(409).json({ message: 'Email already in use' });
@@ -122,7 +107,6 @@ export const UserController = {
     }
   },
 
-<<<<<<< HEAD
   async changePassword(req: AuthRequest, res: Response) {
     try {
       const { currentPassword, newPassword } = req.body;
@@ -142,13 +126,10 @@ export const UserController = {
     }
   },
 
-=======
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   async updateUser(req: AuthRequest, res: Response) {
     try {
       const { role, isActive, formation, duree, dateDebut, name, email } = req.body;
 
-      // Determine the target user's role to enforce student-specific restrictions
       const targetUser = await prisma.user.findUnique({
         where: { id: String(req.params.id) },
         select: { role: true },
@@ -158,7 +139,6 @@ export const UserController = {
       const data: Record<string, unknown> = {};
 
       if (targetUser.role === 'STUDENT') {
-        // For students, only name and email may be changed
         if (name !== undefined) data.name = name;
         if (email !== undefined) data.email = email;
       } else {
@@ -172,22 +152,14 @@ export const UserController = {
         if (isActive !== undefined) data.isActive = Boolean(isActive);
         if (formation !== undefined) data.formation = formation;
         if (duree !== undefined) data.duree = duree;
-<<<<<<< HEAD
         if (dateDebut !== undefined && dateDebut !== '') data.dateDebut = dateDebut;
-=======
-        if (dateDebut !== undefined) data.dateDebut = dateDebut;
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
         if (name !== undefined) data.name = name;
         if (email !== undefined) data.email = email;
       }
 
       res.json(await UserService.updateUser(String(req.params.id), data));
-<<<<<<< HEAD
     } catch (err: any) {
       console.error('[updateUser] error:', err?.message, err?.meta);
-=======
-    } catch {
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       res.status(500).json({ message: 'Failed to update user' });
     }
   },
@@ -248,7 +220,6 @@ export const UserController = {
     }
   },
 
-<<<<<<< HEAD
   async getEligibleCourses(req: AuthRequest, res: Response) {
     try {
       const courses = await UserService.getEligibleCourses(req.user!.userId, String(req.params.id));
@@ -258,25 +229,17 @@ export const UserController = {
     }
   },
 
-=======
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   async assignCourses(req: AuthRequest, res: Response) {
     try {
       const { courseIds } = req.body as { courseIds: string[] };
       if (!Array.isArray(courseIds)) {
         return res.status(400).json({ message: 'courseIds must be an array' });
       }
-<<<<<<< HEAD
       await UserService.assignCourses(req.user!.userId, String(req.params.id), courseIds);
       res.json({ message: 'Courses assigned successfully' });
     } catch (err: any) {
       console.error('[assignCourses] error:', err?.message, err?.meta);
       if (err.code === 'CONFLICT') return res.status(409).json({ message: err.message });
-=======
-      await UserService.assignCourses(String(req.params.id), courseIds);
-      res.json({ message: 'Courses assigned successfully' });
-    } catch {
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       res.status(500).json({ message: 'Failed to assign courses' });
     }
   },
@@ -313,5 +276,3 @@ export const UserController = {
     }
   },
 };
-
-

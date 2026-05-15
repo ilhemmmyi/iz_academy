@@ -8,26 +8,17 @@ import {
   Save,
   LogOut,
   ArrowLeft,
-<<<<<<< HEAD
   Camera,
   Lock,
   Eye,
   EyeOff,
   CheckCircle,
   XCircle,
-=======
-  Phone,
-  MapPin,
-  GraduationCap,
-  Briefcase,
-  Camera
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api/users.api';
 import { toast } from 'sonner';
 
-<<<<<<< HEAD
 const PASSWORD_RULES = [
   { label: '8 caractères minimum', test: (p: string) => p.length >= 8 },
   { label: 'Une lettre majuscule',  test: (p: string) => /[A-Z]/.test(p) },
@@ -36,8 +27,6 @@ const PASSWORD_RULES = [
   { label: 'Un caractère spécial',  test: (p: string) => /[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/.test(p) },
 ];
 
-=======
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
 function getDashboardPath(role: string) {
   if (role === 'TEACHER') return '/teacher';
   if (role === 'ADMIN') return '/admin';
@@ -59,7 +48,6 @@ export function UserProfile() {
 
   // avatar states
   const fileInputRef = useRef<HTMLInputElement>(null);
-<<<<<<< HEAD
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -71,11 +59,6 @@ export function UserProfile() {
   const [showPwNew, setShowPwNew]         = useState(false);
   const [savingPw, setSavingPw]           = useState(false);
 
-=======
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   if (!user) {
     navigate('/login');
     return null;
@@ -90,10 +73,6 @@ export function UserProfile() {
       toast.error('Le nom ne peut pas être vide');
       return;
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     setSaving(true);
     try {
       const updated = await usersApi.updateMe({ name: name.trim() });
@@ -107,7 +86,6 @@ export function UserProfile() {
   };
 
   /* =========================
-<<<<<<< HEAD
      CHANGE PASSWORD
   ========================= */
   const allRulesPassed = PASSWORD_RULES.every(r => r.test(pwNew));
@@ -134,47 +112,23 @@ export function UserProfile() {
   };
 
   /* =========================
-=======
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
      AVATAR UPLOAD
   ========================= */
   const handleAvatarChange = async (file: File | null) => {
     if (!file) return;
-<<<<<<< HEAD
-=======
-
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     if (!file.type.startsWith('image/')) {
       toast.error('Only images are allowed');
       return;
     }
-<<<<<<< HEAD
     setAvatarUploading(true);
     try {
       const updated = await usersApi.updateAvatar(file);
       setUser({ ...user, avatarUrl: updated.avatarUrl });
-=======
-
-    setUploadingAvatar(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('avatar',file);
-
-      const updated = await usersApi.updateAvatar(file);
-
-      setUser({ ...user, avatarUrl: updated.avatarUrl });
-
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       toast.success('Photo de profil mise à jour');
     } catch (err: any) {
       toast.error(err.message || 'Erreur upload avatar');
     } finally {
-<<<<<<< HEAD
       setAvatarUploading(false);
-=======
-      setUploadingAvatar(false);
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     }
   };
 
@@ -227,14 +181,9 @@ export function UserProfile() {
               {/* Camera button */}
               <button
                 type="button"
-<<<<<<< HEAD
                 onClick={() => !avatarUploading && fileInputRef.current?.click()}
                 className="absolute bottom-0 right-0 bg-black/70 text-white p-1.5 rounded-full hover:bg-black transition disabled:opacity-50"
                 disabled={avatarUploading}
-=======
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 bg-black/70 text-white p-1.5 rounded-full hover:bg-black transition"
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>
@@ -321,7 +270,6 @@ export function UserProfile() {
           </div>
 
           {/* =========================
-<<<<<<< HEAD
               CHANGE PASSWORD
           ========================= */}
           <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
@@ -411,8 +359,6 @@ export function UserProfile() {
           </div>
 
           {/* =========================
-=======
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
               LOGOUT
           ========================= */}
           <div className="bg-white border border-border rounded-xl p-6 shadow-sm">
