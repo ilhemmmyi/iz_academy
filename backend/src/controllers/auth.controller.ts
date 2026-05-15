@@ -35,7 +35,11 @@ export const AuthController = {
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
         accessToken,
+<<<<<<< HEAD
         user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword },
+=======
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach },
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       });
     } catch (err: any) {
       if (err.message === 'INVALID_CREDENTIALS') return res.status(401).json({ message: 'Invalid credentials' });
@@ -98,7 +102,11 @@ export const AuthController = {
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
         accessToken,
+<<<<<<< HEAD
         user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword },
+=======
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach },
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       });
     } catch (err: any) {
       if (err.message === 'INVALID_FIREBASE_TOKEN') return res.status(401).json({ message: 'Invalid Firebase token' });

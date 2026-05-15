@@ -1,9 +1,16 @@
 ﻿import { AdminLayout } from '../../components/AdminLayout';
 import {
+<<<<<<< HEAD
   Search, Trash2, Eye, EyeOff, UserPlus, Edit, Copy, CheckCheck,
   ChevronRight, FolderGit2, Award, CheckCircle2, Clock, XCircle,
   Loader2, ExternalLink, AlertCircle, Trophy, HelpCircle,
   Users, GraduationCap, Briefcase,
+=======
+  Search, Trash2, Eye, UserPlus, Edit, Copy, CheckCheck,
+  ChevronRight, BookOpen, FolderGit2, Award, CheckCircle2, Clock, XCircle,
+  Loader2, ExternalLink, AlertCircle, Trophy, HelpCircle,
+  Users, GraduationCap, Briefcase, KeyRound,
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -283,6 +290,7 @@ export function AdminUsers() {
   const [editUser, setEditUser] = useState<ApiUser | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', formation: '', duree: '', dateDebut: '' });
   const [editTeacherCourseIds, setEditTeacherCourseIds] = useState<string[]>([]);
+<<<<<<< HEAD
   const [eligibleCourses, setEligibleCourses] = useState<{ id: string; title: string; teacherId: string | null }[]>([]);
   const [eligibleCoursesLoading, setEligibleCoursesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -292,6 +300,18 @@ export function AdminUsers() {
   const [availableCourses, setAvailableCourses] = useState<{ id: string; title: string }[]>([]);
   const [generatedPassword, setGeneratedPassword] = useState<{ name: string; email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+=======
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const [teacherForm, setTeacherForm] = useState({ name: '', email: '' });
+  const [availableCourses, setAvailableCourses] = useState<{ id: string; title: string }[]>([]);
+  const [generatedPassword, setGeneratedPassword] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [resetPasswordResult, setResetPasswordResult] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [resetCopied, setResetCopied] = useState(false);
+
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   const [users, setUsers] = useState<ApiUser[]>([]);
 
   // Student overview panel
@@ -357,6 +377,7 @@ export function AdminUsers() {
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
+<<<<<<< HEAD
     const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/;
     if (!strongPassword.test(teacherForm.password)) {
       toast.error('Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.');
@@ -368,6 +389,15 @@ export function AdminUsers() {
       setTeacherForm({ name: '', email: '', password: '', showPassword: false });
       setShowAddTeacher(false);
       toast.success(`Formateur ${created.name} créé. Il devra changer son mot de passe à la première connexion.`);
+=======
+    try {
+      const res = await usersApi.createUser({ name: teacherForm.name, email: teacherForm.email, role: 'teacher' });
+      const { generatedPassword: pwd, ...created } = res;
+      setUsers(prev => [...prev, created as ApiUser]);
+      setTeacherForm({ name: '', email: '' });
+      setShowAddTeacher(false);
+      setGeneratedPassword({ name: created.name, email: created.email, password: pwd });
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     } catch {
       toast.error('Erreur lors de la création du formateur.');
     }
@@ -385,10 +415,24 @@ export function AdminUsers() {
     }
   };
 
+<<<<<<< HEAD
+=======
+  const handleResetPassword = async (u: ApiUser) => {
+    if (!window.confirm(`Réinitialiser le mot de passe de ${u.name} ?`)) return;
+    try {
+      const res = await usersApi.resetPassword(u.id);
+      setResetPasswordResult({ name: u.name, email: u.email, password: res.generatedPassword });
+    } catch {
+      toast.error('Erreur lors de la réinitialisation.');
+    }
+  };
+
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   const openEditModal = (u: ApiUser) => {
     setEditUser(u);
     setEditForm({ name: u.name, email: u.email, formation: u.formation || '', duree: u.duree || '', dateDebut: u.dateDebut || '' });
     if (u.role.toLowerCase() === 'teacher') {
+<<<<<<< HEAD
       setEditTeacherCourseIds([]);
       setEligibleCourses([]);
       setEligibleCoursesLoading(true);
@@ -402,6 +446,11 @@ export function AdminUsers() {
         })
         .catch(() => {})
         .finally(() => setEligibleCoursesLoading(false));
+=======
+      // Pre-select courses where this teacher is assigned
+      const assigned = availableCourses.filter(c => (c as any).teacherId === u.id).map(c => c.id);
+      setEditTeacherCourseIds(assigned);
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
       setEditStudentCourses([]);
     } else if (u.role.toLowerCase() === 'student') {
       setEditTeacherCourseIds([]);
@@ -430,14 +479,22 @@ export function AdminUsers() {
         payload = { name: editForm.name, email: editForm.email };
       } else {
         const formationValue = isTeacher
+<<<<<<< HEAD
           ? eligibleCourses.filter(c => editTeacherCourseIds.includes(c.id)).map(c => c.title).join(', ')
+=======
+          ? availableCourses.filter(c => editTeacherCourseIds.includes(c.id)).map(c => c.title).join(', ')
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
           : editForm.formation;
         payload = {
           name: editForm.name,
           email: editForm.email,
           formation: formationValue,
           duree: editForm.duree,
+<<<<<<< HEAD
           ...(isTeacher ? {} : { dateDebut: editForm.dateDebut || undefined }),
+=======
+          dateDebut: editForm.dateDebut,
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
         };
       }
 
@@ -659,6 +716,14 @@ export function AdminUsers() {
                           <button className="p-2 hover:bg-amber-50 text-amber-500 rounded-lg transition" onClick={() => openEditModal(u)} title="Modifier">
                             <Edit className="w-4 h-4" />
                           </button>
+<<<<<<< HEAD
+=======
+                          {u.role.toLowerCase() !== 'student' && (
+                            <button className="p-2 hover:bg-green-50 text-green-600 rounded-lg transition" onClick={() => handleResetPassword(u)} title="Réinitialiser le mot de passe">
+                              <KeyRound className="w-4 h-4" />
+                            </button>
+                          )}
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
                           <button className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition" onClick={() => handleDeleteUser(u.id)} title="Supprimer">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -778,6 +843,58 @@ export function AdminUsers() {
           </DialogContent>
         </Dialog>
 
+<<<<<<< HEAD
+=======
+        {/* ── Reset Password Modal ──────────────────────────────────────────── */}
+        <Dialog open={resetPasswordResult !== null} onOpenChange={() => { setResetPasswordResult(null); setResetCopied(false); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Mot de passe réinitialisé !</DialogTitle>
+              <DialogDescription>
+                Communiquez ces nouveaux identifiants à <strong>{resetPasswordResult?.name}</strong>. Le mot de passe ne sera plus affiché.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-muted-foreground">Email</label>
+                <div className="px-3 py-2 border border-border rounded-lg bg-accent/30 text-sm font-mono">{resetPasswordResult?.email}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-muted-foreground">Nouveau mot de passe</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-3 py-2 border border-border rounded-lg bg-accent/30 text-sm font-mono tracking-wider">
+                    {resetPasswordResult?.password}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetPasswordResult?.password || '');
+                      setResetCopied(true);
+                      setTimeout(() => setResetCopied(false), 2000);
+                    }}
+                    className="p-2 border border-border rounded-lg hover:bg-accent transition"
+                    title="Copier"
+                  >
+                    {resetCopied ? <CheckCheck className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                ⚠️ Notez ce mot de passe maintenant. Il ne sera plus visible après fermeture.
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => { setResetPasswordResult(null); setResetCopied(false); }}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
         {/* ── Edit User Modal ───────────────────────────────────────────────── */}
         <Dialog open={editUser !== null} onOpenChange={() => setEditUser(null)}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -841,6 +958,7 @@ export function AdminUsers() {
                       {editUser?.role.toLowerCase() === 'teacher' ? 'Cours assignés' : 'Formation actuelle'}
                     </label>
                     {editUser?.role.toLowerCase() === 'teacher' ? (
+<<<<<<< HEAD
                       eligibleCoursesLoading ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2 px-1">
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -851,6 +969,13 @@ export function AdminUsers() {
                       ) : (
                         <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
                           {eligibleCourses.map(course => (
+=======
+                      availableCourses.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Aucun cours disponible.</p>
+                      ) : (
+                        <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                          {availableCourses.map(course => (
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
                             <label key={course.id} className="flex items-center gap-3 px-3 py-2 hover:bg-accent/30 cursor-pointer">
                               <input
                                 type="checkbox"
@@ -906,7 +1031,11 @@ export function AdminUsers() {
         </Dialog>
 
         {/* ── Add Teacher Modal ─────────────────────────────────────────────── */}
+<<<<<<< HEAD
         <Dialog open={showAddTeacher} onOpenChange={(open) => { setShowAddTeacher(open); if (!open) setTeacherForm({ name: '', email: '', password: '', showPassword: false }); }}>
+=======
+        <Dialog open={showAddTeacher} onOpenChange={setShowAddTeacher}>
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Ajouter un formateur</DialogTitle>
@@ -927,6 +1056,7 @@ export function AdminUsers() {
                   placeholder="formateur@email.com"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
+<<<<<<< HEAD
               <div>
                 <label className="block text-sm font-medium mb-1">Mot de passe temporaire *</label>
                 <div className="relative">
@@ -945,6 +1075,10 @@ export function AdminUsers() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => { setShowAddTeacher(false); setTeacherForm({ name: '', email: '', password: '', showPassword: false }); }}
+=======
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowAddTeacher(false)}
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
                   className="px-4 py-2 border border-border rounded-lg hover:bg-accent transition">
                   Annuler
                 </button>

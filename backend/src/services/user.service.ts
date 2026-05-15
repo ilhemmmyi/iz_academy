@@ -69,15 +69,31 @@ export const UserService = {
     formation?: string;
     duree?: string;
     dateDebut?: string;
+<<<<<<< HEAD
     password: string;
+=======
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   }) {
     const existing = await UserModel.findByEmail(data.email);
     if (existing) throw Object.assign(new Error('Email already in use'), { code: 'CONFLICT' });
 
+<<<<<<< HEAD
     const { password, ...rest } = data;
     const hashed = await bcrypt.hash(password, 12);
     const user = await UserModel.create({ ...rest, password: hashed, mustChangePassword: true });
     return toSafeUser(user);
+=======
+    const words = ['Alpha', 'Bravo', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'Lima', 'Oscar', 'Sierra'];
+    const symbols = ['!', '@', '#', '$', '&', '*'];
+    const plainPassword =
+      words[Math.floor(Math.random() * words.length)] +
+      Math.floor(1000 + Math.random() * 9000) +
+      symbols[Math.floor(Math.random() * symbols.length)];
+
+    const hashed = await bcrypt.hash(plainPassword, 12);
+    const user = await UserModel.create({ ...data, password: hashed });
+    return { ...toSafeUser(user), generatedPassword: plainPassword };
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   },
 
   async updateUser(id: string, data: Record<string, unknown>) {
@@ -93,6 +109,7 @@ export const UserService = {
       Math.floor(1000 + Math.random() * 9000) +
       symbols[Math.floor(Math.random() * symbols.length)];
     const hashed = await bcrypt.hash(plainPassword, 12);
+<<<<<<< HEAD
     await UserModel.update(id, { password: hashed, mustChangePassword: true });
     return { generatedPassword: plainPassword };
   },
@@ -108,6 +125,12 @@ export const UserService = {
     await UserModel.update(userId, { password: hashed, mustChangePassword: false });
   },
 
+=======
+    await UserModel.update(id, { password: hashed });
+    return { generatedPassword: plainPassword };
+  },
+
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   async getMyCertificates(userId: string) {
     return CertificateModel.findByUser(userId);
   },
@@ -139,6 +162,7 @@ export const UserService = {
     await certificateQueue.add('generate', { userId, courseId });
   },
 
+<<<<<<< HEAD
   async getEligibleCourses(adminId: string, teacherId: string) {
     return prisma.course.findMany({
       where: { OR: [{ teacherId: adminId }, { teacherId }] },
@@ -177,6 +201,12 @@ export const UserService = {
         });
         console.log(`[assignCourses] ${courseIds.length} course(s) assigned to teacher (${teacherId})`);
       }
+=======
+  async assignCourses(teacherId: string, courseIds: string[]) {
+    await prisma.course.updateMany({
+      where: { id: { in: courseIds } },
+      data: { teacherId },
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     });
   },
 

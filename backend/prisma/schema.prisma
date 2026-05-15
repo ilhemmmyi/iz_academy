@@ -64,9 +64,13 @@ model User {
   twoFactorSecret     String?
   formation           String?
   duree               String?
+<<<<<<< HEAD
   dateDebut           String?
   hasCompletedCoach   Boolean          @default(false)
   mustChangePassword  Boolean          @default(false)
+=======
+  hasCompletedCoach   Boolean          @default(false)
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   phone               String?
   address             String?
   educationLevel      String?

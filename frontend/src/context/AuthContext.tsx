@@ -13,7 +13,10 @@ interface User {
   role: string;
   avatarUrl?: string;
   hasCompletedCoach: boolean;
+<<<<<<< HEAD
   mustChangePassword: boolean;
+=======
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   phone?: string;
   address?: string;
   educationLevel?: string;

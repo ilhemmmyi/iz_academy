@@ -3,7 +3,10 @@ import { router } from './routes';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from '../context/AuthContext';
 import { FloatingChatWidget } from './components/FloatingChatWidget';
+<<<<<<< HEAD
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
+=======
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
 import { Component, ErrorInfo, ReactNode } from 'react';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -29,7 +32,10 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <RouterProvider router={router} />
+<<<<<<< HEAD
         <ForcePasswordChangeModal />
+=======
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
         <FloatingChatWidget />
         <Toaster />
       </AuthProvider>

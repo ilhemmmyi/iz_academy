@@ -18,7 +18,10 @@ export const usersApi = {
     name: string;
     email: string;
     role: string;
+<<<<<<< HEAD
     password: string;
+=======
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     formation?: string;
     duree?: string;
     dateDebut?: string;
@@ -28,6 +31,7 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
 
+<<<<<<< HEAD
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     apiClient('/users/me/change-password', {
       method: 'POST',
@@ -37,6 +41,8 @@ export const usersApi = {
   getEligibleCourses: (teacherId: string) =>
     apiClient(`/users/${teacherId}/eligible-courses`),
 
+=======
+>>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   assignCourses: (userId: string, courseIds: string[]) =>
     apiClient(`/users/${userId}/courses`, {
       method: 'PUT',
