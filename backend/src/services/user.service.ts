@@ -37,7 +37,6 @@ export const UserService = {
   },
 
   async deleteUser(id: string, adminId: string) {
-    // Gather courses taught by this user (relevant for TEACHERs)
     const courses = await prisma.course.findMany({
       where: { teacherId: id },
       select: { id: true },
@@ -45,19 +44,14 @@ export const UserService = {
     const courseIds = courses.map((c) => c.id);
 
     await prisma.$transaction([
-      // 1. Remove the user's own quiz attempts (student path)
       prisma.quizAttempt.deleteMany({ where: { userId: id } }),
-      // 2. Remove the user's own messages, certificates & payments
       prisma.message.deleteMany({ where: { OR: [{ senderId: id }, { receiverId: id }] } }),
       CertificateModel.deleteByUser(id),
       prisma.payment.deleteMany({ where: { userId: id } }),
-      // 3. Nullify contact-message replies authored by this user
       prisma.contactMessage.updateMany({ where: { repliedById: id }, data: { repliedById: null } }),
-      // 4. Reassign teacher's courses to the admin instead of deleting them
       ...(courseIds.length
         ? [prisma.course.updateMany({ where: { teacherId: id }, data: { teacherId: adminId } })]
         : []),
-      // 5. Finally delete the user (remaining cascading relations handle the rest)
       prisma.user.delete({ where: { id } }),
     ]);
   },
@@ -69,31 +63,15 @@ export const UserService = {
     formation?: string;
     duree?: string;
     dateDebut?: string;
-<<<<<<< HEAD
     password: string;
-=======
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   }) {
     const existing = await UserModel.findByEmail(data.email);
     if (existing) throw Object.assign(new Error('Email already in use'), { code: 'CONFLICT' });
 
-<<<<<<< HEAD
     const { password, ...rest } = data;
     const hashed = await bcrypt.hash(password, 12);
     const user = await UserModel.create({ ...rest, password: hashed, mustChangePassword: true });
     return toSafeUser(user);
-=======
-    const words = ['Alpha', 'Bravo', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'Lima', 'Oscar', 'Sierra'];
-    const symbols = ['!', '@', '#', '$', '&', '*'];
-    const plainPassword =
-      words[Math.floor(Math.random() * words.length)] +
-      Math.floor(1000 + Math.random() * 9000) +
-      symbols[Math.floor(Math.random() * symbols.length)];
-
-    const hashed = await bcrypt.hash(plainPassword, 12);
-    const user = await UserModel.create({ ...data, password: hashed });
-    return { ...toSafeUser(user), generatedPassword: plainPassword };
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   },
 
   async updateUser(id: string, data: Record<string, unknown>) {
@@ -109,7 +87,6 @@ export const UserService = {
       Math.floor(1000 + Math.random() * 9000) +
       symbols[Math.floor(Math.random() * symbols.length)];
     const hashed = await bcrypt.hash(plainPassword, 12);
-<<<<<<< HEAD
     await UserModel.update(id, { password: hashed, mustChangePassword: true });
     return { generatedPassword: plainPassword };
   },
@@ -125,12 +102,6 @@ export const UserService = {
     await UserModel.update(userId, { password: hashed, mustChangePassword: false });
   },
 
-=======
-    await UserModel.update(id, { password: hashed });
-    return { generatedPassword: plainPassword };
-  },
-
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
   async getMyCertificates(userId: string) {
     return CertificateModel.findByUser(userId);
   },
@@ -162,7 +133,6 @@ export const UserService = {
     await certificateQueue.add('generate', { userId, courseId });
   },
 
-<<<<<<< HEAD
   async getEligibleCourses(adminId: string, teacherId: string) {
     return prisma.course.findMany({
       where: { OR: [{ teacherId: adminId }, { teacherId }] },
@@ -201,42 +171,29 @@ export const UserService = {
         });
         console.log(`[assignCourses] ${courseIds.length} course(s) assigned to teacher (${teacherId})`);
       }
-=======
-  async assignCourses(teacherId: string, courseIds: string[]) {
-    await prisma.course.updateMany({
-      where: { id: { in: courseIds } },
-      data: { teacherId },
->>>>>>> ba8db72789a1b6c442bcd55d3869e6465139c9a4
     });
   },
 
   async removeStudentCourseAccess(studentId: string, courseId: string) {
     await prisma.$transaction([
-      // Delete all lesson progress for this student in this course
       prisma.lessonProgress.deleteMany({
         where: {
           userId: studentId,
           lesson: { module: { courseId } },
         },
       }),
-      // Delete quiz attempts for quizzes belonging to this course
       prisma.quizAttempt.deleteMany({
         where: {
           userId: studentId,
           quiz: { lessons: { some: { module: { courseId } } } },
         },
       }),
-      // Delete the enrollment itself
       prisma.enrollment.deleteMany({
         where: { userId: studentId, courseId },
       }),
     ]);
     console.log(`[Admin] Removed access + progress for user ${studentId} on course ${courseId}`);
   },
-
-  /**
-   * Admin view of a single student: progress per course, project submissions, certificates.
-   */
 
   async updateAvatar(userId: string, file: Express.Multer.File) {
     const url = await uploadToStorage(
@@ -258,19 +215,19 @@ export const UserService = {
       where: { id: userId },
     });
 
-      if (user?.avatarUrl) {
-    await deleteFromStorage(user.avatarUrl); //
-  }
+    if (user?.avatarUrl) {
+      await deleteFromStorage(user.avatarUrl);
+    }
     return prisma.user.update({
       where: { id: userId },
       data: { avatarUrl: null },
     });
   },
+
   async getStudentOverview(studentId: string) {
     const user = await UserModel.findById(studentId);
     if (!user) throw Object.assign(new Error('User not found'), { code: 'NOT_FOUND' });
 
-    // All approved enrollments with full course + lesson tree
     const enrollments = await prisma.enrollment.findMany({
       where: { userId: studentId, status: 'APPROVED' },
       include: {
@@ -286,7 +243,6 @@ export const UserService = {
       orderBy: { createdAt: 'desc' },
     });
 
-    // All the lesson IDs across those courses
     const allLessonIds = enrollments.flatMap((e) =>
       e.course.modules.flatMap((m) => m.lessons.map((l) => l.id)),
     );
@@ -302,7 +258,6 @@ export const UserService = {
       return acc;
     }, {});
 
-    // Lesson progress for this student so partial watch progress counts too
     const lessonProgress = await prisma.lessonProgress.findMany({
       where: { userId: studentId, lessonId: { in: allLessonIds } },
       select: {
@@ -325,7 +280,6 @@ export const UserService = {
       }
     }
 
-    // Project submissions
     const submissions = await prisma.projectSubmission.findMany({
       where: { studentId },
       include: {
@@ -368,7 +322,6 @@ export const UserService = {
       };
     });
 
-    // Certificates
     const certificates = await CertificateModel.findByUser(studentId);
 
     return {
