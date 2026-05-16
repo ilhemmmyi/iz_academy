@@ -14,7 +14,6 @@ const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage").then(m =>
 const FAQ = lazy(() => import("./pages/FAQ").then(m => ({ default: m.FAQ })));
 const Contact = lazy(() => import("./pages/Contact").then(m => ({ default: m.Contact })));
 const UserProfile = lazy(() => import("./pages/UserProfile").then(m => ({ default: m.UserProfile })));
-const Verify2FA = lazy(() => import("./pages/Verify2FA").then(m => ({ default: m.Verify2FA })));
 
 // Lazy-loaded student pages
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
@@ -56,14 +55,12 @@ const PageLoader = () => (
   </div>
 );
 
-/** Wraps a lazy page in Suspense + ProtectedRoute */
 const Guard = ({ roles, children }: { roles: string[]; children: React.ReactNode }) => (
   <ProtectedRoute roles={roles}>
     <Suspense fallback={<PageLoader />}>{children}</Suspense>
   </ProtectedRoute>
 );
 
-/** Same as Guard but also blocks non-coach-completed students */
 const StudentGuard = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute roles={["STUDENT"]}>
     <CoachGuard>
@@ -79,10 +76,6 @@ export const router = createBrowserRouter([
   { path: "/register", Component: Register },
   { path: "/check-email", Component: CheckEmail },
   { path: "/verify-email", Component: VerifyEmail },
-  {
-    path: "/verify-2fa",
-    element: <Suspense fallback={<PageLoader />}><Verify2FA /></Suspense>,
-  },
 
   // Lazy public pages
   {
@@ -141,9 +134,3 @@ export const router = createBrowserRouter([
   { path: "/admin/enrollment-requests", element: <Guard roles={["ADMIN"]}><AdminEnrollmentRequests /></Guard> },
   { path: "/admin/configuration", element: <Guard roles={["ADMIN"]}><AdminConfiguration /></Guard> },
 ]);
-
-
-
-
-
-

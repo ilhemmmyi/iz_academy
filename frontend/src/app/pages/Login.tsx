@@ -24,13 +24,6 @@ export function Login() {
     try {
       const res = await login(email, password);
 
-      if (res.requires2FA) {
-        sessionStorage.setItem('pending2FAUserId', res.userId);
-        navigate('/verify-2fa');
-        return;
-      }
-
-      // Redirect based on role
       if (res.user.role === 'STUDENT') navigate('/student');
       else if (res.user.role === 'TEACHER') navigate('/teacher');
       else navigate('/admin');

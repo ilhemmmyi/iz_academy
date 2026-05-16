@@ -1,7 +1,5 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import speakeasy from 'speakeasy';
-import QRCode from 'qrcode';
 import { prisma } from '../config/prisma';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { emailQueue } from '../queues/email.queue';
@@ -59,7 +57,6 @@ export const AuthService = {
     if (!stored || stored.expiresAt < new Date()) throw new Error('INVALID_REFRESH');
     verifyRefreshToken(token); // validate signature
     await prisma.refreshToken.delete({ where: { token } });
-    // Re-fetch user from DB to get current role and active status
     const user = await prisma.user.findUnique({ where: { id: stored.userId } });
     if (!user || !user.isActive) throw new Error('INVALID_REFRESH');
     return this.issueTokens(user.id, user.role, user.email);
@@ -67,24 +64,6 @@ export const AuthService = {
 
   async logout(token: string) {
     await prisma.refreshToken.deleteMany({ where: { token } });
-  },
-
-  async setup2FA(userId: string) {
-    const secret = speakeasy.generateSecret({ name: 'IzAcademy' });
-    await prisma.user.update({ where: { id: userId }, data: { twoFactorSecret: secret.base32 } });
-    const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
-    return { qrCode };
-  },
-
-  async verify2FA(userId: string, token: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.twoFactorSecret) throw new Error('2FA_NOT_SETUP');
-    const valid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret, encoding: 'base32', token, window: 1,
-    });
-    if (!valid) throw new Error('INVALID_2FA_TOKEN');
-    await prisma.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
-    return true;
   },
 
   async verifyEmail(token: string) {
@@ -101,19 +80,16 @@ export const AuthService = {
   },
 
   async googleLogin(uid: string, email: string, displayName: string, firebaseToken: string) {
-    // 1. Verify the Firebase ID token server-side
     const decoded = await admin.auth().verifyIdToken(firebaseToken);
     if (decoded.uid !== uid || decoded.email !== email) {
       throw new Error('INVALID_FIREBASE_TOKEN');
     }
 
-    // 2. Find existing user by googleId or email
     let user = await prisma.user.findFirst({
       where: { OR: [{ googleId: uid }, { email }] },
     });
 
     if (user) {
-      // Link the Google account if not already linked
       if (!user.googleId) {
         user = await prisma.user.update({
           where: { id: user.id },
@@ -122,9 +98,8 @@ export const AuthService = {
       }
       if (!user.isActive) throw new Error('ACCOUNT_DISABLED');
     } else {
-      // 3. Create a new user (no password required)
       user = await prisma.user.create({
-        data: { name: displayName, email, googleId: uid, role: 'STUDENT' },
+        data: { name: displayName, email, googleId: uid, role: 'STUDENT', isVerified: true },
       });
       emailQueue.add('welcome', { name: user.name, email: user.email }).catch((err) => console.error('Email queue error:', err));
     }

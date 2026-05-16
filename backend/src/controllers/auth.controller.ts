@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { UserModel } from '../models/user.model';
-import { AuthRequest } from '../middlewares/auth.middleware';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -28,9 +26,6 @@ export const AuthController = {
     try {
       const { email, password } = req.body;
       const user = await AuthService.login(email, password);
-      if (user.twoFactorEnabled) {
-        return res.json({ requires2FA: true, userId: user.id });
-      }
       const { accessToken, refreshToken } = await AuthService.issueTokens(user.id, user.role, user.email);
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
@@ -65,42 +60,17 @@ export const AuthController = {
     res.json({ message: 'Logged out' });
   },
 
-  async setup2FA(req: AuthRequest, res: Response) {
-    try {
-      const result = await AuthService.setup2FA(req.user!.userId);
-      res.json(result);
-    } catch {
-      res.status(500).json({ message: '2FA setup failed' });
-    }
-  },
-
-  async verify2FA(req: Request, res: Response) {
-    try {
-      const { userId, token } = req.body;
-      await AuthService.verify2FA(userId, token);
-      const user = await UserModel.findById(userId);
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      const tokens = await AuthService.issueTokens(user.id, user.role, user.email);
-      res.cookie('refreshToken', tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
-      res.json({ accessToken: tokens.accessToken });
-    } catch {
-      res.status(400).json({ message: 'Invalid 2FA token' });
-    }
-  },
-
   async verifyEmail(req: Request, res: Response) {
     try {
-      const { token } = req.query;
-      if (!token || typeof token !== 'string') {
-        return res.status(400).json({ message: 'Token manquant' });
-      }
+      const { token } = req.query as { token: string };
+      if (!token) return res.status(400).json({ message: 'Token manquant' });
       await AuthService.verifyEmail(token);
       res.json({ message: 'Email vérifié avec succès' });
     } catch (err: any) {
-      if (err.message === 'INVALID_TOKEN') return res.status(400).json({ message: 'Lien de vérification invalide' });
-      if (err.message === 'TOKEN_EXPIRED') return res.status(400).json({ message: 'Lien de vérification expiré. Veuillez vous réinscrire.' });
+      if (err.message === 'INVALID_TOKEN') return res.status(400).json({ message: 'Lien invalide' });
+      if (err.message === 'TOKEN_EXPIRED') return res.status(400).json({ message: 'Lien expiré. Veuillez vous réinscrire.' });
       console.error('[verifyEmail]', err);
-      res.status(500).json({ message: 'Échec de la vérification' });
+      res.status(500).json({ message: 'Vérification échouée' });
     }
   },
 

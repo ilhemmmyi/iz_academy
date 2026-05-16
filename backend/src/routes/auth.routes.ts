@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
-import { registerSchema, loginSchema, googleLoginSchema, verify2FASchema } from '../validators/auth.validators';
+import { registerSchema, loginSchema, googleLoginSchema } from '../validators/auth.validators';
 import rateLimit from 'express-rate-limit';
 
 export const authRouter = Router();
@@ -17,5 +17,3 @@ authRouter.post('/login', loginLimiter, validate(loginSchema), AuthController.lo
 authRouter.post('/google', loginLimiter, validate(googleLoginSchema), AuthController.googleLogin);
 authRouter.post('/refresh', AuthController.refresh);
 authRouter.post('/logout', AuthController.logout);
-authRouter.post('/2fa/setup', authenticate, AuthController.setup2FA);
-authRouter.post('/2fa/verify', loginLimiter, validate(verify2FASchema), AuthController.verify2FA);

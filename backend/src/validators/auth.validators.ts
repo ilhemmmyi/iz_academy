@@ -22,8 +22,3 @@ export const googleLoginSchema = z.object({
   displayName: z.string().min(1),
   firebaseToken: z.string().min(1),
 });
-
-export const verify2FASchema = z.object({
-  userId: z.string().min(1),
-  token: z.string().length(6),
-});

@@ -11,6 +11,6 @@ export const UserModel = {
 };
 
 export const toSafeUser = (user: any) => {
-  const { password, twoFactorSecret, ...safe } = user;
+  const { password, ...safe } = user;
   return safe;
 };

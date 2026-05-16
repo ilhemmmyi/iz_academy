@@ -12,11 +12,6 @@ export const authApi = {
 
   logout: () => apiClient('/auth/logout', { method: 'POST' }),
 
-  setup2FA: () => apiClient('/auth/2fa/setup', { method: 'POST' }),
-
-  verify2FA: (userId: string, token: string) =>
-    apiClient('/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ userId, token }) }),
-
   verifyEmail: (token: string) =>
     apiClient(`/auth/verify-email?token=${encodeURIComponent(token)}`),
 };
