@@ -5,6 +5,8 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { CheckEmail } from "./pages/CheckEmail";
 import { VerifyEmail } from "./pages/VerifyEmail";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CoachGuard } from "./components/CoachGuard";
 
@@ -76,6 +78,12 @@ export const router = createBrowserRouter([
   { path: "/register", Component: Register },
   { path: "/check-email", Component: CheckEmail },
   { path: "/verify-email", Component: VerifyEmail },
+  { path: "/forgot-password", Component: ForgotPassword },
+  { path: "/reset-password", Component: ResetPassword },
+  {
+    path: "/verify-2fa",
+    element: <Suspense fallback={<PageLoader />}><Verify2FA /></Suspense>,
+  },
 
   // Lazy public pages
   {

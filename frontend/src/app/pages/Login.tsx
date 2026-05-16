@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useLocation } from 'react-router';
 import {
   GraduationCap,
   Mail,
@@ -10,7 +10,9 @@ import { useAuth } from '../../context/AuthContext';
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, loginWithGoogle } = useAuth();
+  const passwordResetSuccess = (location.state as any)?.passwordReset === true;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,6 +81,11 @@ export function Login() {
 
           {/* Card */}
           <div className="bg-white border border-border rounded-2xl p-8 shadow-sm">
+            {passwordResetSuccess && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
+                Mot de passe réinitialisé avec succès ! Connectez-vous avec votre nouveau mot de passe.
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -137,12 +144,12 @@ export function Login() {
                   </span>
                 </label>
 
-                <a
-                  href="#"
+                <Link
+                  to="/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
                   Mot de passe oublié ?
-                </a>
+                </Link>
               </div>
 
               {/* Login Button */}
