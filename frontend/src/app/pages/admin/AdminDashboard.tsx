@@ -3,8 +3,8 @@ import { Link } from 'react-router';
 import { Users, BookOpen, UserPlus, GraduationCap, Eye } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { Skeleton } from '../../components/ui/skeleton';
 import { usersApi } from '../../../api/users.api';
 import { coursesApi } from '../../../api/courses.api';
 import { enrollmentsApi } from '../../../api/enrollments.api';
@@ -29,6 +29,41 @@ function groupByMonth<T extends { createdAt?: string }>(items: T[], valueKey?: k
   return result.map(r => ({ month: r.month, value: r.value }));
 }
 
+const RevenueChart = lazy(() =>
+  import('recharts').then(({ LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer }) => ({
+    default: ({ data }: { data: { month: string; revenue: number }[] }) => (
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+          <YAxis tick={{ fontSize: 12 }} />
+          <Tooltip
+            formatter={(v: number) => `${v}DT`}
+            contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
+          />
+          <Line type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2.5} dot={{ r: 4, fill: '#0d9488' }} />
+        </LineChart>
+      </ResponsiveContainer>
+    ),
+  }))
+);
+
+const StudentsChart = lazy(() =>
+  import('recharts').then(({ BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer }) => ({
+    default: ({ data }: { data: { month: string; students: number }[] }) => (
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+          <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
+          <Bar dataKey="students" fill="#7c3aed" opacity={0.85} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    ),
+  }))
+);
+
 export function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -38,7 +73,7 @@ export function AdminDashboard() {
 
   useEffect(() => {
     Promise.all([
-      usersApi.getAll().catch(() => []),
+      usersApi.getAll({ limit: 1000 }).then((r: any) => r.users ?? []).catch(() => []),
       coursesApi.getAll().catch(() => []),
       enrollmentsApi.getAll().catch(() => []),
       paymentsApi.getAll().catch(() => []),
@@ -139,33 +174,18 @@ export function AdminDashboard() {
           <Card className="border-l-4 border-l-teal-400">
             <CardHeader><CardTitle className="text-base">Revenus mensuels (DT)</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={revenueChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    formatter={(v: number) => `${v}DT`}
-                    contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
-                  />
-                  <Line type="monotone" dataKey="revenue" stroke="#0d9488" strokeWidth={2.5} dot={{ r: 4, fill: '#0d9488' }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<Skeleton className="w-full h-[280px]" />}>
+                <RevenueChart data={revenueChartData} />
+              </Suspense>
             </CardContent>
           </Card>
 
           <Card className="border-l-4 border-l-violet-400">
             <CardHeader><CardTitle className="text-base">Nouvelles inscriptions</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={newStudentsChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  <Bar dataKey="students" fill="#7c3aed" opacity={0.85} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<Skeleton className="w-full h-[280px]" />}>
+                <StudentsChart data={newStudentsChartData} />
+              </Suspense>
             </CardContent>
           </Card>
         </div>

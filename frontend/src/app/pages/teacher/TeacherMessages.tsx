@@ -17,6 +17,8 @@ export function TeacherMessages() {
   const { user } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [allMessages, setAllMessages] = useState<any[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,12 +27,14 @@ export function TeacherMessages() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [reportMessageId, setReportMessageId] = useState<string | null>(null);
 
-  // Load contacts (enrolled students) + all messages in parallel
+  // Load contacts (enrolled students) + first page of messages in parallel
   useEffect(() => {
     Promise.all([messagesApi.getContacts(), messagesApi.getAll()])
-      .then(([ctcts, msgs]) => {
+      .then(([ctcts, result]) => {
+        const { messages, nextCursor: cursor } = result as { messages: any[]; nextCursor: string | null };
         setContacts(ctcts as Contact[]);
-        setAllMessages(msgs as any[]);
+        setAllMessages(messages);
+        setNextCursor(cursor);
         if ((ctcts as Contact[]).length > 0 && !selectedContact) {
           setSelectedContact((ctcts as Contact[])[0]);
         }
@@ -38,6 +42,20 @@ export function TeacherMessages() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const handleLoadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await messagesApi.getAll(nextCursor) as { messages: any[]; nextCursor: string | null };
+      setAllMessages((prev) => [...prev, ...result.messages]);
+      setNextCursor(result.nextCursor);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -234,6 +252,17 @@ export function TeacherMessages() {
 
             {/* Messages area */}
             <div className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#f5f6fb]">
+              {nextCursor && (
+                <div className="flex justify-center pb-2">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50 underline"
+                  >
+                    {loadingMore ? 'Chargement…' : 'Charger les messages précédents'}
+                  </button>
+                </div>
+              )}
               {currentMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mb-3">

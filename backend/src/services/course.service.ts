@@ -5,18 +5,19 @@ import { prisma } from '../config/prisma';
 import { redis } from '../config/redis';
 import { withCache } from '../utils/cache';
 
+const COURSES_KEYS_SET = 'cache:courses:keys';
+
+const withCourseCache = async <T>(key: string, fn: () => Promise<T>): Promise<T> => {
+  try { await redis.sadd(COURSES_KEYS_SET, key); } catch {}
+  return withCache(key, fn);
+};
+
 const invalidateCourseCache = async (courseId?: string) => {
   try {
     if (courseId) await redis.del(`course:${courseId}`);
-    // C-3: use SCAN instead of blocking redis.keys()
-    const keys: string[] = [];
-    let cursor = '0';
-    do {
-      const [next, batch] = await redis.scan(cursor, 'MATCH', 'courses:*', 'COUNT', '100');
-      cursor = next;
-      keys.push(...batch);
-    } while (cursor !== '0');
+    const keys = await redis.smembers(COURSES_KEYS_SET);
     if (keys.length > 0) await redis.del(...keys);
+    await redis.del(COURSES_KEYS_SET);
   } catch {}
 };
 
@@ -25,7 +26,7 @@ export const CourseService = {
   invalidateCourseCache,
 
   async getAll(filters?: any) {
-    return withCache(`courses:${JSON.stringify(filters || {})}`, () => CourseModel.findAll(filters));
+    return withCourseCache(`courses:${JSON.stringify(filters || {})}`, () => CourseModel.findAll(filters));
   },
 
   async getMine(teacherId: string) {
@@ -33,8 +34,7 @@ export const CourseService = {
   },
 
   async getAllAdmin() {
-    // M-1: cache admin listing
-    return withCache('courses:admin', () => CourseModel.findAllAdmin());
+    return withCourseCache('courses:admin', () => CourseModel.findAllAdmin());
   },
 
   async getById(id: string) {

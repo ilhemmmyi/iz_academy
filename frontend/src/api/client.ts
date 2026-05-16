@@ -23,7 +23,6 @@ export const apiClient = async (path: string, options: RequestInit = {}): Promis
   const isFormData = options.body instanceof FormData;
 
   const headers: Record<string, string> = {
-    ...(isGetRequest ? { 'Cache-Control': 'no-cache, no-store, must-revalidate', Pragma: 'no-cache' } : {}),
     ...(options.headers as Record<string, string>),
   };
 

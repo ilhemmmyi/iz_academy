@@ -31,9 +31,25 @@ export const UserService = {
     return toSafeUser(user);
   },
 
-  async getAll() {
-    const users = await UserModel.findAll();
-    return users.map(toSafeUser);
+  async getAll(params: { search?: string; page?: number; limit?: number; role?: string } = {}) {
+    const { search, page = 1, limit = 25, role } = params;
+    const skip = (page - 1) * limit;
+    const roleFilter = role && role !== 'all' ? { role: role.toUpperCase() as any } : {};
+    const where = {
+      NOT: { role: 'ADMIN' as const },
+      ...roleFilter,
+      ...(search ? {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { email: { contains: search, mode: 'insensitive' as const } },
+        ],
+      } : {}),
+    };
+    const [rawUsers, total] = await Promise.all([
+      prisma.user.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      prisma.user.count({ where }),
+    ]);
+    return { users: rawUsers.map(toSafeUser), total, page, totalPages: Math.ceil(total / limit) };
   },
 
   async deleteUser(id: string, adminId: string) {

@@ -9,7 +9,15 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
 
-  getAll: () => apiClient('/users'),
+  getAll: (params: { search?: string; role?: string; page?: number; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.role && params.role !== 'all') query.set('role', params.role);
+    if (params.page) query.set('page', String(params.page));
+    if (params.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return apiClient(`/users${qs ? `?${qs}` : ''}`);
+  },
 
   getStudentOverview: (userId: string) =>
     apiClient(`/users/${userId}/overview`),

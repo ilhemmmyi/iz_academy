@@ -3,15 +3,22 @@ import { EnrollmentModel } from '../models/enrollment.model';
 import { ActivityService } from './activity.service';
 
 export const MessageService = {
-  getConversations: (userId: string) =>
-    prisma.message.findMany({
+  async getConversations(userId: string, cursor?: string, limit = 50) {
+    const take = limit + 1;
+    const messages = await prisma.message.findMany({
       where: { OR: [{ senderId: userId }, { receiverId: userId }] },
       include: {
         sender: { select: { id: true, name: true, avatarUrl: true } },
         receiver: { select: { id: true, name: true, avatarUrl: true } },
       },
       orderBy: { createdAt: 'desc' },
-    }),
+      take,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+    const hasMore = messages.length > limit;
+    const items = hasMore ? messages.slice(0, limit) : messages;
+    return { messages: items, nextCursor: hasMore ? items[items.length - 1].id : null };
+  },
 
   /**
    * Returns the list of people the user can message:

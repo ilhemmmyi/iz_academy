@@ -44,9 +44,13 @@ export const UserController = {
     }
   },
 
-  async getAll(_req: AuthRequest, res: Response) {
+  async getAll(req: AuthRequest, res: Response) {
     try {
-      res.json(await UserService.getAll());
+      const search = req.query.search as string | undefined;
+      const role = req.query.role as string | undefined;
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.min(Math.max(1, Number(req.query.limit) || 25), 100);
+      res.json(await UserService.getAll({ search, role, page, limit }));
     } catch {
       res.status(500).json({ message: 'Failed to fetch users' });
     }

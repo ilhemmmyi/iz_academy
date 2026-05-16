@@ -9,6 +9,9 @@ const transporter = nodemailer.createTransport({
     user: config.smtp.user,
     pass: config.smtp.pass,
   },
+  tls: {
+    rejectUnauthorized: false, // allow self-signed / intermediate CA chains (Brevo, corporate proxies)
+  },
 });
 
 // Vérifie la connexion SMTP au démarrage

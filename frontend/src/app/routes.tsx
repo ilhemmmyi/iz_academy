@@ -80,10 +80,6 @@ export const router = createBrowserRouter([
   { path: "/verify-email", Component: VerifyEmail },
   { path: "/forgot-password", Component: ForgotPassword },
   { path: "/reset-password", Component: ResetPassword },
-  {
-    path: "/verify-2fa",
-    element: <Suspense fallback={<PageLoader />}><Verify2FA /></Suspense>,
-  },
 
   // Lazy public pages
   {

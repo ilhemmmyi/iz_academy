@@ -13,14 +13,11 @@ async function checkAndIssueCertificate(userId: string, lessonId: string) {
   const lesson = await LessonModel.findById(lessonId);
   if (!lesson?.module?.courseId) return;
   const courseId = lesson.module.courseId;
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    include: { modules: { include: { lessons: true } } },
-  });
-  if (!course) return;
-  const total = course.modules.flatMap((m: any) => m.lessons).length;
-  const done = await LessonModel.countCompleted(userId, courseId);
-  if (done >= total) {
+  const [total, done] = await Promise.all([
+    prisma.lesson.count({ where: { module: { courseId } } }),
+    LessonModel.countCompleted(userId, courseId),
+  ]);
+  if (total > 0 && done >= total) {
     certificateQueue.add('issue', { userId, courseId }).catch((err) =>
       console.error('Certificate queue error:', err)
     );

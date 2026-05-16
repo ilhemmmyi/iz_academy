@@ -15,8 +15,10 @@ export const MessageController = {
 
   async getAll(req: AuthRequest, res: Response) {
     try {
-      const messages = await MessageService.getConversations(req.user!.userId);
-      res.json(messages);
+      const cursor = req.query.cursor as string | undefined;
+      const limit = Math.min(Number(req.query.limit) || 50, 100);
+      const result = await MessageService.getConversations(req.user!.userId, cursor, limit);
+      res.json(result);
     } catch {
       res.status(500).json({ message: 'Failed to fetch messages' });
     }

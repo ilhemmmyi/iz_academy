@@ -5,7 +5,7 @@ import {
   Loader2, ExternalLink, AlertCircle, Trophy, HelpCircle,
   Users, GraduationCap, Briefcase,
 } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '../../components/ui/dialog';
@@ -294,6 +294,10 @@ export function AdminUsers() {
   const [copied, setCopied] = useState(false);
 
   const [users, setUsers] = useState<ApiUser[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Student overview panel
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);
@@ -309,15 +313,50 @@ export function AdminUsers() {
   const [editStudentCoursesLoading, setEditStudentCoursesLoading] = useState(false);
   const [removingCourseId, setRemovingCourseId] = useState<string | null>(null);
 
+  const fetchUsers = useCallback(async (search: string, role: string, pageNum: number) => {
+    setLoading(true);
+    try {
+      const data = await usersApi.getAll({ search: search || undefined, role, page: pageNum, limit: 25 }) as {
+        users: ApiUser[]; total: number; page: number; totalPages: number;
+      };
+      setUsers(data.users);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+    } catch {
+      setError('Impossible de charger les utilisateurs.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    Promise.all([usersApi.getAll(), coursesApi.getAdmin()])
-      .then(([userData, courseData]) => {
-        setUsers(userData as ApiUser[]);
+    coursesApi.getAdmin()
+      .then((courseData) => {
         setAvailableCourses((courseData as any[]).map((c: any) => ({ id: c.id, title: c.title, teacherId: c.teacher?.id })));
       })
-      .catch(() => setError('Impossible de charger les utilisateurs.'))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => {});
+    fetchUsers('', 'all', 1);
+  }, [fetchUsers]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setPage(1);
+      fetchUsers(value, filterRole, 1);
+    }, 400);
+  };
+
+  const handleRoleChange = (role: string) => {
+    setFilterRole(role);
+    setPage(1);
+    fetchUsers(searchQuery, role, 1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    fetchUsers(searchQuery, filterRole, newPage);
+  };
 
   const loadOverview = useCallback(async (userId: string) => {
     if (expandedStudentId === userId) {
@@ -474,16 +513,6 @@ export function AdminUsers() {
     }
   };
 
-  const filteredUsers = users.filter(u => {
-    const role = u.role.toLowerCase();
-    if (role === 'admin') return false;
-    const matchRole = filterRole === 'all' || role === filterRole;
-    const matchSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchRole && matchSearch;
-  });
-
   const selectedUserObj = selectedUser ? users.find(u => u.id === selectedUser) : null;
 
   const studentCount = users.filter(u => u.role.toLowerCase() === 'student').length;
@@ -549,14 +578,14 @@ export function AdminUsers() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={e => handleSearchChange(e.target.value)}
                 placeholder="Rechercher un utilisateur..."
                 className="w-full pl-10 pr-4 py-2 border border-indigo-200 rounded-lg bg-indigo-50/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-indigo-300"
               />
             </div>
             <select
               value={filterRole}
-              onChange={e => setFilterRole(e.target.value)}
+              onChange={e => handleRoleChange(e.target.value)}
               className="px-4 py-2 border border-indigo-200 rounded-lg bg-indigo-50/30 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <option value="all">Tous les utilisateurs</option>
@@ -602,13 +631,13 @@ export function AdminUsers() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredUsers.length === 0 ? (
+              ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     Aucun utilisateur trouvé.
                   </td>
                 </tr>
-              ) : filteredUsers.map(u => {
+              ) : users.map(u => {
                 const roleKey = u.role.toLowerCase();
                 const isExpanded = expandedStudentId === u.id;
                 const avatarColor =
@@ -709,6 +738,31 @@ export function AdminUsers() {
             </tbody>
           </table>
         </div>
+
+        {/* ── Pagination ────────────────────────────────────────────────────── */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between bg-white border border-border rounded-xl px-4 py-3 shadow-sm">
+            <span className="text-sm text-muted-foreground">
+              {total} utilisateur{total !== 1 ? 's' : ''} — page {page} / {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page <= 1}
+                className="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                ← Précédent
+              </button>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page >= totalPages}
+                className="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                Suivant →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Confirm Revoke Certificate Modal ──────────────────────────────── */}
         <AlertDialog open={pendingRevoke !== null}>

@@ -145,7 +145,19 @@ export function StudentCourseView() {
   /* ── flush pending save when leaving ─────────────────────── */
 
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (pendingSaveRef.current && selectedLessonRef.current && videoRef.current) {
+        const { duration } = videoRef.current;
+        lessonsApi.saveVideoProgress(
+          selectedLessonRef.current.id,
+          maxWatchedRef.current,
+          duration || 0,
+        ).catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (pendingSaveRef.current && selectedLessonRef.current && videoRef.current) {
         const { duration } = videoRef.current;
         lessonsApi.saveVideoProgress(
@@ -203,7 +215,7 @@ export function StudentCourseView() {
       saveTimerRef.current = null;
       pendingSaveRef.current = false;
       lessonsApi.saveVideoProgress(lessonId, watchedSeconds, durationSeconds).catch(() => {});
-    }, 5000);
+    }, 15000);
   };
 
   const handleTimeUpdate = () => {
