@@ -114,19 +114,29 @@ export const UserController = {
   async changePassword(req: AuthRequest, res: Response) {
     try {
       const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: 'currentPassword and newPassword are required' });
+      if (typeof newPassword !== 'string' || !newPassword) {
+        return res.status(400).json({ message: 'newPassword is required' });
       }
       const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!strongPassword.test(newPassword)) {
-        return res.status(400).json({ message: 'New password must be at least 8 characters and include uppercase, lowercase, number, and special character' });
+        return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.' });
       }
-      await UserService.changePassword(req.user!.userId, currentPassword, newPassword);
+      // Reject same-as-current explicitly (only when currentPassword was supplied)
+      if (currentPassword && currentPassword === newPassword) {
+        return res.status(400).json({ message: 'Le nouveau mot de passe doit être différent de l\'ancien.' });
+      }
+      await UserService.changePassword(
+        req.user!.userId,
+        newPassword,
+        typeof currentPassword === 'string' && currentPassword.length > 0 ? currentPassword : undefined,
+      );
       res.json({ message: 'Password changed successfully' });
     } catch (err: any) {
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'User not found' });
-      if (err.code === 'WRONG_PASSWORD') return res.status(400).json({ message: 'Current password is incorrect' });
-      res.status(500).json({ message: 'Failed to change password' });
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Utilisateur introuvable.' });
+      if (err.code === 'WRONG_PASSWORD') return res.status(400).json({ message: 'Mot de passe actuel incorrect.' });
+      if (err.code === 'CURRENT_PASSWORD_REQUIRED') return res.status(400).json({ message: 'Le mot de passe actuel est requis.' });
+      if (err.code === 'SAME_PASSWORD') return res.status(400).json({ message: 'Le nouveau mot de passe doit être différent de l\'ancien.' });
+      res.status(500).json({ message: 'Erreur lors du changement de mot de passe.' });
     }
   },
 

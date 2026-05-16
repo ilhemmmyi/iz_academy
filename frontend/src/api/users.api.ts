@@ -36,7 +36,7 @@ export const usersApi = {
       body: JSON.stringify(data),
     }),
 
-  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+  changePassword: (data: { currentPassword?: string; newPassword: string }) =>
     apiClient('/users/me/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -93,4 +93,6 @@ export const usersApi = {
       body: formData,
     });
   },
+
+  deleteAvatar: () => apiClient('/users/me/avatar', { method: 'DELETE' }),
 };

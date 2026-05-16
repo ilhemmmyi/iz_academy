@@ -14,6 +14,7 @@ interface User {
   avatarUrl?: string;
   hasCompletedCoach: boolean;
   mustChangePassword: boolean;
+  hasPassword: boolean;
   phone?: string;
   address?: string;
   educationLevel?: string;

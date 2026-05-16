@@ -12,5 +12,5 @@ export const UserModel = {
 
 export const toSafeUser = (user: any) => {
   const { password, ...safe } = user;
-  return safe;
+  return { ...safe, hasPassword: !!password };
 };

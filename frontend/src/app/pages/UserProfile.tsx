@@ -9,6 +9,7 @@ import {
   LogOut,
   ArrowLeft,
   Camera,
+  Trash2,
   Lock,
   Eye,
   EyeOff,
@@ -49,7 +50,9 @@ export function UserProfile() {
   // avatar states
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarDeleting, setAvatarDeleting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
   // password change states
   const [pwCurrent, setPwCurrent]         = useState('');
@@ -86,23 +89,41 @@ export function UserProfile() {
   };
 
   /* =========================
-     CHANGE PASSWORD
+     CHANGE / SET PASSWORD
   ========================= */
+  const hasLocalPassword = user.hasPassword;
   const allRulesPassed = PASSWORD_RULES.every(r => r.test(pwNew));
   const passwordsMatch = pwNew === pwConfirm && pwConfirm.length > 0;
+  const sameAsOld = hasLocalPassword && pwCurrent.length > 0 && pwNew === pwCurrent;
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!allRulesPassed || !passwordsMatch) return;
+    if (hasLocalPassword && !pwCurrent) return;
+    if (sameAsOld) return;
     setSavingPw(true);
     try {
-      await usersApi.changePassword({ currentPassword: pwCurrent, newPassword: pwNew });
-      toast.success('Mot de passe modifié avec succès');
+      await usersApi.changePassword({
+        ...(hasLocalPassword ? { currentPassword: pwCurrent } : {}),
+        newPassword: pwNew,
+      });
       setPwCurrent(''); setPwNew(''); setPwConfirm('');
+      if (!hasLocalPassword) {
+        // Google user just set a local password — update context immediately
+        // so the form switches to "change" mode without requiring a page refresh
+        setUser({ ...user, hasPassword: true });
+        toast.success('Mot de passe défini avec succès. Vous pouvez maintenant vous connecter avec votre email.');
+      } else {
+        toast.success('Mot de passe modifié avec succès.');
+      }
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('incorrect') || msg.includes('Current')) {
+      if (msg.includes('incorrect') || msg.includes('Mot de passe actuel incorrect')) {
         toast.error('Mot de passe actuel incorrect.');
+      } else if (msg.includes('requis') || msg.includes('required')) {
+        toast.error('Le mot de passe actuel est requis.');
+      } else if (msg.includes('différent') || msg.includes('differ')) {
+        toast.error('Le nouveau mot de passe doit être différent de l\'ancien.');
       } else {
         toast.error('Erreur lors du changement de mot de passe.');
       }
@@ -129,6 +150,23 @@ export function UserProfile() {
       toast.error(err.message || 'Erreur upload avatar');
     } finally {
       setAvatarUploading(false);
+    }
+  };
+
+  /* =========================
+     AVATAR DELETE
+  ========================= */
+  const handleAvatarDelete = async () => {
+    setAvatarDeleting(true);
+    try {
+      await usersApi.deleteAvatar();
+      setAvatarPreview(null);
+      setUser({ ...user, avatarUrl: undefined });
+      toast.success('Photo de profil supprimée');
+    } catch {
+      toast.error('Erreur lors de la suppression de la photo');
+    } finally {
+      setAvatarDeleting(false);
     }
   };
 
@@ -178,15 +216,51 @@ export function UserProfile() {
                 </div>
               )}
 
-              {/* Camera button */}
+              {/* Camera button — opens menu if avatar exists, else opens file picker directly */}
               <button
                 type="button"
-                onClick={() => !avatarUploading && fileInputRef.current?.click()}
+                onClick={() => {
+                  if (avatarUploading || avatarDeleting) return;
+                  if (user.avatarUrl || avatarPreview) {
+                    setAvatarMenuOpen((v) => !v);
+                  } else {
+                    fileInputRef.current?.click();
+                  }
+                }}
                 className="absolute bottom-0 right-0 bg-black/70 text-white p-1.5 rounded-full hover:bg-black transition disabled:opacity-50"
-                disabled={avatarUploading}
+                disabled={avatarUploading || avatarDeleting}
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>
+
+              {/* Dropdown menu */}
+              {avatarMenuOpen && (
+                <>
+                  {/* overlay to close on outside click */}
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setAvatarMenuOpen(false)}
+                  />
+                  <div className="absolute bottom-8 right-0 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      onClick={() => { setAvatarMenuOpen(false); fileInputRef.current?.click(); }}
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      Modifier la photo
+                    </button>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                      onClick={() => { setAvatarMenuOpen(false); handleAvatarDelete(); }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Supprimer la photo
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* hidden input */}
               <input
@@ -270,32 +344,40 @@ export function UserProfile() {
           </div>
 
           {/* =========================
-              CHANGE PASSWORD
+              CHANGE / SET PASSWORD
           ========================= */}
           <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
-            <h2 className="font-semibold mb-5 flex items-center gap-2">
+            <h2 className="font-semibold mb-1 flex items-center gap-2">
               <Lock className="w-4 h-4 text-indigo-500" />
-              Changer mon mot de passe
+              {hasLocalPassword ? 'Changer mon mot de passe' : 'Définir un mot de passe'}
             </h2>
+            {!hasLocalPassword && (
+              <p className="text-xs text-muted-foreground mb-4">
+                Votre compte utilise Google. Vous pouvez définir un mot de passe local pour vous connecter également par email.
+              </p>
+            )}
+            {hasLocalPassword && <div className="mb-5" />}
             <form onSubmit={handleChangePassword} className="space-y-4">
-              {/* Current password */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Mot de passe actuel</label>
-                <div className="relative">
-                  <input
-                    type={showPwCurrent ? 'text' : 'password'}
-                    value={pwCurrent}
-                    onChange={e => setPwCurrent(e.target.value)}
-                    placeholder="Votre mot de passe actuel"
-                    className="w-full px-3 py-2.5 pr-10 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                    required
-                  />
-                  <button type="button" onClick={() => setShowPwCurrent(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    {showPwCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              {/* Current password — only for users who already have a local password */}
+              {hasLocalPassword && (
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Mot de passe actuel</label>
+                  <div className="relative">
+                    <input
+                      type={showPwCurrent ? 'text' : 'password'}
+                      value={pwCurrent}
+                      onChange={e => setPwCurrent(e.target.value)}
+                      placeholder="Votre mot de passe actuel"
+                      className="w-full px-3 py-2.5 pr-10 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                      required
+                    />
+                    <button type="button" onClick={() => setShowPwCurrent(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPwCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* New password */}
               <div>
@@ -347,13 +429,19 @@ export function UserProfile() {
                 )}
               </div>
 
+              {sameAsOld && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <XCircle className="w-3.5 h-3.5 shrink-0" />
+                  Le nouveau mot de passe doit être différent de l'ancien.
+                </p>
+              )}
               <button
                 type="submit"
-                disabled={!pwCurrent || !allRulesPassed || !passwordsMatch || savingPw}
+                disabled={(hasLocalPassword && !pwCurrent) || !allRulesPassed || !passwordsMatch || sameAsOld || savingPw}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition disabled:opacity-50 font-medium text-sm"
               >
                 <Lock className="w-4 h-4" />
-                {savingPw ? 'Enregistrement…' : 'Changer le mot de passe'}
+                {savingPw ? 'Enregistrement…' : hasLocalPassword ? 'Changer le mot de passe' : 'Définir le mot de passe'}
               </button>
             </form>
           </div>

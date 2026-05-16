@@ -107,13 +107,20 @@ export const UserService = {
     return { generatedPassword: plainPassword };
   },
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+  async changePassword(userId: string, newPassword: string, currentPassword?: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.password) throw Object.assign(new Error('User not found'), { code: 'NOT_FOUND' });
+    if (!user) throw Object.assign(new Error('User not found'), { code: 'NOT_FOUND' });
 
-    const valid = await bcrypt.compare(currentPassword, user.password);
-    if (!valid) throw Object.assign(new Error('Current password is incorrect'), { code: 'WRONG_PASSWORD' });
-
+    if (user.password) {
+      // User already has a local password — must verify it before allowing change
+      if (!currentPassword) throw Object.assign(new Error('Current password is required'), { code: 'CURRENT_PASSWORD_REQUIRED' });
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) throw Object.assign(new Error('Current password is incorrect'), { code: 'WRONG_PASSWORD' });
+      // Prevent setting the same password
+      const same = await bcrypt.compare(newPassword, user.password);
+      if (same) throw Object.assign(new Error('New password must differ from current'), { code: 'SAME_PASSWORD' });
+    }
+    // Google-only user (no local password) or verified current password → persist new password
     const hashed = await bcrypt.hash(newPassword, 12);
     await UserModel.update(userId, { password: hashed, mustChangePassword: false });
   },
