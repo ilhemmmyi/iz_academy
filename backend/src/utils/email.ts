@@ -1,13 +1,28 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { config } from '../config';
 
-const resend = new Resend(config.resendApiKey);
+const transporter = nodemailer.createTransport({
+  host: config.smtp.host,
+  port: config.smtp.port,
+  secure: false, // STARTTLS on port 587
+  auth: {
+    user: config.smtp.user,
+    pass: config.smtp.pass,
+  },
+});
 
-const FROM = config.emailFrom; // e.g. "Iz Academy <no-reply@izacademy.com>"
+// Vérifie la connexion SMTP au démarrage
+transporter.verify((err) => {
+  if (err) {
+    console.error('[EmailService] SMTP connection FAILED:', err.message);
+  } else {
+    console.log('[EmailService] SMTP connection OK — ready to send emails');
+  }
+});
 
-const nl2br = (value: string) => value.replace(/\n/g, '<br />');
+const FROM = config.emailFrom;
 
-/** Escape HTML special characters to prevent injection in email templates */
+/** Escape HTML to prevent injection in email templates */
 const esc = (value: string) =>
   value
     .replace(/&/g, '&amp;')
@@ -16,12 +31,22 @@ const esc = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+const nl2br = (value: string) => value.replace(/\n/g, '<br />');
+
+async function send(options: { to: string | string[]; subject: string; html: string }) {
+  await transporter.sendMail({
+    from: FROM,
+    to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+    subject: options.subject,
+    html: options.html,
+  });
+}
+
 export const EmailService = {
 
   async sendWelcome(email: string, name: string) {
-    await resend.emails.send({
-      from: FROM,
-      to: [email],
+    await send({
+      to: email,
       subject: 'Bienvenue sur IzAcademy !',
       html: `<h1>Bienvenue ${esc(name)} !</h1><p>Votre compte a été créé avec succès.</p>`,
     });
@@ -29,18 +54,16 @@ export const EmailService = {
 
   async sendEnrollmentStatus(data: { email: string; name: string; courseName: string; status: string }) {
     const approved = data.status === 'APPROVED';
-    await resend.emails.send({
-      from: FROM,
-      to: [data.email],
+    await send({
+      to: data.email,
       subject: approved ? 'Inscription approuvée !' : 'Inscription refusée',
       html: `<p>Bonjour ${esc(data.name)}, votre demande pour <strong>${esc(data.courseName)}</strong> a été ${approved ? 'approuvée' : 'refusée'}.</p>`,
     });
   },
 
   async sendCertificate(data: { email: string; name: string; courseName: string; fileUrl: string }) {
-    await resend.emails.send({
-      from: FROM,
-      to: [data.email],
+    await send({
+      to: data.email,
       subject: `Votre certificat pour ${esc(data.courseName)}`,
       html: `<p>Félicitations ${esc(data.name)} ! Votre certificat est disponible : <a href="${esc(data.fileUrl)}">Télécharger</a></p>`,
     });
@@ -54,8 +77,7 @@ export const EmailService = {
     message: string;
     contactMessageId: string;
   }) {
-    await resend.emails.send({
-      from: FROM,
+    await send({
       to: data.to,
       subject: `Nouveau message de contact : ${esc(data.subject)}`,
       html: `
@@ -69,10 +91,15 @@ export const EmailService = {
     });
   },
 
-  async sendContactReply(data: { to: string; name: string; subject: string; replyMessage: string; originalMessage?: string }) {
-    await resend.emails.send({
-      from: FROM,
-      to: [data.to],
+  async sendContactReply(data: {
+    to: string;
+    name: string;
+    subject: string;
+    replyMessage: string;
+    originalMessage?: string;
+  }) {
+    await send({
+      to: data.to,
       subject: `Re: ${esc(data.subject)}`,
       html: `
         <p>Bonjour ${esc(data.name)},</p>
@@ -80,9 +107,11 @@ export const EmailService = {
         <p>${nl2br(esc(data.replyMessage))}</p>
         <br />
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0" />
-        <p style="color:#6b7280;font-size:13px"><strong>Message original&nbsp;:</strong><br />
-        <em>Sujet&nbsp;:</em> ${esc(data.subject)}<br />
-        <em>Message&nbsp;:</em> ${nl2br(esc(data.originalMessage ?? ''))}</p>
+        <p style="color:#6b7280;font-size:13px">
+          <strong>Message original&nbsp;:</strong><br />
+          <em>Sujet&nbsp;:</em> ${esc(data.subject)}<br />
+          <em>Message&nbsp;:</em> ${nl2br(esc(data.originalMessage ?? ''))}
+        </p>
         <br />
         <p>Cordialement,<br />L'équipe Iz Academy</p>
       `,
@@ -90,4 +119,3 @@ export const EmailService = {
   },
 
 };
-

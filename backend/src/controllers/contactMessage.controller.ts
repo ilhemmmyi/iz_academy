@@ -99,8 +99,8 @@ export const ContactMessageController = {
     } catch (err: any) {
       if (err.message === 'NOT_FOUND') return res.status(404).json({ message: 'Contact message not found' });
       if (err.message === 'EMPTY_REPLY') return res.status(400).json({ message: 'Reply message is required' });
-      console.error('[contact.reply]', err);
-      res.status(500).json({ message: 'Failed to send reply' });
+      console.error('[contact.reply] SMTP error:', err.message);
+      res.status(500).json({ message: `Réponse sauvegardée mais email non envoyé : ${err.message}` });
     }
   },
 };

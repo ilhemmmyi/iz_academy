@@ -27,8 +27,13 @@ export const config = {
     serviceKey: process.env.SUPABASE_SERVICE_KEY!,
     storageBucket: process.env.SUPABASE_STORAGE_BUCKET || 'iz-academy',
   },
-  resendApiKey: process.env.RESEND_API_KEY!,
   emailFrom: process.env.EMAIL_FROM!,
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    user: process.env.SMTP_USER!,
+    pass: process.env.SMTP_PASS!,
+  },
   sentryDsn: process.env.SENTRY_DSN!,
   /** Minimum quiz score (0–100) required to unlock the next lesson */
   quizPassThreshold: Number(process.env.QUIZ_PASS_THRESHOLD) || 80,
