@@ -60,8 +60,6 @@ model User {
   role             Role             @default(STUDENT)
   avatarUrl        String?
   isActive         Boolean          @default(true)
-  twoFactorEnabled    Boolean          @default(false)
-  twoFactorSecret     String?
   formation           String?
   duree               String?
   dateDebut           String?

@@ -61,7 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     const res = await authApi.login({ email, password });
-    if (res.requires2FA) return res; // caller handles 2FA
     setAccessToken(res.accessToken);
     setUser(res.user);
     return res;                            

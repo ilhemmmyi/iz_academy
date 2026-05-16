@@ -12,8 +12,6 @@ const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage").then(m =>
 const FAQ = lazy(() => import("./pages/FAQ").then(m => ({ default: m.FAQ })));
 const Contact = lazy(() => import("./pages/Contact").then(m => ({ default: m.Contact })));
 const UserProfile = lazy(() => import("./pages/UserProfile").then(m => ({ default: m.UserProfile })));
-const Verify2FA = lazy(() => import("./pages/Verify2FA").then(m => ({ default: m.Verify2FA })));
-
 // Lazy-loaded student pages
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
 const StudentCourses = lazy(() => import("./pages/student/StudentCourses").then(m => ({ default: m.StudentCourses })));
@@ -75,11 +73,6 @@ export const router = createBrowserRouter([
   { path: "/", Component: LandingPage },
   { path: "/login", Component: Login },
   { path: "/register", Component: Register },
-  {
-    path: "/verify-2fa",
-    element: <Suspense fallback={<PageLoader />}><Verify2FA /></Suspense>,
-  },
-
   // Lazy public pages
   {
     path: "/faq",
