@@ -16,4 +16,7 @@ export const authApi = {
 
   verify2FA: (userId: string, token: string) =>
     apiClient('/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ userId, token }) }),
+
+  verifyEmail: (token: string) =>
+    apiClient(`/auth/verify-email?token=${encodeURIComponent(token)}`),
 };

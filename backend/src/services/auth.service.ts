@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import { prisma } from '../config/prisma';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { emailQueue } from '../queues/email.queue';
+import { EmailService } from '../utils/email';
+import { config } from '../config';
 import { admin } from '../config/firebase';
 
 export const AuthService = {
@@ -12,11 +15,22 @@ export const AuthService = {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new Error('EMAIL_EXISTS');
     const hashed = await bcrypt.hash(password, 12);
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
     const user = await prisma.user.create({
-      data: { name, email, password: hashed, role: 'STUDENT' },
+      data: {
+        name, email, password: hashed, role: 'STUDENT',
+        isVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
+      },
     });
-    // Queue welcome email (fire-and-forget — Redis may be unavailable in dev)
-    emailQueue.add('welcome', { name: user.name, email: user.email }).catch((err) => console.error('Email queue error:', err));
+    EmailService.sendVerificationEmail({
+      to: user.email,
+      name: user.name,
+      token: verificationToken,
+      frontendUrl: config.frontendUrl,
+    }).catch((err) => console.error('[register] Verification email error:', err));
     return { id: user.id, name: user.name, email: user.email, role: user.role };
   },
 
@@ -27,6 +41,7 @@ export const AuthService = {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new Error('INVALID_CREDENTIALS');
     if (!user.isActive) throw new Error('ACCOUNT_DISABLED');
+    if (!user.isVerified) throw new Error('EMAIL_NOT_VERIFIED');
     return user;
   },
 
@@ -70,6 +85,19 @@ export const AuthService = {
     if (!valid) throw new Error('INVALID_2FA_TOKEN');
     await prisma.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
     return true;
+  },
+
+  async verifyEmail(token: string) {
+    const user = await prisma.user.findUnique({ where: { emailVerificationToken: token } });
+    if (!user) throw new Error('INVALID_TOKEN');
+    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+      throw new Error('TOKEN_EXPIRED');
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
+    });
+    emailQueue.add('welcome', { name: user.name, email: user.email }).catch((err) => console.error('Email queue error:', err));
   },
 
   async googleLogin(uid: string, email: string, displayName: string, firebaseToken: string) {

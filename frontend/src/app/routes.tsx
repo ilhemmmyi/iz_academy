@@ -3,6 +3,8 @@ import { createBrowserRouter } from "react-router";
 import { LandingPage } from "./pages/LandingPage";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
+import { CheckEmail } from "./pages/CheckEmail";
+import { VerifyEmail } from "./pages/VerifyEmail";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CoachGuard } from "./components/CoachGuard";
 
@@ -75,6 +77,8 @@ export const router = createBrowserRouter([
   { path: "/", Component: LandingPage },
   { path: "/login", Component: Login },
   { path: "/register", Component: Register },
+  { path: "/check-email", Component: CheckEmail },
+  { path: "/verify-email", Component: VerifyEmail },
   {
     path: "/verify-2fa",
     element: <Suspense fallback={<PageLoader />}><Verify2FA /></Suspense>,

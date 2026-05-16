@@ -11,6 +11,7 @@ const isDev = process.env.NODE_ENV !== 'production';
 const loginLimiter = rateLimit({ windowMs: 3 * 60 * 1000, max: isDev ? 100 : 10, standardHeaders: true, legacyHeaders: false });
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: isDev ? 100 : 5, standardHeaders: true, legacyHeaders: false });
 
+authRouter.get('/verify-email', AuthController.verifyEmail);
 authRouter.post('/register', registerLimiter, validate(registerSchema), AuthController.register);
 authRouter.post('/login', loginLimiter, validate(loginSchema), AuthController.login);
 authRouter.post('/google', loginLimiter, validate(googleLoginSchema), AuthController.googleLogin);

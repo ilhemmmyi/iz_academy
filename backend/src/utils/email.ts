@@ -91,6 +91,29 @@ export const EmailService = {
     });
   },
 
+  async sendVerificationEmail(data: { to: string; name: string; token: string; frontendUrl: string }) {
+    const link = `${data.frontendUrl}/verify-email?token=${data.token}`;
+    await send({
+      to: data.to,
+      subject: 'Vérifiez votre adresse email — Iz Academy',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+          <h2 style="color:#4f46e5">Bienvenue sur Iz Academy, ${esc(data.name)} !</h2>
+          <p>Merci de vous être inscrit. Cliquez sur le bouton ci-dessous pour vérifier votre adresse email et activer votre compte :</p>
+          <div style="text-align:center;margin:32px 0">
+            <a href="${link}" style="background:#4f46e5;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+              Vérifier mon email
+            </a>
+          </div>
+          <p style="color:#6b7280;font-size:13px">Ce lien expirera dans <strong>24 heures</strong>.</p>
+          <p style="color:#6b7280;font-size:12px">Si vous n'avez pas créé de compte, ignorez cet email.</p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
+          <p style="color:#9ca3af;font-size:11px">Ou copiez ce lien dans votre navigateur :<br />${esc(link)}</p>
+        </div>
+      `,
+    });
+  },
+
   async sendContactReply(data: {
     to: string;
     name: string;

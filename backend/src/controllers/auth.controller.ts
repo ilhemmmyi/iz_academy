@@ -40,6 +40,7 @@ export const AuthController = {
     } catch (err: any) {
       if (err.message === 'INVALID_CREDENTIALS') return res.status(401).json({ message: 'Invalid credentials' });
       if (err.message === 'ACCOUNT_DISABLED') return res.status(403).json({ message: 'Account disabled' });
+      if (err.message === 'EMAIL_NOT_VERIFIED') return res.status(403).json({ message: 'Veuillez vérifier votre email avant de vous connecter', code: 'EMAIL_NOT_VERIFIED' });
       console.error('[login]', err);
       res.status(500).json({ message: 'Login failed' });
     }
@@ -84,6 +85,22 @@ export const AuthController = {
       res.json({ accessToken: tokens.accessToken });
     } catch {
       res.status(400).json({ message: 'Invalid 2FA token' });
+    }
+  },
+
+  async verifyEmail(req: Request, res: Response) {
+    try {
+      const { token } = req.query;
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: 'Token manquant' });
+      }
+      await AuthService.verifyEmail(token);
+      res.json({ message: 'Email vérifié avec succès' });
+    } catch (err: any) {
+      if (err.message === 'INVALID_TOKEN') return res.status(400).json({ message: 'Lien de vérification invalide' });
+      if (err.message === 'TOKEN_EXPIRED') return res.status(400).json({ message: 'Lien de vérification expiré. Veuillez vous réinscrire.' });
+      console.error('[verifyEmail]', err);
+      res.status(500).json({ message: 'Échec de la vérification' });
     }
   },
 

@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export function Register() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,14 +26,7 @@ export function Register() {
     setIsLoading(true);
     try {
       await authApi.register({ name: formData.name, email: formData.email, password: formData.password });
-
-      
-      toast.success('Compte créé avec succès !');
-      // Auto-login after registration
-      const res = await login(formData.email, formData.password);
-      if (res.user.role === 'STUDENT') navigate('/student');
-      else if (res.user.role === 'TEACHER') navigate('/teacher');
-      else navigate('/admin');
+      navigate('/check-email', { state: { email: formData.email } });
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la création du compte');
     } finally {
