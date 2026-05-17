@@ -120,6 +120,8 @@ export const AuthService = {
         resetPasswordExpires: null,
         isVerified: true,
         mustChangePassword: false,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
       },
     });
   },

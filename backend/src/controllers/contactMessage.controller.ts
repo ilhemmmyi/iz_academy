@@ -1,46 +1,26 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
-import { prisma } from '../config/prisma';
 import { ContactMessageService } from '../services/contactMessage.service';
-import { verifyAccessToken, verifyRefreshToken } from '../utils/jwt';
+import { verifyAccessToken } from '../utils/jwt';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-async function hasAuthenticatedSession(req: Request) {
+// M-6 — Vérification simplifiée : JWT uniquement, sans requête DB supplémentaire
+function hasAuthenticatedSession(req: Request): boolean {
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    try {
-      verifyAccessToken(token);
-      return true;
-    } catch {
-      // Fall back to the refresh cookie check below.
-    }
-  }
-
-  const refreshToken = req.cookies?.refreshToken;
-  if (typeof refreshToken !== 'string' || !refreshToken) {
-    return false;
-  }
-
+  if (!authHeader?.startsWith('Bearer ')) return false;
   try {
-    verifyRefreshToken(refreshToken);
+    verifyAccessToken(authHeader.split(' ')[1]);
+    return true;
   } catch {
     return false;
   }
-
-  const storedToken = await prisma.refreshToken.findUnique({
-    where: { token: refreshToken },
-    select: { expiresAt: true },
-  });
-
-  return Boolean(storedToken && storedToken.expiresAt >= new Date());
 }
 
 export const ContactMessageController = {
   async submit(req: Request, res: Response) {
     try {
-      if (await hasAuthenticatedSession(req)) {
+      if (hasAuthenticatedSession(req)) {
         return res.status(403).json({ message: 'Authenticated users cannot use the contact chat' });
       }
 

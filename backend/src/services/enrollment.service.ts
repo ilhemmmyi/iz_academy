@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma';
-import { emailQueue } from '../queues/email.queue';
+import { queueEmail } from '../utils/queueEmail';
 import { EnrollmentModel } from '../models/enrollment.model';
 import { ActivityModel } from '../models/activity.model';
 import {
@@ -49,12 +49,12 @@ export const EnrollmentService = {
         await prisma.user.update({ where: { id: enrollment.userId }, data: profileUpdate });
       }
     }
-    emailQueue.add('enrollment-status', {
+    await queueEmail('enrollment-status', {
       email: enrollment.user.email,
       name: enrollment.user.name,
       courseName: enrollment.course.title,
       status,
-    }).catch((err) => console.error('Email queue error:', err));
+    });
 
     if (status === 'APPROVED') {
       ActivityModel.create(

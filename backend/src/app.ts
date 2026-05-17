@@ -25,12 +25,20 @@ import { aiRouter } from './routes/ai.routes';
 import { activityRouter } from './routes/activity.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
-Sentry.init({ dsn: config.sentryDsn, environment: process.env.NODE_ENV });
+// M-2 — N'initialiser Sentry que si le DSN est configuré
+if (config.sentryDsn && !config.sentryDsn.includes('xxx')) {
+  Sentry.init({ dsn: config.sentryDsn, environment: process.env.NODE_ENV });
+}
 
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: [config.frontendUrl, 'http://localhost:5173', 'http://localhost:5174'], credentials: true }));
+
+// H-6 — Localhost uniquement en développement
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? [config.frontendUrl]
+  : [config.frontendUrl, 'http://localhost:5173', 'http://localhost:5174'];
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());

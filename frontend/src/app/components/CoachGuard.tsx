@@ -12,7 +12,12 @@ interface Props {
 export function CoachGuard({ children }: Props) {
   const { user, loading } = useAuth();
 
-  if (loading) return null;
+  // M-7 — Afficher un spinner au lieu de null pour éviter le flash
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
 
   if (user?.role === 'STUDENT' && !user.hasCompletedCoach) {
     return <Navigate to="/student/career" replace />;

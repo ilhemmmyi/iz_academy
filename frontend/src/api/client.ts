@@ -5,16 +5,25 @@ let accessToken: string | null = null;
 export const setAccessToken = (token: string | null) => { accessToken = token; };
 export const getAccessToken = () => accessToken;
 
+// H-4 — Une seule requête de refresh à la fois (évite la race condition)
+let refreshPromise: Promise<string | null> | null = null;
+
 const refreshAccessToken = async (): Promise<string | null> => {
-  try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    accessToken = data.accessToken;
-    return accessToken;
-  } catch {
-    return null;
-  }
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      accessToken = data.accessToken;
+      return accessToken;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 };
 
 export const apiClient = async (path: string, options: RequestInit = {}): Promise<any> => {

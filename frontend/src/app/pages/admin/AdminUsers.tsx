@@ -23,7 +23,6 @@ import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
 import { toast } from 'sonner';
 import { usersApi } from '../../../api/users.api';
-import { coursesApi } from '../../../api/courses.api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -289,7 +288,6 @@ export function AdminUsers() {
   const [error, setError] = useState('');
 
   const [teacherForm, setTeacherForm] = useState({ name: '', email: '', password: '', showPassword: false });
-  const [availableCourses, setAvailableCourses] = useState<{ id: string; title: string }[]>([]);
   const [generatedPassword, setGeneratedPassword] = useState<{ name: string; email: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -330,11 +328,6 @@ export function AdminUsers() {
   }, []);
 
   useEffect(() => {
-    coursesApi.getAdmin()
-      .then((courseData) => {
-        setAvailableCourses((courseData as any[]).map((c: any) => ({ id: c.id, title: c.title, teacherId: c.teacher?.id })));
-      })
-      .catch(() => {});
     fetchUsers('', 'all', 1);
   }, [fetchUsers]);
 
@@ -405,9 +398,10 @@ export function AdminUsers() {
     try {
       const created = await usersApi.createUser({ name: teacherForm.name, email: teacherForm.email, role: 'teacher', password: teacherForm.password });
       setUsers(prev => [...prev, created as ApiUser]);
-      setTeacherForm({ name: '', email: '', password: '', showPassword: false });
       setShowAddTeacher(false);
-      toast.success(`Formateur ${created.name} créé. Il devra changer son mot de passe à la première connexion.`);
+      // H-5 — Afficher le modal avec les credentials (était du code mort)
+      setGeneratedPassword({ name: created.name, email: teacherForm.email, password: teacherForm.password });
+      setTeacherForm({ name: '', email: '', password: '', showPassword: false });
     } catch {
       toast.error('Erreur lors de la création du formateur.');
     }
