@@ -68,6 +68,8 @@ model User {
   isVerified                  Boolean          @default(true)
   emailVerificationToken      String?          @unique
   emailVerificationExpires    DateTime?
+  resetPasswordToken          String?          @unique
+  resetPasswordExpires        DateTime?
   phone               String?
   address             String?
   educationLevel      String?

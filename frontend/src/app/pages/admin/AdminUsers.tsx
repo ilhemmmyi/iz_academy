@@ -972,14 +972,16 @@ export function AdminUsers() {
                 <label className="block text-sm font-medium mb-1">Nom complet *</label>
                 <input required type="text" value={teacherForm.name}
                   onChange={e => setTeacherForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="Ex: Marie Dupont"
+                  placeholder="Nom formateur"
+                  autoComplete="off"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Email *</label>
                 <input required type="email" value={teacherForm.email}
                   onChange={e => setTeacherForm(p => ({ ...p, email: e.target.value }))}
-                  placeholder="formateur@email.com"
+                  placeholder="Email formateur"
+                  autoComplete="off"
                   className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
               <div>
@@ -989,7 +991,8 @@ export function AdminUsers() {
                     type={teacherForm.showPassword ? 'text' : 'password'}
                     value={teacherForm.password}
                     onChange={e => setTeacherForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="Min. 8 car., maj., min., chiffre, symbole"
+                    placeholder="Mot de passe"
+                    autoComplete="new-password"
                     className="w-full px-3 py-2 pr-10 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
                   <button type="button" onClick={() => setTeacherForm(p => ({ ...p, showPassword: !p.showPassword }))}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">

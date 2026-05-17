@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 import { prisma } from '../config/prisma';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
-import { emailQueue } from '../queues/email.queue';
+import { queueEmail } from '../utils/queueEmail';
 import { EmailService } from '../utils/email';
 import { config } from '../config';
 import { admin } from '../config/firebase';
@@ -14,7 +16,7 @@ export const AuthService = {
     if (existing) throw new Error('EMAIL_EXISTS');
     const hashed = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const user = await prisma.user.create({
       data: {
         name, email, password: hashed, role: 'STUDENT',
@@ -55,15 +57,71 @@ export const AuthService = {
   async refresh(token: string) {
     const stored = await prisma.refreshToken.findUnique({ where: { token } });
     if (!stored || stored.expiresAt < new Date()) throw new Error('INVALID_REFRESH');
-    verifyRefreshToken(token); // validate signature
+    verifyRefreshToken(token);
     await prisma.refreshToken.delete({ where: { token } });
     const user = await prisma.user.findUnique({ where: { id: stored.userId } });
-    if (!user || !user.isActive) throw new Error('INVALID_REFRESH');
+    // H-3 — Vérifier isActive ET isVerified au refresh
+    if (!user || !user.isActive || !user.isVerified) throw new Error('INVALID_REFRESH');
     return this.issueTokens(user.id, user.role, user.email);
   },
 
   async logout(token: string) {
     await prisma.refreshToken.deleteMany({ where: { token } });
+  },
+
+  async setup2FA(userId: string) {
+    const secret = speakeasy.generateSecret({ name: 'IzAcademy' });
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorSecret: secret.base32 } });
+    const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
+    return { qrCode };
+  },
+
+  async verify2FA(userId: string, token: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.twoFactorSecret) throw new Error('2FA_NOT_SETUP');
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret, encoding: 'base32', token, window: 1,
+    });
+    if (!valid) throw new Error('INVALID_2FA_TOKEN');
+    await prisma.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
+    return true;
+  },
+
+  async forgotPassword(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Always return success — never reveal whether the email exists
+    if (!user || !user.isActive) return;
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { resetPasswordToken: token, resetPasswordExpires: expires },
+    });
+    EmailService.sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      token,
+      frontendUrl: config.frontendUrl,
+    }).catch((err) => console.error('[forgotPassword] Email error:', err));
+  },
+
+  async resetPassword(token: string, newPassword: string) {
+    const user = await prisma.user.findUnique({ where: { resetPasswordToken: token } });
+    if (!user) throw new Error('INVALID_TOKEN');
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      throw new Error('TOKEN_EXPIRED');
+    }
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashed,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        isVerified: true,
+        mustChangePassword: false,
+      },
+    });
   },
 
   async verifyEmail(token: string) {
@@ -76,7 +134,7 @@ export const AuthService = {
       where: { id: user.id },
       data: { isVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
     });
-    emailQueue.add('welcome', { name: user.name, email: user.email }).catch((err) => console.error('Email queue error:', err));
+    await queueEmail('welcome', { name: user.name, email: user.email });
   },
 
   async googleLogin(uid: string, email: string, displayName: string, firebaseToken: string) {
@@ -93,7 +151,7 @@ export const AuthService = {
       if (!user.googleId) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { googleId: uid },
+          data: { googleId: uid, isVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
         });
       }
       if (!user.isActive) throw new Error('ACCOUNT_DISABLED');
@@ -101,7 +159,7 @@ export const AuthService = {
       user = await prisma.user.create({
         data: { name: displayName, email, googleId: uid, role: 'STUDENT', isVerified: true },
       });
-      emailQueue.add('welcome', { name: user.name, email: user.email }).catch((err) => console.error('Email queue error:', err));
+      await queueEmail('welcome', { name: user.name, email: user.email });
     }
 
     return user;
