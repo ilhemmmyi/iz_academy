@@ -61,14 +61,6 @@ export const AuthService = {
       include: { user: true },
     });
     if (!stored || stored.expiresAt < new Date()) throw new Error('INVALID_REFRESH');
-<<<<<<< HEAD
-    verifyRefreshToken(token);
-    await prisma.refreshToken.delete({ where: { token } });
-    const user = await prisma.user.findUnique({ where: { id: stored.userId } });
-    // H-3 — Vérifier isActive ET isVerified au refresh
-    if (!user || !user.isActive || !user.isVerified) throw new Error('INVALID_REFRESH');
-    return this.issueTokens(user.id, user.role, user.email);
-=======
     verifyRefreshToken(token); // validate signature (in-memory, no DB)
     if (!stored.user || !stored.user.isActive) throw new Error('INVALID_REFRESH');
 
@@ -78,7 +70,6 @@ export const AuthService = {
       prisma.refreshToken.delete({ where: { token } }),
     ]);
     return tokens;
->>>>>>> 6dfd6ce476b5abeefbd7f2e2602c6d05dbf5f9fd
   },
 
   async logout(token: string) {
