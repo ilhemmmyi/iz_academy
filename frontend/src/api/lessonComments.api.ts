@@ -50,4 +50,7 @@ export const lessonCommentsApi = {
 
   getByCourse: (courseId: string): Promise<LessonComment[]> =>
     apiClient(`/lessons/comments/course/${courseId}`),
+
+  getByTeacher: (): Promise<LessonComment[]> =>
+    apiClient('/lessons/comments/teacher/mine'),
 };

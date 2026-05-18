@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma';
 import { LessonModel } from '../models/lesson.model';
 import { EnrollmentModel } from '../models/enrollment.model';
+import { config } from '../config';
 
 export const QuizService = {
   getByCourse: (courseId: string) =>
@@ -24,7 +25,7 @@ export const QuizService = {
       if (answers[q.id] === q.correctAnswer) correct++;
     });
     const score = quiz.questions.length > 0 ? (correct / quiz.questions.length) * 100 : 0;
-    const passed = score >= 70;
+    const passed = score >= config.quizPassThreshold;
     const attempt = await prisma.quizAttempt.create({ data: { userId, quizId, score, passed } });
 
     // Auto-complete associated lessons when quiz is passed

@@ -82,4 +82,26 @@ export const LessonCommentService = {
       orderBy: { createdAt: 'desc' },
     });
   },
+
+  /** Returns the most-recent top-level comments across ALL courses taught by `teacherId`. */
+  async getByTeacher(teacherId: string) {
+    const courses = await prisma.course.findMany({
+      where: { teacherId },
+      select: { id: true },
+    });
+    const courseIds = courses.map(c => c.id);
+    if (courseIds.length === 0) return [];
+    return prisma.lessonComment.findMany({
+      where: {
+        parentId: null,
+        lesson: { module: { courseId: { in: courseIds } } },
+      },
+      include: {
+        ...commentInclude,
+        lesson: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  },
 };

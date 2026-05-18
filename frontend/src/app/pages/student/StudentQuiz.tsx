@@ -99,7 +99,7 @@ export function StudentQuiz() {
             <p className="text-muted-foreground mb-6">
               {result.passed
                 ? 'Vous avez réussi le quiz. La prochaine leçon est maintenant déverrouillée.'
-                : `Score minimum requis : 70%. Il vous manque ${Math.ceil(70 - result.score)}%.`}
+                : `Score minimum requis : 80%. Il vous manque ${Math.ceil(80 - result.score)}%.`}
             </p>
             <div className="flex gap-3 justify-center">
               {result.passed ? (
@@ -135,7 +135,7 @@ export function StudentQuiz() {
           <Link to={backUrl} className="text-primary hover:underline text-sm">← Retour au cours</Link>
           <h1 className="mt-2 mb-1">Quiz de la leçon</h1>
           <p className="text-muted-foreground text-sm">
-            {answered}/{total} réponse{total > 1 ? 's' : ''} — Score minimum requis : <strong>70%</strong>
+            {answered}/{total} réponse{total > 1 ? 's' : ''} — Score minimum requis : <strong>80%</strong>
           </p>
         </div>
 

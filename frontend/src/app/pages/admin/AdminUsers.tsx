@@ -306,6 +306,9 @@ export function AdminUsers() {
   const [revokingCertId, setRevokingCertId] = useState<string | null>(null);
   const [pendingRevoke, setPendingRevoke] = useState<Certificate | null>(null);
 
+  // Delete confirmation
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   // Edit student: enrolled courses (for course access removal)
   const [editStudentCourses, setEditStudentCourses] = useState<{ courseId: string; courseTitle: string }[]>([]);
   const [editStudentCoursesLoading, setEditStudentCoursesLoading] = useState(false);
@@ -390,25 +393,36 @@ export function AdminUsers() {
 
   const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/;
-    if (!strongPassword.test(teacherForm.password)) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.');
+    if (teacherForm.password.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères.');
       return;
     }
     try {
       const created = await usersApi.createUser({ name: teacherForm.name, email: teacherForm.email, role: 'teacher', password: teacherForm.password });
+<<<<<<< HEAD
       setUsers(prev => [...prev, created as ApiUser]);
       setShowAddTeacher(false);
       // H-5 — Afficher le modal avec les credentials (était du code mort)
       setGeneratedPassword({ name: created.name, email: teacherForm.email, password: teacherForm.password });
       setTeacherForm({ name: '', email: '', password: '', showPassword: false });
+=======
+      // Prepend so the newest user appears first (matches backend orderBy createdAt desc)
+      setUsers(prev => [created as ApiUser, ...prev]);
+      const savedPassword = teacherForm.password;
+      setTeacherForm({ name: '', email: '', password: '', showPassword: false });
+      setShowAddTeacher(false);
+      // Show credential modal so admin can copy credentials before they disappear
+      setGeneratedPassword({ name: (created as ApiUser).name, email: (created as ApiUser).email, password: savedPassword });
+>>>>>>> 6dfd6ce476b5abeefbd7f2e2602c6d05dbf5f9fd
     } catch {
       toast.error('Erreur lors de la création du formateur.');
     }
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (!window.confirm('Confirmer la suppression de cet utilisateur ?')) return;
+  const confirmDeleteUser = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
       await usersApi.deleteUser(id);
       setUsers(prev => prev.filter(u => u.id !== id));
@@ -683,7 +697,7 @@ export function AdminUsers() {
                           <button className="p-2 hover:bg-amber-50 text-amber-500 rounded-lg transition" onClick={() => openEditModal(u)} title="Modifier">
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition" onClick={() => handleDeleteUser(u.id)} title="Supprimer">
+                          <button className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition" onClick={() => setPendingDeleteId(u.id)} title="Supprimer">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -757,6 +771,27 @@ export function AdminUsers() {
             </div>
           </div>
         )}
+
+        {/* ── Confirm Delete User Modal ─────────────────────────────────────── */}
+        <AlertDialog open={pendingDeleteId !== null}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer l&apos;utilisateur</AlertDialogTitle>
+              <AlertDialogDescription>
+                Voulez-vous vraiment supprimer{' '}
+                <strong>{users.find(u => u.id === pendingDeleteId)?.name ?? 'cet utilisateur'}</strong> ?
+                Cette action est irréversible et supprimera toutes ses données.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingDeleteId(null)}>Annuler</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteUser} className="bg-red-600 hover:bg-red-700 text-white">
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* ── Confirm Revoke Certificate Modal ──────────────────────────────── */}
         <AlertDialog open={pendingRevoke !== null}>
@@ -985,8 +1020,12 @@ export function AdminUsers() {
                     type={teacherForm.showPassword ? 'text' : 'password'}
                     value={teacherForm.password}
                     onChange={e => setTeacherForm(p => ({ ...p, password: e.target.value }))}
+<<<<<<< HEAD
                     placeholder="Mot de passe"
                     autoComplete="new-password"
+=======
+                    placeholder="Minimum 8 caractères"
+>>>>>>> 6dfd6ce476b5abeefbd7f2e2602c6d05dbf5f9fd
                     className="w-full px-3 py-2 pr-10 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
                   <button type="button" onClick={() => setTeacherForm(p => ({ ...p, showPassword: !p.showPassword }))}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">

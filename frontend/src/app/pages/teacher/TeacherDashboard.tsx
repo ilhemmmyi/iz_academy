@@ -29,25 +29,16 @@ export function TeacherDashboard() {
   useEffect(() => {
     Promise.all([
       coursesApi.getMine().catch(() => []),
-      messagesApi.getAll().catch(() => []),
+      messagesApi.getAll().then((r: any) => r.messages ?? []).catch(() => []),
       enrollmentsApi.getAll().catch(() => []),
       projectsApi.teacherSubmissions().catch(() => []),
-    ]).then(([c, m, e, s]) => {
+      lessonCommentsApi.getByTeacher().catch(() => []),
+    ]).then(([c, m, e, s, cms]) => {
       setCourses(c);
       setMessages(m);
       setEnrollments(e);
       setSubmissions(s);
-      // Fetch comments for all teacher courses
-      const courseList = c as any[];
-      if (courseList.length > 0) {
-        Promise.all(courseList.map((course: any) =>
-          lessonCommentsApi.getByCourse(course.id)
-            .then((cms: any[]) => cms.map((cm: any) => ({ ...cm, courseId: course.id })))
-            .catch(() => [])
-        )).then(results => {
-          setComments((results as any[][]).flat());
-        });
-      }
+      setComments(cms);
     }).finally(() => setLoading(false));
   }, []);
 

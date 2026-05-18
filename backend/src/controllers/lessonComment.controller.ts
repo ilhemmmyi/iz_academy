@@ -59,4 +59,13 @@ export const LessonCommentController = {
       res.status(500).json({ message: 'Failed to fetch comments' });
     }
   },
+
+  async getTeacherComments(req: AuthRequest, res: Response) {
+    try {
+      const comments = await LessonCommentService.getByTeacher(req.user!.userId);
+      res.json(comments);
+    } catch {
+      res.status(500).json({ message: 'Failed to fetch comments' });
+    }
+  },
 };

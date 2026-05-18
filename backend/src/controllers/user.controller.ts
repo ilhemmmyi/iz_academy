@@ -99,9 +99,8 @@ export const UserController = {
       if (!['STUDENT', 'TEACHER'].includes(normalizedRole)) {
         return res.status(400).json({ message: 'Invalid role' });
       }
-      const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/;
-      if (!strongPassword.test(password)) {
-        return res.status(400).json({ message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character' });
+      if (typeof password !== 'string' || password.length < 8) {
+        return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
       }
       const user = await UserService.createUser({ name, email, role: normalizedRole, formation, duree, dateDebut, password });
       res.status(201).json(user);

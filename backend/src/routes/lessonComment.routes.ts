@@ -14,3 +14,6 @@ lessonCommentRouter.delete('/comments/:commentId', authenticate, LessonCommentCo
 
 // Teacher: all comments for a course
 lessonCommentRouter.get('/comments/course/:courseId', authenticate, LessonCommentController.getCourseComments);
+
+// Teacher: all comments across all their courses (single request)
+lessonCommentRouter.get('/comments/teacher/mine', authenticate, LessonCommentController.getTeacherComments);
