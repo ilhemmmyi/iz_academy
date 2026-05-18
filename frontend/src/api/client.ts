@@ -5,6 +5,11 @@ let accessToken: string | null = null;
 export const setAccessToken = (token: string | null) => { accessToken = token; };
 export const getAccessToken = () => accessToken;
 
+// Deduplicate concurrent GET requests to the same path.
+// If two components mount simultaneously and call the same endpoint, they share
+// one in-flight Promise instead of firing two identical requests.
+const inFlight = new Map<string, Promise<any>>();
+
 const refreshAccessToken = async (): Promise<string | null> => {
   try {
     const res = await fetch(`${BASE_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
@@ -17,20 +22,10 @@ const refreshAccessToken = async (): Promise<string | null> => {
   }
 };
 
-export const apiClient = async (path: string, options: RequestInit = {}): Promise<any> => {
-  const isGetRequest = !options.method || options.method.toUpperCase() === 'GET';
-
+const _fetch = async (path: string, options: RequestInit, isGetRequest: boolean): Promise<any> => {
   const isFormData = options.body instanceof FormData;
-
-  const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
-  };
-
-  // ❌ DO NOT set Content-Type for FormData
-  if (!isFormData) {
-    headers['Content-Type'] = 'application/json';
-  }
-
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
   if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
 
   let res = await fetch(`${BASE_URL}${path}`, {
@@ -44,7 +39,6 @@ export const apiClient = async (path: string, options: RequestInit = {}): Promis
     const newToken = await refreshAccessToken();
     if (newToken) {
       headers['Authorization'] = `Bearer ${newToken}`;
-
       res = await fetch(`${BASE_URL}${path}`, {
         ...options,
         cache: isGetRequest ? 'no-store' : options.cache,
@@ -62,4 +56,18 @@ export const apiClient = async (path: string, options: RequestInit = {}): Promis
   const text = await res.text();
   if (!text) return {};
   return JSON.parse(text);
+};
+
+export const apiClient = (path: string, options: RequestInit = {}): Promise<any> => {
+  const isGetRequest = !options.method || options.method.toUpperCase() === 'GET';
+
+  if (isGetRequest) {
+    const existing = inFlight.get(path);
+    if (existing) return existing;
+    const promise = _fetch(path, options, true).finally(() => inFlight.delete(path));
+    inFlight.set(path, promise);
+    return promise;
+  }
+
+  return _fetch(path, options, false);
 };

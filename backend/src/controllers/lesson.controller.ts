@@ -10,8 +10,10 @@ export const LessonController = {
       await LessonService.completeLesson(String(req.params.id), req.user!.userId);
       console.log(`[Controller Complete] Completed successfully`);
       res.json({ message: 'Lesson completed' });
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[Controller Complete] Error:`, err);
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Lesson not found' });
+      if (err.code === 'NOT_ENROLLED') return res.status(403).json({ message: 'Not enrolled in this course' });
       res.status(500).json({ message: 'Failed to complete lesson' });
     }
   },

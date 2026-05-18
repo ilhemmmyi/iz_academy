@@ -211,6 +211,7 @@ model LessonProgress {
   @@unique([userId, lessonId])
   @@index([userId])
   @@index([lessonId])
+  @@index([userId, updatedAt])
 }
 
 model Enrollment {

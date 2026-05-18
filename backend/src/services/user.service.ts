@@ -4,6 +4,8 @@ import { UserModel, toSafeUser } from '../models/user.model';
 import { CertificateModel } from '../models/certificate.model';
 import { ProjectModel } from '../models/project.model';
 import { certificateQueue } from '../queues/certificate.queue';
+import { emailQueue } from '../queues/email.queue';
+import { config } from '../config';
 import { uploadToStorage, deleteFromStorage } from '../utils/storage';
 import { buildCertificatePdf } from '../utils/certificate';
 import {
@@ -87,6 +89,16 @@ export const UserService = {
     const { password, ...rest } = data;
     const hashed = await bcrypt.hash(password, 12);
     const user = await UserModel.create({ ...rest, password: hashed, mustChangePassword: true });
+
+    // Notify the new teacher by email (fire-and-forget via queue)
+    if (rest.role === 'TEACHER') {
+      emailQueue.add('teacher-created', {
+        email: user.email,
+        name: user.name,
+        frontendUrl: config.frontendUrl,
+      }).catch((err) => console.error('[createUser] Email queue error:', err));
+    }
+
     return toSafeUser(user);
   },
 

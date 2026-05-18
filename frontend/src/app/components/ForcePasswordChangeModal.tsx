@@ -23,16 +23,22 @@ export function ForcePasswordChangeModal() {
 
   if (!user?.mustChangePassword) return null;
 
+  // Google-only accounts have no local password — skip current-password step
+  const needsCurrentPassword = user.hasPassword === true;
+
   const allRulesPassed = RULES.every(r => r.test(next));
   const passwordsMatch = next === confirm && confirm.length > 0;
-  const canSubmit = current.length > 0 && allRulesPassed && passwordsMatch;
+  const canSubmit = (!needsCurrentPassword || current.length > 0) && allRulesPassed && passwordsMatch;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     setLoading(true);
     try {
-      await usersApi.changePassword({ currentPassword: current, newPassword: next });
+      await usersApi.changePassword({
+        ...(needsCurrentPassword ? { currentPassword: current } : {}),
+        newPassword: next,
+      });
       setUser({ ...user, mustChangePassword: false });
       toast.success('Mot de passe mis à jour avec succès !');
     } catch (err: any) {
@@ -65,24 +71,26 @@ export function ForcePasswordChangeModal() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {/* Current password */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Mot de passe temporaire actuel</label>
-            <div className="relative">
-              <input
-                type={showCurrent ? 'text' : 'password'}
-                value={current}
-                onChange={e => setCurrent(e.target.value)}
-                placeholder="Mot de passe fourni par l'admin"
-                className="w-full px-3 py-2.5 pr-10 border border-border rounded-xl bg-accent/20 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                required
-              />
-              <button type="button" onClick={() => setShowCurrent(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          {/* Current password — only for accounts that already have a local password */}
+          {needsCurrentPassword && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Mot de passe temporaire actuel</label>
+              <div className="relative">
+                <input
+                  type={showCurrent ? 'text' : 'password'}
+                  value={current}
+                  onChange={e => setCurrent(e.target.value)}
+                  placeholder="Mot de passe fourni par l'admin"
+                  className="w-full px-3 py-2.5 pr-10 border border-border rounded-xl bg-accent/20 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  required
+                />
+                <button type="button" onClick={() => setShowCurrent(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* New password */}
           <div>

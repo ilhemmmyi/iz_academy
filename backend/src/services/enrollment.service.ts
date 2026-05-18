@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma';
 import { emailQueue } from '../queues/email.queue';
 import { EnrollmentModel } from '../models/enrollment.model';
 import { ActivityModel } from '../models/activity.model';
+import { withCache } from '../utils/cache';
 import {
   calculateCourseProgressPercentage,
   getLessonProgressPercentage,
@@ -108,11 +109,34 @@ export const EnrollmentService = {
 
     if (approvedCourseIds.length === 0) return enrollments.map(e => ({ ...e, progress: null }));
 
-    // Fetch total lesson counts and durations per course
-    const courses = await prisma.course.findMany({
-      where: { id: { in: approvedCourseIds } },
-      include: { modules: { include: { lessons: { select: { id: true, durationSeconds: true } } } } },
-    });
+    // All four data fetches are independent of each other — run in parallel
+    const [courses, lessonProgress, submissions, certificates] = await Promise.all([
+      prisma.course.findMany({
+        where: { id: { in: approvedCourseIds } },
+        include: { modules: { include: { lessons: { select: { id: true, durationSeconds: true } } } } },
+      }),
+      prisma.lessonProgress.findMany({
+        where: {
+          userId,
+          lesson: { module: { courseId: { in: approvedCourseIds } } },
+        },
+        select: {
+          completed: true,
+          watchedSeconds: true,
+          durationSeconds: true,
+          lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } },
+        },
+      }),
+      prisma.projectSubmission.findMany({
+        where: { studentId: userId, courseId: { in: approvedCourseIds } },
+        select: { courseId: true, status: true },
+      }),
+      prisma.certificate.findMany({
+        where: { userId, courseId: { in: approvedCourseIds } },
+        select: { id: true, courseId: true, fileUrl: true },
+      }),
+    ]);
+
     const totalLessonsMap: Record<string, number> = {};
     const totalDurationMap: Record<string, number> = {};
     courses.forEach(c => {
@@ -124,19 +148,6 @@ export const EnrollmentService = {
       );
     });
 
-    // Fetch lesson progress per course for this user so partial watch progress counts too
-    const lessonProgress = await prisma.lessonProgress.findMany({
-      where: {
-        userId,
-        lesson: { module: { courseId: { in: approvedCourseIds } } },
-      },
-      select: {
-        completed: true,
-        watchedSeconds: true,
-        durationSeconds: true,
-        lesson: { select: { durationSeconds: true, module: { select: { courseId: true } } } },
-      },
-    });
     const completedLessonsMap: Record<string, number> = {};
     const watchedDurationMap: Record<string, number> = {};
     lessonProgress.forEach(p => {
@@ -149,19 +160,9 @@ export const EnrollmentService = {
       }
     });
 
-    // Fetch project submissions for this user
-    const submissions = await prisma.projectSubmission.findMany({
-      where: { studentId: userId, courseId: { in: approvedCourseIds } },
-      select: { courseId: true, status: true },
-    });
     const submissionMap: Record<string, string> = {};
     submissions.forEach(s => { submissionMap[s.courseId] = s.status; });
 
-    // Fetch certificates for this user
-    const certificates = await prisma.certificate.findMany({
-      where: { userId, courseId: { in: approvedCourseIds } },
-      select: { id: true, courseId: true, fileUrl: true },
-    });
     const certMap: Record<string, { id: string; fileUrl: string | null }> = {};
     certificates.forEach(c => { certMap[c.courseId] = { id: c.id, fileUrl: c.fileUrl }; });
 
@@ -287,30 +288,35 @@ export const EnrollmentService = {
   /**
    * Returns per-day watched seconds for the last `days` days (today first).
    * Aggregates across ALL enrolled courses for this user.
+   * Single DB query instead of one-per-day loop; result cached for 60 s.
    */
   async getWatchStats(userId: string, days = 10) {
-    const now = new Date();
-    const result: { day: string; seconds: number }[] = [];
+    return withCache(`watch-stats:${userId}:${days}`, async () => {
+      const now = new Date();
+      const rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
 
-    for (let i = 0; i < days; i++) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-      const end   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-
-      // Sum watchedSeconds for LessonProgress rows updated on this day
-      const agg = await prisma.lessonProgress.aggregate({
-        where: {
-          userId,
-          updatedAt: { gte: start, lte: end },
-        },
-        _sum: { watchedSeconds: true },
+      // Single query: all lesson progress records updated within the window
+      const records = await prisma.lessonProgress.findMany({
+        where: { userId, updatedAt: { gte: rangeStart } },
+        select: { watchedSeconds: true, updatedAt: true },
       });
 
-      const label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-      result.push({ day: label, seconds: agg._sum.watchedSeconds ?? 0 });
-    }
+      // Aggregate in-memory by calendar day (same semantics as the old per-day aggregate)
+      const secByDay: Record<string, number> = {};
+      records.forEach(r => {
+        const label = new Date(r.updatedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        secByDay[label] = (secByDay[label] ?? 0) + (r.watchedSeconds ?? 0);
+      });
 
-    return result; // index 0 = today, index 1 = yesterday, …
+      // Build result array: index 0 = today, index 1 = yesterday, …
+      const result: { day: string; seconds: number }[] = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const label = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+        result.push({ day: label, seconds: secByDay[label] ?? 0 });
+      }
+      return result;
+    }, 60); // 60 s TTL — chart is approximate, short staleness is fine
   },
 };

@@ -117,6 +117,30 @@ export const EmailService = {
     });
   },
 
+  async sendTeacherCreated(data: { email: string; name: string; frontendUrl: string }) {
+    await send({
+      to: data.email,
+      subject: 'Votre compte formateur IZ Academy a été créé',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+          <h2 style="color:#4f46e5">Bonjour ${esc(data.name)},</h2>
+          <p>Un administrateur vient de créer votre compte formateur sur <strong>IZ Academy</strong>.</p>
+          <p>Vous pouvez vous connecter dès maintenant avec votre adresse email et le mot de passe temporaire qui vous a été communiqué.</p>
+          <div style="text-align:center;margin:32px 0">
+            <a href="${esc(data.frontendUrl)}/login" style="background:#4f46e5;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
+              Se connecter
+            </a>
+          </div>
+          <p style="color:#6b7280;font-size:13px">
+            Vous devrez changer votre mot de passe temporaire lors de votre première connexion.
+          </p>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
+          <p style="color:#9ca3af;font-size:11px">Si vous n'attendiez pas ce message, contactez votre administrateur.</p>
+        </div>
+      `,
+    });
+  },
+
   async sendContactReply(data: {
     to: string;
     name: string;

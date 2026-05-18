@@ -28,6 +28,18 @@ export const LessonService = {
 
   async completeLesson(lessonId: string, userId: string) {
     console.log(`[Backend Complete API] Manual complete called for lesson ${lessonId}, userId: ${userId}`);
+    const lesson = await LessonModel.findById(lessonId);
+    if (!lesson?.module?.courseId) {
+      const err: any = new Error('Lesson not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+    const enrolled = await EnrollmentModel.findApproved(userId, lesson.module.courseId);
+    if (!enrolled) {
+      const err: any = new Error('Not enrolled');
+      err.code = 'NOT_ENROLLED';
+      throw err;
+    }
     await LessonModel.upsertProgress(userId, lessonId, {
       completed: true,
       completedAt: new Date(),
@@ -116,7 +128,7 @@ export const LessonService = {
         where: { userId, quizId: prevLesson.quizId },
         orderBy: { score: 'desc' },
       });
-      if (!bestAttempt || bestAttempt.score < config.quizPassThreshold) return false;
+      if (!bestAttempt || !bestAttempt.passed) return false;
     }
 
     return true;
