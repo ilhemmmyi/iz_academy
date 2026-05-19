@@ -1,4 +1,10 @@
 import { prisma } from '../config/prisma';
+import {
+  calculateCourseProgressPercentage,
+  getLessonProgressPercentage,
+  getProjectProgressPercentage,
+  getCertificateProgressPercentage,
+} from '../utils/courseProgress';
 
 export const CourseModel = {
   findAll: (filters?: any) => prisma.course.findMany({
@@ -91,26 +97,37 @@ export const CourseModel = {
       where: { id: courseId },
       include: { modules: { include: { lessons: true } } },
     });
-    if (!course) return { total: 0, completed: 0, percentage: 0, completedLessonIds: [], videoProgress: {}, passedQuizLessonIds: [] };
+    if (!course) return { total: 0, completed: 0, percentage: 0, projectStatus: null, hasCertificate: false, completedLessonIds: [], videoProgress: {}, passedQuizLessonIds: [], lessonDurations: {} };
     const allLessons = course.modules.flatMap(m => m.lessons);
     const totalLessons = allLessons.length;
-    const allProgress = await prisma.lessonProgress.findMany({
-      where: { userId, lesson: { module: { courseId } } },
-    });
+
+    const [allProgress, allKnownProgress, submissionRows, certRows] = await Promise.all([
+      prisma.lessonProgress.findMany({
+        where: { userId, lesson: { module: { courseId } } },
+      }),
+      prisma.lessonProgress.groupBy({
+        by: ['lessonId'],
+        where: { lesson: { module: { courseId } } },
+        _max: { durationSeconds: true },
+      }),
+      prisma.projectSubmission.findMany({
+        where: { studentId: userId, courseId },
+        select: { status: true },
+        orderBy: { submittedAt: 'desc' },
+        take: 1,
+      }),
+      prisma.certificate.findFirst({
+        where: { userId, courseId },
+        select: { id: true },
+      }),
+    ]);
+
     const completedLessonIds = allProgress.filter(p => p.completed).map(p => p.lessonId);
     const videoProgress: Record<string, { watchedSeconds: number; durationSeconds: number }> = {};
     for (const p of allProgress) {
       videoProgress[p.lessonId] = { watchedSeconds: p.watchedSeconds, durationSeconds: p.durationSeconds };
     }
 
-    // Build a map of lesson durations from the Lesson table for ALL lessons (even unvisited)
-    // Also query LessonProgress across ALL users to find the best-known duration per lesson
-    // (Lesson.durationSeconds may still be 0 if the lesson was just created and no one has finished it)
-    const allKnownProgress = await prisma.lessonProgress.groupBy({
-      by: ['lessonId'],
-      where: { lesson: { module: { courseId } } },
-      _max: { durationSeconds: true },
-    });
     const knownDurationsFromProgress: Record<string, number> = {};
     for (const p of allKnownProgress) {
       knownDurationsFromProgress[p.lessonId] = p._max.durationSeconds ?? 0;
@@ -118,7 +135,6 @@ export const CourseModel = {
 
     const lessonDurations: Record<string, number> = {};
     for (const l of allLessons) {
-      // Use the highest value from either the Lesson row or any user's progress record
       lessonDurations[l.id] = Math.max(l.durationSeconds ?? 0, knownDurationsFromProgress[l.id] ?? 0);
     }
 
@@ -140,10 +156,29 @@ export const CourseModel = {
       }
     }
 
+    const projectStatus = submissionRows[0]?.status ?? null;
+    const hasCertificate = !!certRows;
+
+    // Compute total/watched durations for the lesson progress share
+    const totalDuration = allLessons.reduce((acc, l) => acc + Math.max(lessonDurations[l.id] ?? 0, 1), 0);
+    const watchedDuration = allProgress.reduce((acc, p) => {
+      const lessonDuration = Math.max(p.durationSeconds || 0, lessonDurations[p.lessonId] || 0, 1);
+      return acc + Math.min(Math.max(p.watchedSeconds || 0, 0), lessonDuration);
+    }, 0);
+
+    const lessonPct = getLessonProgressPercentage({ watchedDuration, totalDuration });
+    const percentage = calculateCourseProgressPercentage({
+      lessonProgress: lessonPct,
+      projectProgress: getProjectProgressPercentage(projectStatus),
+      certificateProgress: getCertificateProgressPercentage(hasCertificate),
+    });
+
     return {
       total: totalLessons,
       completed: completedLessonIds.length,
-      percentage: totalLessons > 0 ? Math.round((completedLessonIds.length / totalLessons) * 100) : 0,
+      percentage,
+      projectStatus,
+      hasCertificate,
       completedLessonIds,
       videoProgress,
       passedQuizLessonIds,

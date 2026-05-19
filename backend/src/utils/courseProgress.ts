@@ -7,18 +7,11 @@ function clampPercent(value: number) {
 }
 
 export function getLessonProgressPercentage(params: {
-  completedLessons: number;
-  totalLessons: number;
   watchedDuration: number;
   totalDuration: number;
-}) {
-  if (params.totalLessons > 0 && params.completedLessons >= params.totalLessons) {
-    return 100;
-  }
-
-  return params.totalDuration > 0
-    ? clampPercent((params.watchedDuration / params.totalDuration) * 100)
-    : 0;
+}): number {
+  if (params.totalDuration <= 0) return 0;
+  return clampPercent((params.watchedDuration / params.totalDuration) * 100);
 }
 
 export function getProjectProgressPercentage(projectStatus: string | null | undefined) {
@@ -26,8 +19,8 @@ export function getProjectProgressPercentage(projectStatus: string | null | unde
   return projectStatus ? 100 : 0;
 }
 
-export function getCertificateProgressPercentage(projectStatus: string | null | undefined) {
-  return projectStatus === 'VALIDATED' ? 100 : 0;
+export function getCertificateProgressPercentage(hasCertificate: boolean): number {
+  return hasCertificate ? 100 : 0;
 }
 
 export function calculateCourseProgressPercentage(params: {

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router';
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   LayoutDashboard,
   BookOpen,
@@ -12,26 +12,50 @@ import {
   Sparkles,
   ChevronDown,
   User,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { enrollmentsApi } from '../../api/enrollments.api';
 
 interface StudentLayoutProps {
   children: React.ReactNode;
+  /** Live course progress to show in the sidebar while on a course page */
+  liveProgress?: { courseId: string; pct: number };
 }
 
-export function StudentLayout({ children }: StudentLayoutProps) {
+export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, loading } = useAuth();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCoursesOpen, setIsCoursesOpen] = useState(false);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const navigation = [
+  const isOnCoursePage = location.pathname.startsWith('/student/course/');
+  const activeCourseId = isOnCoursePage ? location.pathname.split('/')[3] : null;
+
+  // Auto-expand courses section when navigating to a course
+  useEffect(() => {
+    if (isOnCoursePage) setIsCoursesOpen(true);
+  }, [isOnCoursePage]);
+
+  // Fetch approved enrollments for sidebar listing
+  useEffect(() => {
+    if (!user?.hasCompletedCoach) return;
+    enrollmentsApi.getMine()
+      .then(data => setEnrollments(data.filter((e: any) => e.status === 'APPROVED')))
+      .catch(() => {});
+  }, [user?.hasCompletedCoach]);
+
+  const topNav = [
     { name: 'Tableau de bord', href: '/student', icon: LayoutDashboard },
-    { name: 'Mes cours', href: '/student/courses', icon: BookOpen },
+  ];
+
+  const bottomNav = [
     { name: 'Certificats', href: '/student/certificates', icon: Award },
     { name: 'Messages', href: '/student/messages', icon: MessageSquare },
     { name: 'Assistant virtuel', href: '/student/career', icon: Bot },
@@ -40,10 +64,6 @@ export function StudentLayout({ children }: StudentLayoutProps) {
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const getRoleAvatarColor = (role?: string) => {
-    return 'bg-indigo-500';
   };
 
   return (
@@ -93,21 +113,15 @@ export function StudentLayout({ children }: StudentLayoutProps) {
                     </span>
 
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform ${
-                        isUserMenuOpen ? 'rotate-180' : ''
-                      }`}
+                      className={`w-4 h-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
                     />
                   </button>
 
                   {isUserMenuOpen && (
                     <div className="absolute right-0 mt-2 w-52 bg-white border border-border rounded-xl shadow-lg py-1 z-50">
                       <div className="px-4 py-2 border-b border-border">
-                        <p className="text-sm font-semibold truncate">
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user.email}
-                        </p>
+                        <p className="text-sm font-semibold truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
 
                       <Link
@@ -154,11 +168,13 @@ export function StudentLayout({ children }: StudentLayoutProps) {
             fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r border-border
             transform transition-transform duration-300 ease-in-out lg:translate-x-0
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            mt-16 lg:mt-0
+            mt-16 lg:mt-0 flex flex-col
           `}
         >
-          <nav className="p-4 space-y-2">
-            {navigation.map((item) => {
+          <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
+
+            {/* Top nav items (dashboard first) */}
+            {topNav.map((item) => {
               const isActive = location.pathname === item.href;
               const isCoachRoute = item.href === '/student/career';
               const locked = !user?.hasCompletedCoach && !isCoachRoute;
@@ -168,9 +184,9 @@ export function StudentLayout({ children }: StudentLayoutProps) {
                   key={item.name}
                   className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed"
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5 ml-auto" />}
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
                 </span>
               ) : (
                 <Link
@@ -183,16 +199,154 @@ export function StudentLayout({ children }: StudentLayoutProps) {
                       : 'hover:bg-accent'
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5 ml-auto" />}
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
                 </Link>
               );
             })}
+
+            {/* Courses collapsible section */}
+            {!user?.hasCompletedCoach ? (
+              <span className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed">
+                <BookOpen className="w-5 h-5 shrink-0" />
+                <span className="flex-1 text-[15px] font-medium">Mes cours</span>
+              </span>
+            ) : (
+              <div>
+                <button
+                  onClick={() => setIsCoursesOpen(!isCoursesOpen)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                    isOnCoursePage && !isCoursesOpen
+                      ? 'bg-primary/10 text-primary'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  <BookOpen className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-left text-[15px] font-medium">Mes cours</span>
+                  <ChevronDown
+                    className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+                      isCoursesOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Animated sub-list */}
+                <div
+                  className={`overflow-hidden transition-all duration-200 ease-in-out ${
+                    isCoursesOpen ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="mt-1 space-y-0.5 pb-1">
+                    {enrollments.length === 0 ? (
+                      <div className="pl-9 pr-3 py-2 text-xs text-muted-foreground italic">
+                        Aucun cours inscrit
+                      </div>
+                    ) : (
+                      enrollments.map((enrollment: any) => {
+                        const courseId = enrollment.course.id;
+                        const storedPct: number = enrollment.progress?.percentage ?? 0;
+                        const pct: number = liveProgress?.courseId === courseId ? liveProgress.pct : storedPct;
+                        const isActive = activeCourseId === courseId;
+
+                        return (
+                          <Link
+                            key={courseId}
+                            to={`/student/course/${courseId}`}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={`flex items-center gap-3 pl-9 pr-3 py-2.5 rounded-lg transition group ${
+                              isActive
+                                ? 'bg-primary text-primary-foreground'
+                                : 'hover:bg-accent'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium leading-snug truncate">
+                                {enrollment.course.title}
+                              </p>
+
+                              {/* Progress bar */}
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <div
+                                  className={`flex-1 h-1 rounded-full overflow-hidden ${
+                                    isActive ? 'bg-primary-foreground/30' : 'bg-slate-100'
+                                  }`}
+                                >
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      isActive ? 'bg-primary-foreground' : pct >= 100 ? 'bg-emerald-500' : 'bg-primary'
+                                    }`}
+                                    style={{ width: `${Math.min(pct, 100)}%` }}
+                                  />
+                                </div>
+                                <span
+                                  className={`text-[10px] shrink-0 tabular-nums ${
+                                    isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                                  }`}
+                                >
+                                  {pct}%
+                                </span>
+                              </div>
+                            </div>
+
+                            {pct >= 100 && !isActive && (
+                              <Award className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            )}
+                          </Link>
+                        );
+                      })
+                    )}
+
+                    {/* Link to public catalogue */}
+                    <Link
+                      to="/courses"
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="flex items-center gap-2 pl-9 pr-3 py-2 text-xs text-primary hover:underline transition"
+                    >
+                      + Découvrir les cours
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom nav items (Certificats, Messages, Assistant virtuel) */}
+            {bottomNav.map((item) => {
+              const isActive = location.pathname === item.href;
+              const isCoachRoute = item.href === '/student/career';
+              const locked = !user?.hasCompletedCoach && !isCoachRoute;
+
+              return locked ? (
+                <span
+                  key={item.name}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed"
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
+                </span>
+              ) : (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-accent'
+                  }`}
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
+                </Link>
+              );
+            })}
+
           </nav>
         </aside>
 
-        {/* OVERLAY */}
+        {/* OVERLAY (mobile) */}
         {isSidebarOpen && (
           <div
             className="fixed inset-0 bg-black/50 z-20 lg:hidden"

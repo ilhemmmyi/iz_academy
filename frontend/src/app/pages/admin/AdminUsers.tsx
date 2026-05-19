@@ -399,13 +399,6 @@ export function AdminUsers() {
     }
     try {
       const created = await usersApi.createUser({ name: teacherForm.name, email: teacherForm.email, role: 'teacher', password: teacherForm.password });
-<<<<<<< HEAD
-      setUsers(prev => [...prev, created as ApiUser]);
-      setShowAddTeacher(false);
-      // H-5 — Afficher le modal avec les credentials (était du code mort)
-      setGeneratedPassword({ name: created.name, email: teacherForm.email, password: teacherForm.password });
-      setTeacherForm({ name: '', email: '', password: '', showPassword: false });
-=======
       // Prepend so the newest user appears first (matches backend orderBy createdAt desc)
       setUsers(prev => [created as ApiUser, ...prev]);
       const savedPassword = teacherForm.password;
@@ -413,7 +406,6 @@ export function AdminUsers() {
       setShowAddTeacher(false);
       // Show credential modal so admin can copy credentials before they disappear
       setGeneratedPassword({ name: (created as ApiUser).name, email: (created as ApiUser).email, password: savedPassword });
->>>>>>> 6dfd6ce476b5abeefbd7f2e2602c6d05dbf5f9fd
     } catch {
       toast.error('Erreur lors de la création du formateur.');
     }
@@ -1020,12 +1012,7 @@ export function AdminUsers() {
                     type={teacherForm.showPassword ? 'text' : 'password'}
                     value={teacherForm.password}
                     onChange={e => setTeacherForm(p => ({ ...p, password: e.target.value }))}
-<<<<<<< HEAD
-                    placeholder="Mot de passe"
-                    autoComplete="new-password"
-=======
                     placeholder="Minimum 8 caractères"
->>>>>>> 6dfd6ce476b5abeefbd7f2e2602c6d05dbf5f9fd
                     className="w-full px-3 py-2 pr-10 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
                   <button type="button" onClick={() => setTeacherForm(p => ({ ...p, showPassword: !p.showPassword }))}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">

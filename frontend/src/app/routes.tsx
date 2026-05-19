@@ -19,7 +19,6 @@ const UserProfile = lazy(() => import("./pages/UserProfile").then(m => ({ defaul
 
 // Lazy-loaded student pages
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard").then(m => ({ default: m.StudentDashboard })));
-const StudentCourses = lazy(() => import("./pages/student/StudentCourses").then(m => ({ default: m.StudentCourses })));
 const StudentCourseView = lazy(() => import("./pages/student/StudentCourseView").then(m => ({ default: m.StudentCourseView })));
 const StudentQuiz = lazy(() => import("./pages/student/StudentQuiz").then(m => ({ default: m.StudentQuiz })));
 const StudentProjects = lazy(() => import("./pages/student/StudentProjects").then(m => ({ default: m.StudentProjects })));
@@ -105,7 +104,6 @@ export const router = createBrowserRouter([
 
   // Student Routes
   { path: "/student", element: <StudentGuard><StudentDashboard /></StudentGuard> },
-  { path: "/student/courses", element: <StudentGuard><StudentCourses /></StudentGuard> },
   { path: "/student/course/:courseId", element: <StudentGuard><StudentCourseView /></StudentGuard> },
   { path: "/student/quiz/:courseId", element: <StudentGuard><StudentQuiz /></StudentGuard> },
   { path: "/student/quiz/:courseId/:lessonId", element: <StudentGuard><StudentQuiz /></StudentGuard> },

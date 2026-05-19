@@ -35,6 +35,7 @@ export function StudentProjects() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [showResubmitForm, setShowResubmitForm] = useState(false);
+  const [courseProgressPct, setCourseProgressPct] = useState(0);
 
   useEffect(() => {
     if (!courseId) { setLoading(false); return; }
@@ -46,6 +47,7 @@ export function StudentProjects() {
     ]).then(([proj, subs, progress, course]) => {
       setProjects(proj as Project[]);
       setSubmissions((subs as Submission[]).filter((s: Submission) => s.projectId && proj.some((p: Project) => p.id === s.projectId)));
+      setCourseProgressPct((progress as any).percentage ?? 0);
       if (course) {
         const allLessons = (course.modules || []).flatMap((m: any) => m.lessons || []);
         setAllLessonsCompleted(
@@ -88,6 +90,12 @@ export function StudentProjects() {
         if (existing >= 0) { const updated = [...prev]; updated[existing] = sub; return updated; }
         return [...prev, sub];
       });
+      // Refetch course progress so the sidebar updates immediately with the +20 project contribution
+      if (courseId) {
+        coursesApi.getProgress(courseId)
+          .then(p => setCourseProgressPct(p.percentage ?? 0))
+          .catch(() => {});
+      }
       setShowSubmitForm(false);
       setShowResubmitForm(false);
       setGithubUrl('');
@@ -118,7 +126,7 @@ export function StudentProjects() {
   };
 
   return (
-    <StudentLayout>
+    <StudentLayout liveProgress={courseId ? { courseId, pct: courseProgressPct } : undefined}>
       <div className="max-w-4xl mx-auto space-y-6">
 
         <div>

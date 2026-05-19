@@ -1,7 +1,5 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import speakeasy from 'speakeasy';
-import QRCode from 'qrcode';
 import { prisma } from '../config/prisma';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { queueEmail } from '../utils/queueEmail';
@@ -61,16 +59,9 @@ export const AuthService = {
       include: { user: true },
     });
     if (!stored || stored.expiresAt < new Date()) throw new Error('INVALID_REFRESH');
-<<<<<<< HEAD
-    verifyRefreshToken(token);
-    await prisma.refreshToken.delete({ where: { token } });
-    const user = await prisma.user.findUnique({ where: { id: stored.userId } });
-    // H-3 — Vérifier isActive ET isVerified au refresh
-    if (!user || !user.isActive || !user.isVerified) throw new Error('INVALID_REFRESH');
-    return this.issueTokens(user.id, user.role, user.email);
-=======
     verifyRefreshToken(token); // validate signature (in-memory, no DB)
-    if (!stored.user || !stored.user.isActive) throw new Error('INVALID_REFRESH');
+    // Verify both isActive and isVerified — a disabled or unverified account must not renew
+    if (!stored.user || !stored.user.isActive || !stored.user.isVerified) throw new Error('INVALID_REFRESH');
 
     // Delete old token + create new tokens in parallel (independent operations)
     const [tokens] = await Promise.all([
@@ -78,29 +69,10 @@ export const AuthService = {
       prisma.refreshToken.delete({ where: { token } }),
     ]);
     return tokens;
->>>>>>> 6dfd6ce476b5abeefbd7f2e2602c6d05dbf5f9fd
   },
 
   async logout(token: string) {
     await prisma.refreshToken.deleteMany({ where: { token } });
-  },
-
-  async setup2FA(userId: string) {
-    const secret = speakeasy.generateSecret({ name: 'IzAcademy' });
-    await prisma.user.update({ where: { id: userId }, data: { twoFactorSecret: secret.base32 } });
-    const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
-    return { qrCode };
-  },
-
-  async verify2FA(userId: string, token: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.twoFactorSecret) throw new Error('2FA_NOT_SETUP');
-    const valid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret, encoding: 'base32', token, window: 1,
-    });
-    if (!valid) throw new Error('INVALID_2FA_TOKEN');
-    await prisma.user.update({ where: { id: userId }, data: { twoFactorEnabled: true } });
-    return true;
   },
 
   async forgotPassword(email: string) {

@@ -337,8 +337,6 @@ export const UserService = {
       const totalDuration = totalDurationByCourse[e.course.id] ?? 0;
       const watchedDuration = watchedDurationByCourse[e.course.id] ?? 0;
       const lessonProgress = getLessonProgressPercentage({
-        completedLessons: completed,
-        totalLessons: total,
         watchedDuration,
         totalDuration,
       });
@@ -352,7 +350,7 @@ export const UserService = {
         percentage: calculateCourseProgressPercentage({
           lessonProgress,
           projectProgress: getProjectProgressPercentage(projectStatus),
-          certificateProgress: getCertificateProgressPercentage(projectStatus),
+          certificateProgress: getCertificateProgressPercentage(projectStatus === 'VALIDATED'),
         }),
       };
     });

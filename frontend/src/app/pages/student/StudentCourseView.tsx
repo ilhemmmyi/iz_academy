@@ -58,11 +58,20 @@ export function StudentCourseView() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState<any>(null);
-  const [progress, setProgress] = useState<{ completedLessonIds: string[]; videoProgress: VideoProgressMap; passedQuizLessonIds: string[]; lessonDurations: Record<string, number> }>({
+  const [progress, setProgress] = useState<{
+    completedLessonIds: string[];
+    videoProgress: VideoProgressMap;
+    passedQuizLessonIds: string[];
+    lessonDurations: Record<string, number>;
+    projectStatus: string | null;
+    hasCertificate: boolean;
+  }>({
     completedLessonIds: [],
     videoProgress: {},
     passedQuizLessonIds: [],
     lessonDurations: {},
+    projectStatus: null,
+    hasCertificate: false,
   });
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -96,8 +105,9 @@ export function StudentCourseView() {
         completedLessonIds: p.completedLessonIds || [],
         videoProgress: p.videoProgress || {},
         passedQuizLessonIds: p.passedQuizLessonIds || [],
-        // Merge lessonDurations: keep previously known durations so totalDuration never collapses
         lessonDurations: { ...(prev.lessonDurations || {}), ...(p.lessonDurations || {}) },
+        projectStatus: p.projectStatus ?? null,
+        hasCertificate: p.hasCertificate ?? false,
       }));
     } catch {}
   }, [courseId]);
@@ -122,7 +132,7 @@ export function StudentCourseView() {
       resourcesApi.getResources(courseId).catch(() => []),
     ]).then(([c, p, res]) => {
       setCourse(c);
-      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [], lessonDurations: p.lessonDurations || {} });
+      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [], lessonDurations: p.lessonDurations || {}, projectStatus: p.projectStatus ?? null, hasCertificate: p.hasCertificate ?? false });
       setCourseResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
       if (firstLesson) {
@@ -148,11 +158,12 @@ export function StudentCourseView() {
     const handleBeforeUnload = () => {
       if (pendingSaveRef.current && selectedLessonRef.current && videoRef.current) {
         const { duration } = videoRef.current;
-        lessonsApi.saveVideoProgress(
+        // keepalive variant: guaranteed to complete even when the page is unloading
+        lessonsApi.saveVideoProgressBeacon(
           selectedLessonRef.current.id,
           maxWatchedRef.current,
           duration || 0,
-        ).catch(() => {});
+        );
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -208,14 +219,17 @@ export function StudentCourseView() {
 
   /* ── video: throttled progress save ─────────────────────── */
 
-  const scheduleSave = (lessonId: string, watchedSeconds: number, durationSeconds: number) => {
+  const scheduleSave = () => {
     pendingSaveRef.current = true;
     if (saveTimerRef.current) return; // already scheduled
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
       pendingSaveRef.current = false;
-      lessonsApi.saveVideoProgress(lessonId, watchedSeconds, durationSeconds).catch(() => {});
-    }, 15000);
+      if (!selectedLessonRef.current) return;
+      // Read refs at fire time, not at schedule time — avoids stale closure capture
+      const duration = videoRef.current?.duration || 0;
+      lessonsApi.saveVideoProgress(selectedLessonRef.current.id, maxWatchedRef.current, duration).catch(() => {});
+    }, 5000);
   };
 
   const handleTimeUpdate = () => {
@@ -250,7 +264,7 @@ export function StudentCourseView() {
     if (currentTime > maxWatchedRef.current) {
       maxWatchedRef.current = currentTime;
       setCurrentWatchedPct(Math.min((maxWatchedRef.current / duration) * 100, 100));
-      scheduleSave(lesson.id, maxWatchedRef.current, duration);
+      scheduleSave();
       setProgress(prev => ({
         ...prev,
         videoProgress: {
@@ -268,7 +282,12 @@ export function StudentCourseView() {
     ) {
       hasAutoCompletedRef.current = true;
       lessonsApi.complete(lesson.id)
-        .then(() => fetchProgress())
+        .then(async () => {
+          await fetchProgress();
+          // Certificate generation is async (backend queue).
+          // One delayed re-check lets the sidebar reflect +10 without a manual refresh.
+          setTimeout(() => fetchProgress(), 6000);
+        })
         .catch(() => {});
     }
   };
@@ -346,8 +365,6 @@ export function StudentCourseView() {
   /* ── derived from course structure ───────────────────────── */
 
   const allLessons: any[] = (course.modules || []).flatMap((m: any) => m.lessons || []);
-  const totalLessons = allLessons.length;
-  const completedCount = progress.completedLessonIds.length;
 
   // Duration-based progress
   // Priority: 1) videoProgress[id].durationSeconds (from active session) 2) lessonDurations[id] (from Lesson table, all lessons) 3) l.durationSeconds (from course data)
@@ -357,20 +374,23 @@ export function StudentCourseView() {
     || l.durationSeconds
     || 0;
 
-  const totalDuration = allLessons.reduce((acc: number, l: any) => acc + getLessonDuration(l), 0);
+  // Use Math.max(..., 1) so unknown-duration lessons still contribute to the denominator,
+  // preventing inflated percentages when only some lessons have known durations.
+  const totalDuration = allLessons.reduce((acc: number, l: any) => acc + Math.max(getLessonDuration(l), 1), 0);
 
-  // Watch-time based: sum actual watched seconds (capped at lesson duration, not just completed lessons)
+  // Watch-time based: sum actual watched seconds capped at lesson duration.
+  // Use Math.max(cap, 1) to match the totalDuration denominator so ratios stay sane.
   const watchedDuration = allLessons.reduce((acc: number, l: any) => {
     const watched = progress.videoProgress[l.id]?.watchedSeconds || 0;
-    const cap = getLessonDuration(l);
-    return acc + (cap > 0 ? Math.min(watched, cap) : watched);
+    const cap = Math.max(getLessonDuration(l), 1);
+    return acc + Math.min(watched, cap);
   }, 0);
 
-  // If ALL lessons are marked completed → force 100% (handles rounding / threshold gaps)
-  const allLessonsCompleted = totalLessons > 0 && completedCount >= totalLessons;
-  const progressPct = allLessonsCompleted
-    ? 100
-    : totalDuration > 0 ? Math.round((watchedDuration / totalDuration) * 100) : 0;
+  const lessonPct = totalDuration > 0 ? Math.min(Math.round((watchedDuration / totalDuration) * 100), 100) : 0;
+  const progressPct = Math.min(
+    Math.round(lessonPct * 0.7) + (progress.projectStatus ? 20 : 0) + (progress.hasCertificate ? 10 : 0),
+    100,
+  );
 
   // Format seconds → "X min Y sec"
   const fmtDuration = (sec: number) => {
@@ -409,7 +429,7 @@ export function StudentCourseView() {
   /* ── render ───────────────────────────────────────────────── */
 
   return (
-    <StudentLayout>
+    <StudentLayout liveProgress={{ courseId: courseId!, pct: progressPct }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <Link to="/student/courses" className="text-primary hover:underline mb-2 inline-block">
@@ -682,11 +702,11 @@ export function StudentCourseView() {
               {/* Progression — inside Contenu du cours */}
               <div className="p-4 border-t border-indigo-100">
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">{fmtDuration(allLessonsCompleted ? totalDuration : watchedDuration)} / {fmtDuration(totalDuration)}</span>
-                  <span className="font-semibold text-teal-600">{progressPct}%</span>
+                  <span className="text-muted-foreground">{fmtDuration(watchedDuration)} / {fmtDuration(totalDuration)}</span>
+                  <span className="font-semibold text-teal-600">{lessonPct}%</span>
                 </div>
                 <div className="w-full h-2 bg-teal-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-teal-500 transition-all" style={{ width: `${progressPct}%` }} />
+                  <div className="h-full bg-teal-500 transition-all" style={{ width: `${lessonPct}%` }} />
                 </div>
               </div>
             </div>
