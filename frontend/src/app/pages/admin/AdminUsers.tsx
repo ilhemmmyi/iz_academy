@@ -1013,6 +1013,7 @@ export function AdminUsers() {
                     value={teacherForm.password}
                     onChange={e => setTeacherForm(p => ({ ...p, password: e.target.value }))}
                     placeholder="Minimum 8 caractères"
+
                     autoComplete="new-password"
                     className="w-full px-3 py-2 pr-10 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
                   <button type="button" onClick={() => setTeacherForm(p => ({ ...p, showPassword: !p.showPassword }))}

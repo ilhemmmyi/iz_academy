@@ -174,17 +174,16 @@ export const EnrollmentService = {
       const totalDuration = totalDurationMap[e.courseId] || 0;
       const watchedDuration = watchedDurationMap[e.courseId] || 0;
       const lessonProgress = getLessonProgressPercentage({
-        completedLessons,
-        totalLessons,
         watchedDuration,
         totalDuration,
       });
 
       const projectStatus = submissionMap[e.courseId] ?? null;
+      const hasCertificate = !!certMap[e.courseId];
       const percentage = calculateCourseProgressPercentage({
         lessonProgress,
         projectProgress: getProjectProgressPercentage(projectStatus),
-        certificateProgress: getCertificateProgressPercentage(projectStatus),
+        certificateProgress: getCertificateProgressPercentage(hasCertificate),
       });
 
       return {
@@ -264,8 +263,6 @@ export const EnrollmentService = {
       const totalDuration = totalDurationMap[e.courseId] || 0;
       const watchedDuration = watchedDurationMap[`${e.userId}:${e.courseId}`] || 0;
       const lessonProgress = getLessonProgressPercentage({
-        completedLessons: completed,
-        totalLessons: total,
         watchedDuration,
         totalDuration,
       });
@@ -273,7 +270,7 @@ export const EnrollmentService = {
       const percentage = calculateCourseProgressPercentage({
         lessonProgress,
         projectProgress: getProjectProgressPercentage(projectStatus),
-        certificateProgress: getCertificateProgressPercentage(projectStatus),
+        certificateProgress: getCertificateProgressPercentage(!!projectStatus && projectStatus === 'VALIDATED'),
       });
       return {
         id: e.id,

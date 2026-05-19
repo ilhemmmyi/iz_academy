@@ -5,7 +5,9 @@ let accessToken: string | null = null;
 export const setAccessToken = (token: string | null) => { accessToken = token; };
 export const getAccessToken = () => accessToken;
 
-// H-4 — Une seule requête de refresh à la fois (évite la race condition)
+
+// Single refresh at a time — prevents race condition when multiple 401s fire simultaneously
+
 let refreshPromise: Promise<string | null> | null = null;
 
 // Deduplicate concurrent GET requests to the same path.

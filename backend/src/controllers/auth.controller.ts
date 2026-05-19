@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { AuthRequest } from '../middlewares/auth.middleware';
-import { UserModel } from '../models/user.model';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -60,29 +58,6 @@ export const AuthController = {
     if (token) await AuthService.logout(token);
     res.clearCookie('refreshToken');
     res.json({ message: 'Logged out' });
-  },
-
-  async setup2FA(req: AuthRequest, res: Response) {
-    try {
-      const result = await AuthService.setup2FA(req.user!.userId);
-      res.json(result);
-    } catch {
-      res.status(500).json({ message: '2FA setup failed' });
-    }
-  },
-
-  async verify2FA(req: Request, res: Response) {
-    try {
-      const { userId, token } = req.body;
-      await AuthService.verify2FA(userId, token);
-      const user = await UserModel.findById(userId);
-      if (!user) return res.status(404).json({ message: 'User not found' });
-      const tokens = await AuthService.issueTokens(user.id, user.role, user.email);
-      res.cookie('refreshToken', tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
-      res.json({ accessToken: tokens.accessToken });
-    } catch {
-      res.status(400).json({ message: 'Invalid 2FA token' });
-    }
   },
 
   async forgotPassword(req: Request, res: Response) {

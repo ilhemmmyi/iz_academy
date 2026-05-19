@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
-import { registerSchema, loginSchema, googleLoginSchema, verify2FASchema, resetPasswordSchema } from '../validators/auth.validators';
+import { registerSchema, loginSchema, googleLoginSchema, resetPasswordSchema } from '../validators/auth.validators';
 import rateLimit from 'express-rate-limit';
 
 export const authRouter = Router();

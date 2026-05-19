@@ -50,7 +50,7 @@ export function StudentQuiz() {
     setError('');
   };
 
-  const backUrl = courseId ? `/student/course/${courseId}` : '/student/courses';
+  const backUrl = courseId ? `/student/course/${courseId}` : '/student';
 
   if (loading) {
     return (
