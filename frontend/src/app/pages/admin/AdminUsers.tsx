@@ -175,9 +175,6 @@ function CourseCard({
               style={{ width: `${cp.percentage}%` }}
             />
           </div>
-          <div className="text-xs text-muted-foreground">
-            {cp.completed} / {cp.total} leçons complétées
-          </div>
         </div>
 
         {/* ── Projet ─── */}

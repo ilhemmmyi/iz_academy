@@ -8,3 +8,4 @@ export const uploadRouter = Router();
 
 uploadRouter.post('/video', authenticate, requireRole('ADMIN', 'TEACHER'), uploadVideo, UploadController.uploadVideo);
 uploadRouter.post('/thumbnail', authenticate, requireRole('ADMIN'), uploadImage, UploadController.uploadThumbnail);
+uploadRouter.post('/homepage-video', authenticate, requireRole('ADMIN'), uploadVideo, UploadController.uploadHomepageVideo);

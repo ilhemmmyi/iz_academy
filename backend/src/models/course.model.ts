@@ -93,22 +93,29 @@ export const CourseModel = {
   delete: (id: string) => prisma.course.delete({ where: { id } }),
 
   getProgress: async (courseId: string, userId: string) => {
+    // Select only columns needed for progress calculation (avoids loading videoUrl, description, etc.)
     const course = await prisma.course.findUnique({
       where: { id: courseId },
-      include: { modules: { include: { lessons: true } } },
+      select: {
+        modules: {
+          select: {
+            lessons: {
+              select: { id: true, durationSeconds: true, quizId: true },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+      },
     });
     if (!course) return { total: 0, completed: 0, percentage: 0, projectStatus: null, hasCertificate: false, completedLessonIds: [], videoProgress: {}, passedQuizLessonIds: [], lessonDurations: {} };
     const allLessons = course.modules.flatMap(m => m.lessons);
     const totalLessons = allLessons.length;
+    const allLessonIds = allLessons.map(l => l.id);
 
-    const [allProgress, allKnownProgress, submissionRows, certRows] = await Promise.all([
+    // Use direct lessonId list instead of join-in-WHERE for index efficiency
+    const [allProgress, submissionRows, certRows] = await Promise.all([
       prisma.lessonProgress.findMany({
-        where: { userId, lesson: { module: { courseId } } },
-      }),
-      prisma.lessonProgress.groupBy({
-        by: ['lessonId'],
-        where: { lesson: { module: { courseId } } },
-        _max: { durationSeconds: true },
+        where: { userId, lessonId: { in: allLessonIds } },
       }),
       prisma.projectSubmission.findMany({
         where: { studentId: userId, courseId },
@@ -128,14 +135,13 @@ export const CourseModel = {
       videoProgress[p.lessonId] = { watchedSeconds: p.watchedSeconds, durationSeconds: p.durationSeconds };
     }
 
-    const knownDurationsFromProgress: Record<string, number> = {};
-    for (const p of allKnownProgress) {
-      knownDurationsFromProgress[p.lessonId] = p._max.durationSeconds ?? 0;
-    }
-
+    // lesson.durationSeconds is kept up-to-date by saveVideoProgress; supplement with user's own records
     const lessonDurations: Record<string, number> = {};
     for (const l of allLessons) {
-      lessonDurations[l.id] = Math.max(l.durationSeconds ?? 0, knownDurationsFromProgress[l.id] ?? 0);
+      lessonDurations[l.id] = l.durationSeconds ?? 0;
+    }
+    for (const p of allProgress) {
+      lessonDurations[p.lessonId] = Math.max(lessonDurations[p.lessonId] ?? 0, p.durationSeconds ?? 0);
     }
 
     // Determine which lessons' quizzes the student has passed

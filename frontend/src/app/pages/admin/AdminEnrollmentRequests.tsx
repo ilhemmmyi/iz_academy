@@ -12,18 +12,12 @@ import {
   MapPin,
   GraduationCap,
   Briefcase,
+  Search,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
 import { toast } from 'sonner';
 import { enrollmentsApi } from '../../../api/enrollments.api';
 
@@ -45,6 +39,7 @@ interface EnrollmentRequest {
 export function AdminEnrollmentRequests() {
   const [requests, setRequests] = useState<EnrollmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     enrollmentsApi.getAll()
@@ -90,8 +85,21 @@ export function AdminEnrollmentRequests() {
     }
   };
 
+  const matchesSearch = (r: EnrollmentRequest) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      r.studentName.toLowerCase().includes(q) ||
+      r.studentEmail.toLowerCase().includes(q) ||
+      (r.phone || '').toLowerCase().includes(q) ||
+      (r.address || '').toLowerCase().includes(q)
+    );
+  };
+
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const approvedRequests = requests.filter(r => r.status === 'approved');
+  const filteredPending = pendingRequests.filter(matchesSearch);
+  const filteredApproved = approvedRequests.filter(matchesSearch);
 
   const RequestCard = ({ request }: { request: EnrollmentRequest }) => (
     <Card>
@@ -103,18 +111,18 @@ export function AdminEnrollmentRequests() {
                 <h3>{request.studentName}</h3>
                 <Badge
                   variant={
-                    request.status === 'approved' 
-                      ? 'default' 
-                      : request.status === 'rejected' 
-                      ? 'destructive' 
+                    request.status === 'approved'
+                      ? 'default'
+                      : request.status === 'rejected'
+                      ? 'destructive'
                       : 'secondary'
                   }
                 >
                   {request.status === 'approved' && <CheckCircle className="w-3 h-3 mr-1" />}
                   {request.status === 'rejected' && <XCircle className="w-3 h-3 mr-1" />}
                   {request.status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
-                  {request.status === 'approved' ? 'Approuvée' : 
-                   request.status === 'rejected' ? 'Rejetée' : 
+                  {request.status === 'approved' ? 'Approuvée' :
+                   request.status === 'rejected' ? 'Rejetée' :
                    'En attente'}
                 </Badge>
               </div>
@@ -142,7 +150,7 @@ export function AdminEnrollmentRequests() {
             </div>
           )}
 
-          {/* ── Profil étudiant : toujours visible ── */}
+          {/* Profil étudiant */}
           <div className="border border-border rounded-lg overflow-hidden">
             <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center gap-2">
               <User className="w-3.5 h-3.5 text-muted-foreground" />
@@ -194,14 +202,14 @@ export function AdminEnrollmentRequests() {
 
           {request.status === 'pending' && (
             <div className="flex gap-2">
-              <Button 
+              <Button
                 className="flex-1"
                 onClick={() => handleApprove(request.id)}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Approuver
               </Button>
-              <Button 
+              <Button
                 variant="destructive"
                 className="flex-1"
                 onClick={() => handleDelete(request.id)}
@@ -216,9 +224,22 @@ export function AdminEnrollmentRequests() {
     </Card>
   );
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white border border-border rounded-xl p-12 text-center text-muted-foreground">
+            Chargement des demandes...
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* En-tête */}
         <div>
           <h1 className="mb-2">Demandes d'inscription</h1>
           <p className="text-muted-foreground">
@@ -226,73 +247,45 @@ export function AdminEnrollmentRequests() {
           </p>
         </div>
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-l-4 border-l-amber-400 border-amber-100 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-amber-600 mb-1">
-                    {pendingRequests.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    En attente
-                  </div>
-                </div>
-                <div className="p-3 bg-amber-50 rounded-lg">
-                  <Clock className="w-8 h-8 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-teal-400 border-teal-100 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold text-teal-600 mb-1">
-                    {approvedRequests.length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Approuvées
-                  </div>
-                </div>
-                <div className="p-3 bg-teal-50 rounded-lg">
-                  <CheckCircle className="w-8 h-8 text-teal-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-
+        {/* Barre de recherche */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Rechercher par nom, email, téléphone ou adresse…"
+            className="w-full pl-11 pr-4 py-3 border border-border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-primary text-sm shadow-sm"
+          />
         </div>
 
         {/* Liste des demandes */}
         <Tabs defaultValue="pending" className="w-full">
           <TabsList>
             <TabsTrigger value="pending">
-              En attente ({pendingRequests.length})
+              En attente ({filteredPending.length})
             </TabsTrigger>
             <TabsTrigger value="approved">
-              Approuvées ({approvedRequests.length})
+              Approuvées ({filteredApproved.length})
             </TabsTrigger>
-  
           </TabsList>
 
           <TabsContent value="pending" className="space-y-4 mt-6">
-            {pendingRequests.length > 0 ? (
+            {filteredPending.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
-                {pendingRequests.map(request => (
+                {filteredPending.map(request => (
                   <RequestCard key={request.id} request={request} />
                 ))}
               </div>
             ) : (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Clock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl mb-2">Aucune demande en attente</h3>
+                  <Clock className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-40" />
+                  <h3 className="text-xl mb-2">
+                    {searchQuery ? 'Aucun résultat pour cette recherche' : 'Aucune demande en attente'}
+                  </h3>
                   <p className="text-muted-foreground">
-                    Toutes les demandes ont été traitées
+                    {searchQuery ? 'Essayez un autre mot-clé.' : 'Toutes les demandes ont été traitées.'}
                   </p>
                 </CardContent>
               </Card>
@@ -300,14 +293,26 @@ export function AdminEnrollmentRequests() {
           </TabsContent>
 
           <TabsContent value="approved" className="space-y-4 mt-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              {approvedRequests.map(request => (
-                <RequestCard key={request.id} request={request} />
-              ))}
-            </div>
+            {filteredApproved.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                {filteredApproved.map(request => (
+                  <RequestCard key={request.id} request={request} />
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <CheckCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-40" />
+                  <h3 className="text-xl mb-2">
+                    {searchQuery ? 'Aucun résultat pour cette recherche' : 'Aucune demande approuvée'}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {searchQuery ? 'Essayez un autre mot-clé.' : 'Aucune demande n\'a encore été approuvée.'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
-
-
         </Tabs>
       </div>
     </AdminLayout>

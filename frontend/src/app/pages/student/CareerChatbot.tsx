@@ -112,9 +112,7 @@ export function CareerChatbot() {
   const [step, setStep] = useState<number>(0);
   const [answers, setAnswers] = useState<CareerQuestionnaire>(EMPTY);
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [aiResult, setAiResult] = useState<RecommendationResult | null>(null);
-  const [savedAnswers, setSavedAnswers] = useState<CareerQuestionnaire>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [retryCountdown, setRetryCountdown] = useState(0);
 
@@ -123,28 +121,6 @@ export function CareerChatbot() {
   const [autreInput, setAutreInput] = useState('');
   const [autreKey, setAutreKey] = useState<keyof CareerQuestionnaire | null>(null);
   const [autreIsMulti, setAutreIsMulti] = useState(false);
-
-  // ── Load saved coach data from DB on mount ──────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const token = getAccessToken();
-        const saved = await careerApi.getMyCoachData(token);
-        if (saved) {
-          setAiResult(saved.recommendations);
-          setSavedAnswers(saved.answers);
-          setAnswers(saved.answers);
-          const resultStep = STEPS.length + 1;
-          setStep(resultStep);
-        }
-      } catch {
-        // ignore — will fall back to questionnaire
-      } finally {
-        setInitialLoading(false);
-      }
-    };
-    load();
-  }, []);
 
   useEffect(() => {
     if (!import.meta.env.DEV || !aiResult?.recommendedCourses?.length) return;
@@ -253,16 +229,9 @@ export function CareerChatbot() {
       const token = getAccessToken();
       const res = await careerApi.getRecommendation(answers, token);
       setAiResult(res);
-      const nextStep = totalSteps + 1;
-      setStep(nextStep);
-      try {
-        sessionStorage.setItem('career_result', JSON.stringify(res));
-        sessionStorage.setItem('career_answers', JSON.stringify(answers));
-        sessionStorage.setItem('career_step', String(nextStep));
-      } catch { /* ignore storage errors */ }
+      setStep(totalSteps + 1);
       // Mark coach as completed (fire-and-forget — don't block UI)
       markCoachCompleted().catch(() => { /* ignore errors silently */ });
-      // result step
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue.');
       if (err.loading) {
@@ -283,38 +252,16 @@ export function CareerChatbot() {
   const handleReset = () => {
     setStep(0);
     setAnswers(EMPTY);
-    setSavedAnswers(EMPTY);
     setAiResult(null);
     setError(null);
     setRetryCountdown(0);
     setShowAutrePopup(false);
     setAutreInput('');
-    // Delete from DB (fire-and-forget)
-    const token = getAccessToken();
-    careerApi.deleteMyCoachData(token).catch(() => { /* ignore */ });
-    try {
-      sessionStorage.removeItem('career_result');
-      sessionStorage.removeItem('career_answers');
-      sessionStorage.removeItem('career_step');
-    } catch { /* ignore */ }
   };
-
-  // ── Render: Initial loading from DB ────────────────────────────────────
-  if (initialLoading) {
-    return (
-      <CoachOnboardingLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        </div>
-      </CoachOnboardingLayout>
-    );
-  }
 
   // ── Render: Result page (full layout — coach is done) ───────────────────
   if (step === totalSteps + 1 && aiResult) {
     const { recommendedCourses, strengths, weaknesses, focusAreas, learningPlan } = aiResult;
-    // Use savedAnswers (loaded from DB) or current answers (just submitted)
-    const displayAnswers = savedAnswers.goal ? savedAnswers : answers;
     return (
       <StudentLayout>
         <div className="max-w-3xl mx-auto space-y-6">
@@ -338,7 +285,7 @@ export function CareerChatbot() {
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
             <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">Ton profil</p>
             <div className="flex flex-wrap gap-2">
-              {[displayAnswers.goal, displayAnswers.field, displayAnswers.level, ...(displayAnswers.skills.length > 0 ? displayAnswers.skills : ['No skills yet']), displayAnswers.hoursPerWeek, displayAnswers.learningStyle, displayAnswers.shortTermGoal].map((tag, i) => (
+              {[answers.goal, answers.field, answers.level, ...(answers.skills.length > 0 ? answers.skills : ['No skills yet']), answers.hoursPerWeek, answers.learningStyle, answers.shortTermGoal].map((tag, i) => (
                 <span key={i} className="px-2 py-1 bg-white border border-indigo-200 rounded-full text-xs text-indigo-700">{tag}</span>
               ))}
             </div>

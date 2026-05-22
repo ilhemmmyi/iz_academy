@@ -29,7 +29,12 @@ export function Contact() {
                 <Mail className="w-6 h-6 text-primary" />
               </div>
               <h3 className="mb-2">Email</h3>
-              <p className="text-muted-foreground">contact@izacademy.com</p>
+              <a
+                href="mailto:imenzarai@iz-solution.com"
+                className="text-muted-foreground hover:text-primary transition"
+              >
+                imenzarai@iz-solution.com
+              </a>
             </div>
 
             <div className="bg-white border border-border rounded-xl p-6 text-center">
@@ -37,7 +42,12 @@ export function Contact() {
                 <Phone className="w-6 h-6 text-primary" />
               </div>
               <h3 className="mb-2">Téléphone</h3>
-              <p className="text-muted-foreground">+33 1 23 45 67 89</p>
+              <a
+                href="tel:+21651654500"
+                className="text-muted-foreground hover:text-primary transition"
+              >
+                +216 51 654 500
+              </a>
             </div>
 
             <div className="bg-white border border-border rounded-xl p-6 text-center">
@@ -45,7 +55,7 @@ export function Contact() {
                 <MapPin className="w-6 h-6 text-primary" />
               </div>
               <h3 className="mb-2">Adresse</h3>
-              <p className="text-muted-foreground">123 Avenue des Champs-Élysées, Paris</p>
+              <p className="text-muted-foreground">Sahloul, Sousse, Tunisie</p>
             </div>
           </div>
 

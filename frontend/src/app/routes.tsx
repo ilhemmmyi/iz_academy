@@ -14,6 +14,7 @@ import { CoachGuard } from "./components/CoachGuard";
 const CoursesPage = lazy(() => import("./pages/CoursesPage").then(m => ({ default: m.CoursesPage })));
 const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage").then(m => ({ default: m.CourseDetailPage })));
 const FAQ = lazy(() => import("./pages/FAQ").then(m => ({ default: m.FAQ })));
+const About = lazy(() => import("./pages/About").then(m => ({ default: m.About })));
 const Contact = lazy(() => import("./pages/Contact").then(m => ({ default: m.Contact })));
 const UserProfile = lazy(() => import("./pages/UserProfile").then(m => ({ default: m.UserProfile })));
 
@@ -37,7 +38,6 @@ const TeacherProjects = lazy(() => import("./pages/teacher/TeacherProjects").the
 
 // Lazy-loaded admin pages
 const AdminCreateCourse = lazy(() => import("./pages/admin/AdminCreateCourse").then(m => ({ default: m.AdminCreateCourse })));
-const AdminEditCourse = lazy(() => import("./pages/admin/AdminEditCourse").then(m => ({ default: m.AdminEditCourse })));
 const AdminCourseView = lazy(() => import("./pages/admin/AdminCourseView").then(m => ({ default: m.AdminCourseView })));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard").then(m => ({ default: m.AdminDashboard })));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers").then(m => ({ default: m.AdminUsers })));
@@ -86,6 +86,10 @@ export const router = createBrowserRouter([
     element: <Suspense fallback={<PageLoader />}><FAQ /></Suspense>,
   },
   {
+    path: "/about",
+    element: <Suspense fallback={<PageLoader />}><About /></Suspense>,
+  },
+  {
     path: "/contact",
     element: <Suspense fallback={<PageLoader />}><Contact /></Suspense>,
   },
@@ -124,7 +128,6 @@ export const router = createBrowserRouter([
   // Admin Routes
   { path: "/admin/create-course", element: <Guard roles={["ADMIN"]}><AdminCreateCourse /></Guard> },
   { path: "/admin/courses/:id", element: <Guard roles={["ADMIN"]}><AdminCourseView /></Guard> },
-  { path: "/admin/courses/:id/edit", element: <Guard roles={["ADMIN"]}><AdminEditCourse /></Guard> },
   { path: "/admin", element: <Guard roles={["ADMIN"]}><AdminDashboard /></Guard> },
   { path: "/admin/users", element: <Guard roles={["ADMIN"]}><AdminUsers /></Guard> },
   { path: "/admin/courses", element: <Guard roles={["ADMIN"]}><AdminCourses /></Guard> },

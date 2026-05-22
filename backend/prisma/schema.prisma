@@ -91,7 +91,6 @@ model User {
   lessonComments   LessonComment[]
   contactReplies   ContactMessage[] @relation("ContactReplies")
   reports          Report[]
-  careerCoachData  CareerCoachData?
   activities       Activity[]
 }
 
@@ -424,16 +423,10 @@ model Report {
   @@index([status])
 }
 
-model CareerCoachData {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answers         Json
-  recommendations Json
-  updatedAt       DateTime @updatedAt
-  createdAt       DateTime @default(now())
-
-  @@index([userId])
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model Activity {

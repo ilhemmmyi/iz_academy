@@ -98,13 +98,7 @@ export function AdminCourses() {
                     <button className="p-2 hover:bg-accent rounded-lg transition" title="Voir" onClick={() => navigate(`/admin/courses/${course.id}`)}>
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button
-                      className="p-2 hover:bg-accent rounded-lg transition"
-                      title="Modifier"
-                      onClick={() => navigate(`/admin/courses/${course.id}/edit`)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
+    
                     <button
                       onClick={() => handleTogglePublish(course.id)}
                       className={`p-2 rounded-lg transition ${

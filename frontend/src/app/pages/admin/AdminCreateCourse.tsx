@@ -129,8 +129,8 @@ export function AdminCreateCourse() {
 
   useEffect(() => {
     coursesApi.getCategories().then(setCategories).catch(() => {});
-    usersApi.getAll()
-      .then((users: any[]) => setTeachers(users.filter((u: any) => u.role === 'TEACHER')))
+    usersApi.getAll({ role: 'TEACHER', limit: 100 })
+      .then((res: any) => setTeachers(res.users ?? []))
       .catch(() => {});
   }, []);
 
@@ -445,7 +445,7 @@ export function AdminCreateCourse() {
                   <Label>Formateur (optionnel)</Label>
                   <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Assigné à l'administrateur par défaut" />
+                      <SelectValue placeholder="Administrateur (par défaut)" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__admin__">Administrateur (par défaut)</SelectItem>
@@ -783,6 +783,7 @@ export function AdminCreateCourse() {
             <Card>
               <CardContent className="pt-6 space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Titre</span><span className="font-medium">{title}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Formateur</span><span>{selectedTeacherId === '__admin__' ? 'Administrateur' : (teachers.find(t => t.id === selectedTeacherId)?.name || '—')}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Catégorie</span><span>{categories.find(c => c.id === categoryId)?.name || '—'}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Niveau</span><span>{level}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Durée</span><span>{duration || '—'}</span></div>

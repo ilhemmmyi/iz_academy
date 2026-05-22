@@ -1,47 +1,149 @@
+import { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
-import { useParams, Link, useNavigate } from 'react-router';
+import { useParams, Link } from 'react-router';
 import {
-  Play,
-  ChevronDown,
-  ChevronUp,
-  Video,
-  FileText,
-  Download,
-  BookOpen,
-  Edit,
-  Globe,
-  EyeOff,
-  FolderKanban,
-  Users,
-  Tag,
-  DollarSign,
-  ExternalLink,
+  Play, ChevronDown, ChevronUp, Video, FileText, Download, BookOpen, Edit, Globe, EyeOff,
+  FolderKanban, Users, Tag, DollarSign, ExternalLink, X,
+  PlusCircle, Trash2, ListChecks, CheckCircle2, ImageIcon, Paperclip, Link2,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Card, CardContent } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { toast } from 'sonner';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
-import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
-import { Button } from '../../components/ui/button';
-import { toast } from 'sonner';
+import { lessonResourcesApi, LessonResource } from '../../../api/lessonResources.api';
+import { uploadApi } from '../../../api/upload.api';
+import { usersApi } from '../../../api/users.api';
+
+// ── Edit form interfaces ──────────────────────────────────────────────────────
+interface PendingResource {
+  id: string;
+  type: 'FILE' | 'LINK';
+  title: string;
+  file?: File;
+  url?: string;
+}
+interface QuizQuestion {
+  id: string;
+  text: string;
+  answers: [string, string, string, string];
+  correctAnswer: number;
+}
+interface LessonForm {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  hasQuiz: boolean;
+  quizOpen: boolean;
+  questions: QuizQuestion[];
+  resourcesOpen: boolean;
+  resourceType: 'FILE' | 'LINK';
+  resourceTitle: string;
+  resourceFile: File | null;
+  resourceUrl: string;
+  pendingResources: PendingResource[];
+  existingResources: LessonResource[];
+}
+interface SectionForm {
+  id: string;
+  title: string;
+  lessons: LessonForm[];
+}
+interface ProjectForm {
+  id: string;
+  title: string;
+  description: string;
+  instructions: string;
+}
+
+const newQuestion = (): QuizQuestion => ({
+  id: Date.now().toString() + Math.random(),
+  text: '',
+  answers: ['', '', '', ''],
+  correctAnswer: 0,
+});
+const newLesson = (): LessonForm => ({
+  id: Date.now().toString() + Math.random(),
+  title: '',
+  description: '',
+  videoUrl: '',
+  hasQuiz: false,
+  quizOpen: false,
+  questions: [newQuestion()],
+  resourcesOpen: false,
+  resourceType: 'FILE',
+  resourceTitle: '',
+  resourceFile: null,
+  resourceUrl: '',
+  pendingResources: [],
+  existingResources: [],
+});
+const newSection = (): SectionForm => ({
+  id: Date.now().toString() + Math.random(),
+  title: '',
+  lessons: [newLesson()],
+});
+const newProject = (): ProjectForm => ({
+  id: Date.now().toString() + Math.random(),
+  title: '',
+  description: '',
+  instructions: '',
+});
+
+const STEPS = [
+  { label: 'Infos', icon: BookOpen },
+  { label: 'Contenu', icon: ListChecks },
+  { label: 'Projets', icon: FolderKanban },
+  { label: 'Révision', icon: CheckCircle2 },
+];
 
 export function AdminCourseView() {
   const { id: courseId } = useParams();
-  const navigate = useNavigate();
 
+  // ── View state ────────────────────────────────────────────────────────────
   const [course, setCourse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-
-  // Resources
   const [resources, setResources] = useState<CourseResource[]>([]);
-  const [lessonResources, setLessonResources] = useState<LessonRes[]>([]);
-
-  // Active tab
+  const [lessonResources, setLessonResources] = useState<LessonResource[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'resources'>('info');
 
+  // ── Edit mode state ───────────────────────────────────────────────────────
+  const [editMode, setEditMode] = useState(false);
+  const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Edit form — step 1
+  const [title, setTitle] = useState('');
+  const [shortDesc, setShortDesc] = useState('');
+  const [longDesc, setLongDesc] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [level, setLevel] = useState('');
+  const [duration, setDuration] = useState('');
+  const [price, setPrice] = useState('');
+  const [objectives, setObjectives] = useState(['']);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [thumbnailUploading, setThumbnailUploading] = useState(false);
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('__admin__');
+
+  // Edit form — step 2
+  const [sections, setSections] = useState<SectionForm[]>([newSection()]);
+  const [uploadingVideo, setUploadingVideo] = useState<string | null>(null);
+
+  // Edit form — step 3
+  const [projects, setProjects] = useState<ProjectForm[]>([newProject()]);
+
+  // ── View helpers (declared before loadAll to avoid TDZ) ──────────────────
   const loadVideo = async (lesson: any) => {
     if (!lesson?.videoUrl) { setVideoSrc(null); return; }
     try {
@@ -52,12 +154,18 @@ export function AdminCourseView() {
     }
   };
 
-  useEffect(() => {
+  // ── Data loading ──────────────────────────────────────────────────────────
+  const loadAll = useCallback(async () => {
     if (!courseId) { setLoading(false); return; }
-    Promise.all([
-      coursesApi.getById(courseId),
-      resourcesApi.getResources(courseId).catch(() => [] as CourseResource[]),
-    ]).then(([c, res]) => {
+    try {
+      const [c, res, cats, users] = await Promise.all([
+        coursesApi.getById(courseId),
+        resourcesApi.getResources(courseId).catch(() => [] as CourseResource[]),
+        coursesApi.getCategories().catch(() => [] as { id: string; name: string }[]),
+        usersApi.getAll({ role: 'TEACHER', limit: 100 }).catch(() => ({ users: [] as any[] })),
+      ]);
+
+      // View state
       setCourse(c);
       setResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
@@ -67,8 +175,95 @@ export function AdminCourseView() {
         lessonResourcesApi.getResources(firstLesson.id).then(setLessonResources).catch(() => setLessonResources([]));
       }
       if (c?.modules?.[0]) setExpandedSections([c.modules[0].id]);
-    }).catch(() => {}).finally(() => setLoading(false));
+
+      // Edit form state
+      setCategories(cats);
+      setTeachers((users as any).users ?? []);
+      setSelectedTeacherId(c.teacherId || '__admin__');
+      setTitle(c.title || '');
+      setShortDesc(c.shortDescription || '');
+      setLongDesc(c.longDescription || '');
+      setCategoryId(c.categoryId || '');
+      setLevel(c.level || '');
+      setDuration(c.duration || '');
+      setPrice(c.price?.toString() || '');
+      setObjectives(c.objectives?.length ? c.objectives : ['']);
+      setThumbnailUrl(c.thumbnailUrl || '');
+
+      const builtSections: SectionForm[] = c.modules?.length
+        ? c.modules.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            lessons: m.lessons?.length
+              ? m.lessons.map((l: any) => ({
+                  id: l.id,
+                  title: l.title,
+                  description: l.description || '',
+                  videoUrl: l.videoUrl || '',
+                  hasQuiz: !!l.quiz,
+                  quizOpen: false,
+                  questions: l.quiz?.questions?.length
+                    ? l.quiz.questions.map((q: any) => ({
+                        id: q.id,
+                        text: q.text,
+                        answers: q.answers as [string, string, string, string],
+                        correctAnswer: q.correctAnswer,
+                      }))
+                    : [newQuestion()],
+                  resourcesOpen: false,
+                  resourceType: 'FILE' as const,
+                  resourceTitle: '',
+                  resourceFile: null,
+                  resourceUrl: '',
+                  pendingResources: [],
+                  existingResources: [],
+                }))
+              : [newLesson()],
+          }))
+        : [newSection()];
+
+      setSections(builtSections);
+
+      // Load per-lesson resources for the edit form
+      const allLessonIds = (c.modules || []).flatMap((m: any) =>
+        (m.lessons || []).map((l: any) => l.id as string)
+      );
+      if (allLessonIds.length > 0) {
+        Promise.all(
+          allLessonIds.map((lid: string) =>
+            lessonResourcesApi.getResources(lid)
+              .then(r => ({ lid, resources: r }))
+              .catch(() => ({ lid, resources: [] as LessonResource[] }))
+          )
+        ).then(results => {
+          setSections(prev => prev.map(s => ({
+            ...s,
+            lessons: s.lessons.map(l => {
+              const found = results.find(r => r.lid === l.id);
+              return found && found.resources.length > 0 ? { ...l, existingResources: found.resources } : l;
+            }),
+          })));
+        });
+      }
+
+      setProjects(
+        c.projects?.length
+          ? c.projects.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              description: p.description || '',
+              instructions: p.instructions || '',
+            }))
+          : [newProject()]
+      );
+    } catch {
+      toast.error('Impossible de charger le cours');
+    } finally {
+      setLoading(false);
+    }
   }, [courseId]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const handleSelectLesson = (lesson: any) => {
     setSelectedLesson(lesson);
@@ -93,7 +288,293 @@ export function AdminCourseView() {
     }
   };
 
+  const handleEnterEditMode = async (c: any) => {
+    // Always re-populate form from current course data before showing the wizard
+    setTitle(c.title || '');
+    setShortDesc(c.shortDescription || '');
+    setLongDesc(c.longDescription || '');
+    setCategoryId(c.categoryId || '');
+    setLevel(c.level || '');
+    setDuration(c.duration || '');
+    setPrice(c.price?.toString() || '');
+    setObjectives(c.objectives?.length ? c.objectives : ['']);
+    setThumbnailUrl(c.thumbnailUrl || '');
+    setSelectedTeacherId(c.teacherId || '__admin__');
 
+    const builtSections: SectionForm[] = c.modules?.length
+      ? c.modules.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          lessons: m.lessons?.length
+            ? m.lessons.map((l: any) => ({
+                id: l.id,
+                title: l.title,
+                description: l.description || '',
+                videoUrl: l.videoUrl || '',
+                hasQuiz: !!l.quiz,
+                quizOpen: false,
+                questions: l.quiz?.questions?.length
+                  ? l.quiz.questions.map((q: any) => ({
+                      id: q.id,
+                      text: q.text,
+                      answers: q.answers as [string, string, string, string],
+                      correctAnswer: q.correctAnswer,
+                    }))
+                  : [newQuestion()],
+                resourcesOpen: false,
+                resourceType: 'FILE' as const,
+                resourceTitle: '',
+                resourceFile: null,
+                resourceUrl: '',
+                pendingResources: [],
+                existingResources: [],
+              }))
+            : [newLesson()],
+        }))
+      : [newSection()];
+    setSections(builtSections);
+
+    setProjects(
+      c.projects?.length
+        ? c.projects.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description || '',
+            instructions: p.instructions || '',
+          }))
+        : [newProject()]
+    );
+
+    // Fetch categories and teachers if not yet loaded
+    if (categories.length === 0) {
+      coursesApi.getCategories().then(setCategories).catch(() => {});
+    }
+    if (teachers.length === 0) {
+      usersApi.getAll({ role: 'TEACHER', limit: 100 })
+        .then((res: any) => setTeachers(res.users ?? []))
+        .catch(() => {});
+    }
+
+    // Load per-lesson existing resources
+    const allLessonIds = (c.modules || []).flatMap((m: any) =>
+      (m.lessons || []).map((l: any) => l.id as string)
+    );
+    if (allLessonIds.length > 0) {
+      Promise.all(
+        allLessonIds.map((lid: string) =>
+          lessonResourcesApi.getResources(lid)
+            .then(r => ({ lid, resources: r }))
+            .catch(() => ({ lid, resources: [] as LessonResource[] }))
+        )
+      ).then(results => {
+        setSections(prev => prev.map(s => ({
+          ...s,
+          lessons: s.lessons.map(l => {
+            const found = results.find(r => r.lid === l.id);
+            return found && found.resources.length > 0 ? { ...l, existingResources: found.resources } : l;
+          }),
+        })));
+      });
+    }
+
+    setStep(1);
+    setEditMode(true);
+  };
+
+  // ── Edit helpers ──────────────────────────────────────────────────────────
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setThumbnailUploading(true);
+    try {
+      const { url } = await uploadApi.uploadThumbnail(file);
+      setThumbnailUrl(url);
+      toast.success('Image uploadée');
+    } catch {
+      toast.error("Échec de l'upload");
+    } finally {
+      setThumbnailUploading(false);
+    }
+  };
+
+  const addObjective = () => setObjectives(o => [...o, '']);
+  const updateObjective = (i: number, v: string) => setObjectives(o => o.map((x, idx) => idx === i ? v : x));
+  const removeObjective = (i: number) => setObjectives(o => o.filter((_, idx) => idx !== i));
+
+  const addSection = () => setSections(prev => [...prev, newSection()]);
+  const removeSection = (sid: string) => setSections(prev => prev.filter(s => s.id !== sid));
+  const updateSectionTitle = (sid: string, v: string) =>
+    setSections(prev => prev.map(s => s.id === sid ? { ...s, title: v } : s));
+
+  const addLesson = (sid: string) =>
+    setSections(prev => prev.map(s => s.id === sid ? { ...s, lessons: [...s.lessons, newLesson()] } : s));
+  const removeLesson = (sid: string, lid: string) =>
+    setSections(prev => prev.map(s => s.id === sid ? { ...s, lessons: s.lessons.filter(l => l.id !== lid) } : s));
+  const updateLesson = (sid: string, lid: string, patch: Partial<LessonForm>) =>
+    setSections(prev => prev.map(s =>
+      s.id === sid ? { ...s, lessons: s.lessons.map(l => l.id === lid ? { ...l, ...patch } : l) } : s
+    ));
+
+  const handleVideoUpload = async (sectionId: string, lessonId: string, file: File) => {
+    const key = `${sectionId}-${lessonId}`;
+    setUploadingVideo(key);
+    try {
+      const { url } = await uploadApi.uploadVideo(file);
+      updateLesson(sectionId, lessonId, { videoUrl: url });
+      toast.success('Vidéo uploadée avec succès');
+    } catch {
+      toast.error("Échec de l'upload vidéo");
+    } finally {
+      setUploadingVideo(null);
+    }
+  };
+
+  const addPendingResource = (sid: string, lid: string) => {
+    setSections(prev => prev.map(s => s.id === sid ? {
+      ...s, lessons: s.lessons.map(l => {
+        if (l.id !== lid) return l;
+        if (!l.resourceTitle.trim()) return l;
+        if (l.resourceType === 'FILE' && !l.resourceFile) return l;
+        if (l.resourceType === 'LINK' && !l.resourceUrl.trim()) return l;
+        const entry: PendingResource = {
+          id: Date.now().toString() + Math.random(),
+          type: l.resourceType,
+          title: l.resourceTitle.trim(),
+          ...(l.resourceType === 'FILE' ? { file: l.resourceFile! } : { url: l.resourceUrl.trim() }),
+        };
+        return { ...l, pendingResources: [...l.pendingResources, entry], resourceTitle: '', resourceFile: null, resourceUrl: '' };
+      })
+    } : s));
+  };
+
+  const removePendingResource = (sid: string, lid: string, rid: string) =>
+    setSections(prev => prev.map(s => s.id === sid ? {
+      ...s, lessons: s.lessons.map(l => l.id === lid
+        ? { ...l, pendingResources: l.pendingResources.filter(r => r.id !== rid) }
+        : l)
+    } : s));
+
+  const deleteExistingResource = async (sid: string, lid: string, rid: string) => {
+    try {
+      await lessonResourcesApi.deleteResource(rid);
+      setSections(prev => prev.map(s => s.id === sid ? {
+        ...s, lessons: s.lessons.map(l => l.id === lid
+          ? { ...l, existingResources: l.existingResources.filter(r => r.id !== rid) }
+          : l)
+      } : s));
+      toast.success('Ressource supprimée');
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const addQuestion = (sid: string, lid: string) =>
+    setSections(s => s.map(sec => sec.id === sid ? {
+      ...sec, lessons: sec.lessons.map(l => l.id === lid ? { ...l, questions: [...l.questions, newQuestion()] } : l)
+    } : sec));
+  const removeQuestion = (sid: string, lid: string, qid: string) =>
+    setSections(s => s.map(sec => sec.id === sid ? {
+      ...sec, lessons: sec.lessons.map(l => l.id === lid ? { ...l, questions: l.questions.filter(q => q.id !== qid) } : l)
+    } : sec));
+  const updateQuestion = (sid: string, lid: string, qid: string, patch: Partial<QuizQuestion>) =>
+    setSections(s => s.map(sec => sec.id === sid ? {
+      ...sec, lessons: sec.lessons.map(l => l.id === lid ? { ...l, questions: l.questions.map(q => q.id === qid ? { ...q, ...patch } : q) } : l)
+    } : sec));
+  const updateAnswer = (sid: string, lid: string, qid: string, ai: number, v: string) =>
+    setSections(s => s.map(sec => sec.id === sid ? {
+      ...sec, lessons: sec.lessons.map(l => l.id === lid ? {
+        ...l, questions: l.questions.map(q => {
+          if (q.id !== qid) return q;
+          const answers = [...q.answers] as [string, string, string, string];
+          answers[ai] = v;
+          return { ...q, answers };
+        })
+      } : l)
+    } : sec));
+
+  const addProject = () => setProjects(p => [...p, newProject()]);
+  const removeProject = (pid: string) => setProjects(p => p.filter(x => x.id !== pid));
+  const updateProject = (pid: string, patch: Partial<ProjectForm>) =>
+    setProjects(p => p.map(x => x.id === pid ? { ...x, ...patch } : x));
+
+  const canGoNext = () => {
+    if (step === 1) return !!(title && categoryId && level);
+    if (step === 2) return sections.every(s => s.title.trim() && s.lessons.every(l => l.title.trim()));
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!title || !categoryId || !level) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await coursesApi.update(courseId!, {
+        title,
+        shortDescription: shortDesc,
+        longDescription: longDesc,
+        categoryId,
+        level,
+        duration,
+        price: parseFloat(price) || 0,
+        objectives: objectives.filter(o => o.trim()),
+        thumbnailUrl: thumbnailUrl || null,
+        ...(selectedTeacherId && selectedTeacherId !== '__admin__' ? { teacherId: selectedTeacherId } : {}),
+        modules: sections.map(s => ({
+          title: s.title,
+          lessons: s.lessons.map(l => ({
+            title: l.title,
+            description: l.description || undefined,
+            videoUrl: l.videoUrl || undefined,
+            ...(l.hasQuiz && l.questions.some(q => q.text.trim()) ? {
+              quiz: {
+                questions: l.questions
+                  .filter(q => q.text.trim())
+                  .map(q => ({ text: q.text, answers: q.answers, correctAnswer: q.correctAnswer })),
+              },
+            } : {}),
+          })),
+        })),
+        projects: projects
+          .filter(p => p.title.trim())
+          .map(p => ({ title: p.title, description: p.description, instructions: p.instructions })),
+      });
+
+      // Upload pending lesson resources using refreshed lesson IDs
+      const hasPending = sections.some(s => s.lessons.some(l => l.pendingResources.length > 0));
+      if (hasPending) {
+        const updatedCourse = await coursesApi.getById(courseId!) as any;
+        for (let mi = 0; mi < sections.length; mi++) {
+          const createdModule = updatedCourse?.modules?.[mi];
+          if (!createdModule) continue;
+          for (let li = 0; li < sections[mi].lessons.length; li++) {
+            const lesson = sections[mi].lessons[li];
+            const createdLesson = createdModule.lessons?.[li];
+            if (!createdLesson || lesson.pendingResources.length === 0) continue;
+            for (const r of lesson.pendingResources) {
+              try {
+                if (r.type === 'FILE' && r.file) await lessonResourcesApi.uploadFile(createdLesson.id, r.title, r.file);
+                else if (r.type === 'LINK' && r.url) await lessonResourcesApi.addLink(createdLesson.id, r.title, r.url);
+              } catch { /* non-blocking */ }
+            }
+          }
+        }
+      }
+
+      toast.success('Cours modifié avec succès !');
+      setEditMode(false);
+      setStep(1);
+      setLoading(true);
+      await loadAll();
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la modification');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Render: loading ───────────────────────────────────────────────────────
   if (loading) {
     return (
       <AdminLayout>
@@ -124,31 +605,522 @@ export function AdminCourseView() {
 
   const allLessons: any[] = (course.modules || []).flatMap((m: any) => m.lessons || []);
 
+  // ── Shared header ─────────────────────────────────────────────────────────
+  const pageHeader = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <Link to="/admin/courses" className="text-sm text-muted-foreground hover:text-primary transition flex items-center gap-1">
+          ← Gestion des cours
+        </Link>
+      </div>
+      <div className="flex items-center gap-2">
+        {!editMode && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTogglePublish}
+            className={course.isPublished ? 'text-amber-600 border-amber-200 hover:bg-amber-50' : 'text-teal-600 border-teal-200 hover:bg-teal-50'}
+          >
+            {course.isPublished ? <><EyeOff className="w-4 h-4 mr-2" />Dépublier</> : <><Globe className="w-4 h-4 mr-2" />Publier</>}
+          </Button>
+        )}
+        {editMode ? (
+          <Button variant="outline" size="sm" onClick={() => { setEditMode(false); setStep(1); }}>
+            ✕ Annuler les modifications
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => handleEnterEditMode(course)}>
+            <Edit className="w-4 h-4 mr-2" />
+            Modifier
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  // ── Edit mode ─────────────────────────────────────────────────────────────
+  if (editMode) {
+    return (
+      <AdminLayout>
+        <div className="max-w-4xl mx-auto space-y-8 pb-12">
+          {pageHeader}
+
+          <div>
+            <h1 className="mb-1">Modifier le cours</h1>
+            <p className="text-muted-foreground text-sm">{title}</p>
+          </div>
+
+          {/* Step indicator */}
+          <div className="flex items-center gap-2">
+            {STEPS.map((s, i) => {
+              const Icon = s.icon;
+              const active = step === i + 1;
+              const done = step > i + 1;
+              return (
+                <div key={i} className="flex items-center gap-2 flex-1">
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition flex-1 ${active ? 'bg-primary text-primary-foreground' : done ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </div>
+                  {i < STEPS.length - 1 && <div className="w-4 h-0.5 bg-border flex-shrink-0" />}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Step 1: Basic Info */}
+          {step === 1 && (
+            <div className="space-y-6">
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <h2 className="text-xl font-semibold">Informations générales</h2>
+
+                  <div className="space-y-2">
+                    <Label>Image du cours</Label>
+                    <div className="flex items-center gap-4">
+                      {thumbnailUrl ? (
+                        <img src={thumbnailUrl} alt="thumbnail" className="w-32 h-20 object-cover rounded-lg border border-border" />
+                      ) : (
+                        <div className="w-32 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center bg-muted">
+                          <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <label className="cursor-pointer flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-accent transition text-sm">
+                        <ImageIcon className="w-4 h-4" />
+                        {thumbnailUploading ? 'Upload...' : thumbnailUrl ? "Changer l'image" : 'Uploader une image'}
+                        <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} disabled={thumbnailUploading} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Titre du cours *</Label>
+                    <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Développement Web Full Stack" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description courte</Label>
+                    <Input value={shortDesc} onChange={e => setShortDesc(e.target.value)} placeholder="Résumé affiché sur la carte du cours" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description détaillée</Label>
+                    <Textarea value={longDesc} onChange={e => setLongDesc(e.target.value)} placeholder="Décrivez le contenu et les prérequis" rows={4} />
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Catégorie *</Label>
+                      <Select value={categoryId} onValueChange={setCategoryId}>
+                        <SelectTrigger><SelectValue placeholder="Sélectionner une catégorie" /></SelectTrigger>
+                        <SelectContent>
+                          {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Niveau *</Label>
+                      <Select value={level} onValueChange={setLevel}>
+                        <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Débutant">Débutant</SelectItem>
+                          <SelectItem value="Intermédiaire">Intermédiaire</SelectItem>
+                          <SelectItem value="Avancé">Avancé</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Durée estimée</Label>
+                      <Input value={duration} onChange={e => setDuration(e.target.value)} placeholder="Ex: 12 semaines" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Prix (DT)</Label>
+                      <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0 = Gratuit" min="0" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Objectifs d'apprentissage</h2>
+                    <Button type="button" variant="outline" size="sm" onClick={addObjective}>
+                      <PlusCircle className="w-4 h-4 mr-2" /> Ajouter
+                    </Button>
+                  </div>
+                  {objectives.map((obj, i) => (
+                    <div key={i} className="flex gap-2">
+                      <Input value={obj} onChange={e => updateObjective(i, e.target.value)} placeholder={`Objectif ${i + 1}`} />
+                      {objectives.length > 1 && (
+                        <Button type="button" variant="outline" size="icon" onClick={() => removeObjective(i)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 2: Sections & Lessons */}
+          {step === 2 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Sections et leçons</h2>
+                <Button type="button" variant="outline" size="sm" onClick={addSection}>
+                  <PlusCircle className="w-4 h-4 mr-2" /> Ajouter une section
+                </Button>
+              </div>
+
+              {sections.map((section, si) => (
+                <Card key={section.id} className="border-2 border-primary/20">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex gap-2 items-center">
+                      <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {si + 1}
+                      </div>
+                      <Input
+                        value={section.title}
+                        onChange={e => updateSectionTitle(section.id, e.target.value)}
+                        placeholder={`Section ${si + 1} — titre`}
+                        className="font-medium"
+                      />
+                      {sections.length > 1 && (
+                        <Button type="button" variant="outline" size="icon" onClick={() => removeSection(section.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="ml-10 space-y-4">
+                      {section.lessons.map((lesson, li) => (
+                        <div key={lesson.id} className="border border-border rounded-lg p-4 bg-muted/20 space-y-3">
+                          <div className="flex gap-2 items-center">
+                            <span className="text-sm text-muted-foreground w-6">{li + 1}.</span>
+                            <Input
+                              value={lesson.title}
+                              onChange={e => updateLesson(section.id, lesson.id, { title: e.target.value })}
+                              placeholder="Titre de la leçon"
+                              className="flex-1"
+                            />
+                            {section.lessons.length > 1 && (
+                              <Button type="button" variant="ghost" size="icon" onClick={() => removeLesson(section.id, lesson.id)}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className="ml-6 space-y-2">
+                            <Textarea
+                              value={lesson.description}
+                              onChange={e => updateLesson(section.id, lesson.id, { description: e.target.value })}
+                              placeholder="Description de la leçon (optionnel)"
+                              className="text-sm"
+                              rows={2}
+                            />
+                            <div className="flex gap-2 items-center">
+                              <Input
+                                value={lesson.videoUrl}
+                                onChange={e => updateLesson(section.id, lesson.id, { videoUrl: e.target.value })}
+                                placeholder="URL vidéo (optionnel)"
+                                className="text-sm flex-1"
+                              />
+                              <label className="cursor-pointer flex items-center gap-2 px-3 py-2 border border-border rounded-lg hover:bg-accent transition text-sm whitespace-nowrap flex-shrink-0">
+                                <Video className="w-4 h-4" />
+                                {uploadingVideo === `${section.id}-${lesson.id}` ? 'Upload...' : 'Uploader'}
+                                <input
+                                  type="file"
+                                  accept="video/*"
+                                  className="hidden"
+                                  disabled={uploadingVideo !== null}
+                                  onChange={e => e.target.files?.[0] && handleVideoUpload(section.id, lesson.id, e.target.files[0])}
+                                />
+                              </label>
+                            </div>
+                            {lesson.videoUrl && <p className="text-xs text-green-600 truncate">✓ Vidéo prête</p>}
+                          </div>
+
+                          {/* Resources */}
+                          <div className="ml-6">
+                            <button
+                              type="button"
+                              className="flex items-center gap-1.5 text-sm font-semibold text-primary mb-2"
+                              onClick={() => updateLesson(section.id, lesson.id, { resourcesOpen: !lesson.resourcesOpen })}
+                            >
+                              <Paperclip className="w-4 h-4" />
+                              Ressources
+                              {lesson.resourcesOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                            {lesson.resourcesOpen && (
+                              <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4 space-y-3">
+                                {lesson.existingResources.length > 0 && (
+                                  <div className="space-y-1.5">
+                                    <p className="text-xs font-semibold text-muted-foreground">Ressources existantes</p>
+                                    {lesson.existingResources.map(r => (
+                                      <div key={r.id} className="flex items-center justify-between bg-white border border-border rounded-lg px-3 py-2">
+                                        <div className="flex items-center gap-2 text-sm min-w-0">
+                                          {r.type === 'FILE' ? <Paperclip className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : <Link2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                          <span className="font-medium truncate">{r.title}</span>
+                                          <span className="text-xs text-muted-foreground truncate">{r.type === 'LINK' ? r.url : ''}</span>
+                                        </div>
+                                        <button type="button" className="flex-shrink-0 ml-2 p-1 hover:bg-red-50 rounded" onClick={() => deleteExistingResource(section.id, lesson.id, r.id)}>
+                                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <hr className="border-blue-200" />
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <button type="button"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${lesson.resourceType === 'FILE' ? 'bg-primary text-primary-foreground' : 'border border-border bg-white hover:bg-accent'}`}
+                                    onClick={() => updateLesson(section.id, lesson.id, { resourceType: 'FILE' })}
+                                  ><Paperclip className="w-3.5 h-3.5" /> Fichier</button>
+                                  <button type="button"
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${lesson.resourceType === 'LINK' ? 'bg-primary text-primary-foreground' : 'border border-border bg-white hover:bg-accent'}`}
+                                    onClick={() => updateLesson(section.id, lesson.id, { resourceType: 'LINK' })}
+                                  ><Link2 className="w-3.5 h-3.5" /> Lien</button>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium block mb-1">Titre de la ressource *</label>
+                                  <Input
+                                    value={lesson.resourceTitle}
+                                    onChange={e => updateLesson(section.id, lesson.id, { resourceTitle: e.target.value })}
+                                    placeholder="Ex: Cours PDF Chapitre 1"
+                                    className="text-sm"
+                                  />
+                                </div>
+                                {lesson.resourceType === 'FILE' ? (
+                                  <div>
+                                    <label className="text-xs font-medium block mb-1">Fichier *</label>
+                                    <label className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-white cursor-pointer hover:bg-accent transition text-sm">
+                                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                                      {lesson.resourceFile ? lesson.resourceFile.name : 'Choisir un fichier (PDF, doc, image...)'}
+                                      <input type="file" className="hidden" onChange={e => updateLesson(section.id, lesson.id, { resourceFile: e.target.files?.[0] || null })} />
+                                    </label>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <label className="text-xs font-medium block mb-1">URL *</label>
+                                    <Input
+                                      value={lesson.resourceUrl}
+                                      onChange={e => updateLesson(section.id, lesson.id, { resourceUrl: e.target.value })}
+                                      placeholder="https://..."
+                                      className="text-sm"
+                                    />
+                                  </div>
+                                )}
+                                <Button type="button" size="sm" className="bg-black hover:bg-black/80 text-white"
+                                  onClick={() => addPendingResource(section.id, lesson.id)}
+                                >
+                                  <PlusCircle className="w-4 h-4 mr-1" /> Ajouter
+                                </Button>
+                                {lesson.pendingResources.length > 0 && (
+                                  <div className="space-y-1.5 pt-1">
+                                    {lesson.pendingResources.map(r => (
+                                      <div key={r.id} className="flex items-center justify-between bg-white border border-border rounded-lg px-3 py-2">
+                                        <div className="flex items-center gap-2 text-sm min-w-0">
+                                          {r.type === 'FILE' ? <Paperclip className="w-3.5 h-3.5 text-primary flex-shrink-0" /> : <Link2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+                                          <span className="font-medium truncate">{r.title}</span>
+                                          <span className="text-xs text-muted-foreground truncate">{r.type === 'FILE' ? r.file?.name : r.url}</span>
+                                        </div>
+                                        <button type="button" className="flex-shrink-0 ml-2" onClick={() => removePendingResource(section.id, lesson.id, r.id)}>
+                                          <X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quiz */}
+                          <div className="ml-6">
+                            <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
+                              <input
+                                type="checkbox"
+                                checked={lesson.hasQuiz}
+                                onChange={e => updateLesson(section.id, lesson.id, { hasQuiz: e.target.checked, quizOpen: e.target.checked })}
+                                className="w-4 h-4 accent-primary"
+                              />
+                              <span className="font-medium">Cette leçon a un quiz (70% requis pour avancer)</span>
+                            </label>
+                          </div>
+
+                          {lesson.hasQuiz && (
+                            <div className="ml-6 bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-2 text-sm font-semibold text-primary"
+                                  onClick={() => updateLesson(section.id, lesson.id, { quizOpen: !lesson.quizOpen })}
+                                >
+                                  {lesson.quizOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  Questions ({lesson.questions.length})
+                                </button>
+                                <Button type="button" variant="outline" size="sm" onClick={() => addQuestion(section.id, lesson.id)}>
+                                  <PlusCircle className="w-3 h-3 mr-1" /> Question
+                                </Button>
+                              </div>
+
+                              {lesson.quizOpen && lesson.questions.map((q, qi) => (
+                                <div key={q.id} className="bg-white border border-border rounded-lg p-4 space-y-3">
+                                  <div className="flex gap-2 items-start">
+                                    <span className="text-xs font-bold text-muted-foreground pt-2 w-4">{qi + 1}</span>
+                                    <Input
+                                      value={q.text}
+                                      onChange={e => updateQuestion(section.id, lesson.id, q.id, { text: e.target.value })}
+                                      placeholder="Texte de la question"
+                                      className="flex-1"
+                                    />
+                                    {lesson.questions.length > 1 && (
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeQuestion(section.id, lesson.id, q.id)}>
+                                        <Trash2 className="w-3 h-3 text-destructive" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <div className="ml-6 space-y-2">
+                                    <p className="text-xs text-muted-foreground mb-1">Réponses — cochez la bonne réponse :</p>
+                                    {q.answers.map((ans, ai) => (
+                                      <div key={ai} className="flex items-center gap-2">
+                                        <input
+                                          type="radio"
+                                          name={`correct-${q.id}`}
+                                          checked={q.correctAnswer === ai}
+                                          onChange={() => updateQuestion(section.id, lesson.id, q.id, { correctAnswer: ai })}
+                                          className="w-4 h-4 accent-green-600 flex-shrink-0"
+                                        />
+                                        <Input
+                                          value={ans}
+                                          onChange={e => updateAnswer(section.id, lesson.id, q.id, ai, e.target.value)}
+                                          placeholder={`Réponse ${ai + 1}`}
+                                          className="text-sm"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <Button type="button" variant="ghost" size="sm" onClick={() => addLesson(section.id)}>
+                        <PlusCircle className="w-4 h-4 mr-1" /> Ajouter une leçon
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Step 3: Projects */}
+          {step === 3 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Projets du cours</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Projets pratiques pour les étudiants.</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addProject}>
+                  <PlusCircle className="w-4 h-4 mr-2" /> Ajouter un projet
+                </Button>
+              </div>
+
+              {projects.map((p, pi) => (
+                <Card key={p.id}>
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex gap-2 items-center">
+                      <div className="w-8 h-8 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {pi + 1}
+                      </div>
+                      <Input
+                        value={p.title}
+                        onChange={e => updateProject(p.id, { title: e.target.value })}
+                        placeholder="Titre du projet"
+                        className="flex-1 font-medium"
+                      />
+                      {projects.length > 1 && (
+                        <Button type="button" variant="outline" size="icon" onClick={() => removeProject(p.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                    <Textarea
+                      value={p.description}
+                      onChange={e => updateProject(p.id, { description: e.target.value })}
+                      placeholder="Description du projet"
+                      rows={2}
+                    />
+                    <Textarea
+                      value={p.instructions}
+                      onChange={e => updateProject(p.id, { instructions: e.target.value })}
+                      placeholder="Instructions détaillées"
+                      rows={4}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Step 4: Review */}
+          {step === 4 && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold">Récapitulatif</h2>
+              <Card>
+                <CardContent className="pt-6 space-y-3 text-sm">
+                  {thumbnailUrl && (
+                    <div className="mb-2">
+                      <img src={thumbnailUrl} alt="thumbnail" className="w-full max-w-xs h-32 object-cover rounded-lg" />
+                    </div>
+                  )}
+                  <div className="flex justify-between"><span className="text-muted-foreground">Titre</span><span className="font-medium">{title}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Catégorie</span><span>{categories.find(c => c.id === categoryId)?.name || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Niveau</span><span>{level}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Durée</span><span>{duration || '—'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Prix</span><span>{price ? `${price}DT` : 'Gratuit'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Sections</span><span>{sections.length}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Leçons</span><span>{sections.reduce((a, s) => a + s.lessons.length, 0)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Leçons avec quiz</span><span>{sections.reduce((a, s) => a + s.lessons.filter(l => l.hasQuiz).length, 0)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Projets</span><span>{projects.filter(p => p.title.trim()).length}</span></div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex gap-4 pt-4 border-t border-border">
+            {step > 1 && (
+              <Button type="button" variant="outline" onClick={() => setStep(s => s - 1)}>
+                ← Précédent
+              </Button>
+            )}
+            <div className="flex-1" />
+            {step < 4 ? (
+              <Button type="button" onClick={() => setStep(s => s + 1)} disabled={!canGoNext()}>
+                Suivant →
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
+                {submitting ? 'Sauvegarde...' : '✓ Enregistrer les modifications'}
+              </Button>
+            )}
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // ── View mode ─────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/admin/courses" className="text-sm text-muted-foreground hover:text-primary transition flex items-center gap-1">
-              ← Gestion des cours
-            </Link>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleTogglePublish}
-              className={course.isPublished ? 'text-amber-600 border-amber-200 hover:bg-amber-50' : 'text-teal-600 border-teal-200 hover:bg-teal-50'}
-            >
-              {course.isPublished ? <><EyeOff className="w-4 h-4 mr-2" />Dépublier</> : <><Globe className="w-4 h-4 mr-2" />Publier</>}
-            </Button>
-            <Button size="sm" onClick={() => navigate(`/admin/courses/${courseId}/edit`)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Modifier
-            </Button>
-          </div>
-        </div>
+        {pageHeader}
 
         {/* Course header card */}
         <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-400 rounded-xl p-6 shadow-sm">
@@ -200,9 +1172,8 @@ export function AdminCourseView() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* ── Left: Video + tabs ── */}
+          {/* Left: Video + tabs */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Video player */}
             <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-400 rounded-xl overflow-hidden shadow-sm">
               {videoSrc ? (
                 <div className="aspect-video bg-black">
@@ -240,7 +1211,7 @@ export function AdminCourseView() {
               )}
             </div>
 
-            {/* Tabs: Info | Ressources */}
+            {/* Tabs */}
             <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
               <div className="flex border-b border-border">
                 {(['info', 'resources'] as const).map(tab => (
@@ -258,7 +1229,6 @@ export function AdminCourseView() {
                 ))}
               </div>
 
-              {/* Info tab */}
               {activeTab === 'info' && (
                 <div className="p-6 space-y-4">
                   {course.longDescription && (
@@ -299,10 +1269,8 @@ export function AdminCourseView() {
                 </div>
               )}
 
-              {/* Resources tab */}
               {activeTab === 'resources' && (
                 <div className="p-6 space-y-4">
-                  {/* Lesson resources */}
                   {lessonResources.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-semibold flex items-center gap-2">
@@ -330,7 +1298,6 @@ export function AdminCourseView() {
                     </div>
                   )}
 
-                  {/* Course resource list */}
                   {resources.length === 0 && lessonResources.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -365,7 +1332,7 @@ export function AdminCourseView() {
             </div>
           </div>
 
-          {/* ── Right Sidebar: Course structure ── */}
+          {/* Right Sidebar: Course structure */}
           <div className="space-y-6">
             <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-400 rounded-xl overflow-hidden shadow-sm">
               <div className="p-4 border-b border-indigo-100 bg-indigo-50/40">

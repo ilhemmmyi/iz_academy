@@ -88,7 +88,7 @@ export function StudentCourseView() {
   // highest timestamp the student has honestly watched (high-water mark)
   const maxWatchedRef = useRef(0);
   const hasAutoCompletedRef = useRef(false);
-  // save-throttle: only POST to server every 5 s
+  // save-throttle: only POST to server every 30 s (or immediately on pause/seek)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef(false);
   const selectedLessonRef = useRef<any>(null);
@@ -169,14 +169,8 @@ export function StudentCourseView() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (pendingSaveRef.current && selectedLessonRef.current && videoRef.current) {
-        const { duration } = videoRef.current;
-        lessonsApi.saveVideoProgress(
-          selectedLessonRef.current.id,
-          maxWatchedRef.current,
-          duration || 0,
-        ).catch(() => {});
-      }
+      // SPA navigation away: flush normally (fetch is not cancelled here)
+      flushSave();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
@@ -219,6 +213,17 @@ export function StudentCourseView() {
 
   /* ── video: throttled progress save ─────────────────────── */
 
+  const flushSave = useCallback(() => {
+    if (!pendingSaveRef.current || !selectedLessonRef.current) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    pendingSaveRef.current = false;
+    const duration = videoRef.current?.duration || 0;
+    lessonsApi.saveVideoProgress(selectedLessonRef.current.id, maxWatchedRef.current, duration).catch(() => {});
+  }, []);
+
   const scheduleSave = () => {
     pendingSaveRef.current = true;
     if (saveTimerRef.current) return; // already scheduled
@@ -226,10 +231,9 @@ export function StudentCourseView() {
       saveTimerRef.current = null;
       pendingSaveRef.current = false;
       if (!selectedLessonRef.current) return;
-      // Read refs at fire time, not at schedule time — avoids stale closure capture
       const duration = videoRef.current?.duration || 0;
       lessonsApi.saveVideoProgress(selectedLessonRef.current.id, maxWatchedRef.current, duration).catch(() => {});
-    }, 5000);
+    }, 30000);
   };
 
   const handleTimeUpdate = () => {
@@ -301,20 +305,8 @@ export function StudentCourseView() {
       }
       return;
     }
-    // Flush save for the previous lesson immediately
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    if (pendingSaveRef.current && selectedLessonRef.current && videoRef.current) {
-      const { duration } = videoRef.current;
-      lessonsApi.saveVideoProgress(
-        selectedLessonRef.current.id,
-        maxWatchedRef.current,
-        duration || 0,
-      ).catch(() => {});
-      pendingSaveRef.current = false;
-    }
+    // Flush save for the previous lesson immediately before switching
+    flushSave();
 
     selectedLessonRef.current = lesson;
     setSelectedLesson(lesson);
@@ -454,6 +446,8 @@ export function StudentCourseView() {
                     controlsList="nodownload"
                     onLoadedMetadata={handleLoadedMetadata}
                     onTimeUpdate={handleTimeUpdate}
+                    onPause={flushSave}
+                    onSeeked={flushSave}
                   />
                   {/* Skip-forward warning overlay */}
                   {isSkipping && (

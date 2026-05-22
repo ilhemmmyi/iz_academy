@@ -15,13 +15,18 @@ import {
 import { Badge } from '../components/ui/badge';
 import { useState, useEffect } from 'react';
 import { coursesApi } from '../../api/courses.api';
+import { settingsApi } from '../../api/settings.api';
 
 export function LandingPage() {
   const [courses, setCourses] = useState<any[]>([]);
+  const [videoUrl, setVideoUrl] = useState('');
 
   useEffect(() => {
     coursesApi.getAll()
       .then(data => setCourses(data.slice(0, 4)))
+      .catch(() => {});
+    settingsApi.getAll()
+      .then(s => { if (s.homepageVideoUrl) setVideoUrl(s.homepageVideoUrl); })
       .catch(() => {});
   }, []);
 
@@ -270,21 +275,29 @@ export function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Video Placeholder */}
-<div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(56,82,233,0.45),0_0_60px_rgba(105,63,203,0.35),0_0_90px_rgba(223,98,160,0.3)] group"
-            >
-              <img   src="https://images.unsplash.com/photo-1771054244019-96f9db9720b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbmxpbmUlMjBsZWFybmluZyUyMHZpZGVvJTIwY29uZmVyZW5jZSUyMGVkdWNhdGlvbnxlbnwxfHx8fDE3NzM1MTI2Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Démo de la plateforme Iz Academy"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition">
-                <button
-                  type="button"
-                  className="w-20 h-20 bg-white rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.8)]"
-                >
-                  <Play className="w-10 h-10 text-primary ml-1" />
-                </button>
-              </div>
+            {/* Video — dynamic from admin settings */}
+            <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(56,82,233,0.45),0_0_60px_rgba(105,63,203,0.35),0_0_90px_rgba(223,98,160,0.3)] group">
+              {videoUrl ? (
+                <video
+                  src={videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                  preload="metadata"
+                />
+              ) : (
+                <>
+                  <img
+                    src="https://images.unsplash.com/photo-1771054244019-96f9db9720b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbmxpbmUlMjBsZWFybmluZyUyMHZpZGVvJTIwY29uZmVyZW5jZSUyMGVkdWNhdGlvbnxlbnwxfHx8fDE3NzM1MTI2Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
+                    alt="Démo de la plateforme Iz Academy"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition">
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+                      <Play className="w-10 h-10 text-primary ml-1" />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Features List */}
@@ -362,30 +375,6 @@ export function LandingPage() {
               </div>*/}
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl mb-4">Restez informé</h2>
-          <p className="text-muted-foreground mb-8">
-            Inscrivez-vous à notre newsletter pour recevoir nos dernières
-            actualités
-          </p>
-          <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Votre adresse email"
-              className="flex-1 px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <button
-              type="submit"
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-lg transition-all duration-300 hover:shadow-[0_0_25px_rgba(56,82,233,0.5)]"
-            >
-              S'inscrire
-            </button>
-          </form>
         </div>
       </section>
 

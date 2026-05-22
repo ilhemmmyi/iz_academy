@@ -6,12 +6,14 @@ import {
   Plus, Edit, Trash2, X, Tag,
   MailCheck, Send, Inbox, Clock, CheckCheck, User, AtSign, MessageSquare, ChevronDown,
   AlertCircle, CheckCircle2, MessageCircle, Loader2, ShieldCheck,
-  Search, Download, TrendingUp, Euro, Save,
+  Search, Download, TrendingUp, Euro, Save, Video,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
 import { coursesApi } from '../../../api/courses.api';
+import { settingsApi } from '../../../api/settings.api';
+import { apiClient } from '../../../api/client';
 import { contactApi, type ContactMessage } from '../../../api/contact.api';
 import { reportsApi } from '../../../api/reports.api';
 import { paymentsApi } from '../../../api/payments.api';
@@ -621,9 +623,6 @@ function PaymentsSection() {
           <h2 className="text-lg font-semibold">Gestion des paiements</h2>
           <p className="text-sm text-muted-foreground">Suivi des revenus et transactions</p>
         </div>
-        <button className="px-4 py-2 border border-border rounded-lg hover:bg-accent transition flex items-center gap-2 text-sm font-medium">
-          <Download className="w-4 h-4" />Exporter CSV
-        </button>
       </div>
 
       {/* Chart + Stats */}
@@ -723,115 +722,214 @@ function PaymentsSection() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SettingsSection() {
-  const [settings, setSettings] = useState({
-    siteName: 'Iz Academy',
-    siteEmail: 'nourslama60@gmail.com',
-    supportEmail: 'support@izacademy.com',
-    currency: 'DT',
-    language: 'fr',
-    timezone: 'Europe/Paris',
-    emailNotifications: true,
-    maintenanceMode: false,
-  });
+  const [siteEmail, setSiteEmail] = useState('imenzarai@iz-solution.com');
+  const [emailSaving, setEmailSaving] = useState(false);
 
-  const handleSave = () => { toast.success('Paramètres sauvegardés avec succès !'); };
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false);
+
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
+
+  useEffect(() => {
+    settingsApi.getAll()
+      .then(s => {
+        if (s.siteEmail) setSiteEmail(s.siteEmail);
+        if (s.homepageVideoUrl) setVideoUrl(s.homepageVideoUrl);
+        setMaintenanceMode(s.maintenanceMode === 'true');
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveEmail = async () => {
+    if (!siteEmail.trim()) { toast.error("L'email est requis"); return; }
+    setEmailSaving(true);
+    try {
+      await settingsApi.update('siteEmail', siteEmail.trim());
+      toast.success('Email sauvegardé');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    const next = !maintenanceMode;
+    setMaintenanceSaving(true);
+    try {
+      await settingsApi.update('maintenanceMode', String(next));
+      setMaintenanceMode(next);
+      toast.success(next ? 'Mode maintenance activé — le site est inaccessible aux utilisateurs' : 'Mode maintenance désactivé');
+    } catch {
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setMaintenanceSaving(false);
+    }
+  };
+
+  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('video', file);
+      const result = await apiClient('/uploads/homepage-video', { method: 'POST', body: formData });
+      setVideoUrl(result.url);
+      toast.success('Vidéo uploadée et sauvegardée');
+    } catch {
+      toast.error("Erreur lors de l'upload de la vidéo");
+    } finally {
+      setVideoUploading(false);
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="space-y-6 pt-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Paramètres de la plateforme</h2>
-          <p className="text-sm text-muted-foreground">Configurez les informations et préférences du site</p>
-        </div>
-        <button
-          onClick={handleSave}
-          className="px-5 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition flex items-center gap-2 text-sm"
-        >
-          <Save className="w-4 h-4" />Sauvegarder
-        </button>
+      <div>
+        <h2 className="text-lg font-semibold">Paramètres de la plateforme</h2>
+        <p className="text-sm text-muted-foreground">Configurez les informations et préférences du site</p>
       </div>
 
-      <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 space-y-6 shadow-sm">
-        {/* Informations générales */}
+      {/* Vidéo page d'accueil */}
+      <div className="bg-white border border-violet-100 border-l-4 border-l-violet-400 rounded-xl p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-violet-50 rounded-lg">
+            <Video className="w-5 h-5 text-violet-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Vidéo page d'accueil</h3>
+            <p className="text-sm text-muted-foreground">Uploadez une vidéo depuis votre ordinateur (MP4, WebM — max 500 Mo)</p>
+          </div>
+        </div>
+
+        <label className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition ${videoUploading ? 'border-violet-300 bg-violet-50 cursor-not-allowed' : 'border-violet-300 hover:border-violet-500 hover:bg-violet-50'}`}>
+          {videoUploading
+            ? <Loader2 className="w-5 h-5 text-violet-600 animate-spin shrink-0" />
+            : <Video className="w-5 h-5 text-violet-500 shrink-0" />
+          }
+          <span className="text-sm text-violet-700 font-medium">
+            {videoUploading ? 'Upload en cours…' : 'Choisir une vidéo depuis votre ordinateur'}
+          </span>
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/*"
+            className="hidden"
+            disabled={videoUploading}
+            onChange={handleVideoFileChange}
+          />
+        </label>
+
+        {videoUrl && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Vidéo actuelle :</p>
+            <video
+              src={videoUrl}
+              controls
+              className="w-full max-h-48 rounded-lg object-contain bg-black"
+              preload="metadata"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Email du site */}
+      <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Informations générales</h3>
+          <button
+            onClick={handleSaveEmail}
+            disabled={emailSaving}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition flex items-center gap-2 text-sm disabled:opacity-60"
+          >
+            {emailSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Sauvegarder
+          </button>
+        </div>
         <div>
-          <h3 className="font-semibold mb-4">Informations générales</h3>
-          <div className="space-y-4">
-            {[
-              { id: 'siteName', label: 'Nom du site', type: 'text', key: 'siteName' as const },
-              { id: 'siteEmail', label: 'Email du site', type: 'email', key: 'siteEmail' as const },
-              { id: 'supportEmail', label: 'Email de support', type: 'email', key: 'supportEmail' as const },
-            ].map(field => (
-              <div key={field.id}>
-                <label htmlFor={field.id} className="block mb-2 text-sm font-medium">{field.label}</label>
-                <input
-                  id={field.id}
-                  type={field.type}
-                  value={settings[field.key]}
-                  onChange={e => setSettings({ ...settings, [field.key]: e.target.value })}
-                  className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                />
-              </div>
-            ))}
-          </div>
+          <label htmlFor="siteEmail" className="block mb-2 text-sm font-medium">Email du site</label>
+          <input
+            id="siteEmail"
+            type="email"
+            value={siteEmail}
+            onChange={e => setSiteEmail(e.target.value)}
+            className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            placeholder="email@exemple.com"
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">Cet email est affiché sur la page de contact.</p>
         </div>
+      </div>
 
-        {/* Préférences */}
-        <div className="pt-6 border-t border-border">
-          <h3 className="font-semibold mb-4">Préférences</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="currency" className="block mb-2 text-sm font-medium">Devise</label>
-              <select id="currency" value={settings.currency} onChange={e => setSettings({ ...settings, currency: e.target.value })}
-                className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm">
-                <option value="DT">Dinar tunisien (DT)</option>
-                <option value="EUR">Euro (€)</option>
-                <option value="USD">Dollar ($)</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="language" className="block mb-2 text-sm font-medium">Langue</label>
-              <select id="language" value={settings.language} onChange={e => setSettings({ ...settings, language: e.target.value })}
-                className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm">
-                <option value="fr">Français</option>
-                <option value="en">English</option>
-                <option value="es">Español</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="timezone" className="block mb-2 text-sm font-medium">Fuseau horaire</label>
-              <select id="timezone" value={settings.timezone} onChange={e => setSettings({ ...settings, timezone: e.target.value })}
-                className="w-full px-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm">
-                <option value="Europe/Paris">Paris (GMT+1)</option>
-                <option value="America/New_York">New York (GMT-5)</option>
-                <option value="Asia/Tokyo">Tokyo (GMT+9)</option>
-              </select>
-            </div>
+      {/* Préférences — lecture seule */}
+      <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
+        <h3 className="font-semibold mb-4">Préférences</h3>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block mb-2 text-sm font-medium">Devise</label>
+            <input
+              value="Dinar tunisien (DT)"
+              disabled
+              className="w-full px-4 py-3 border border-border rounded-lg bg-accent/40 text-sm text-muted-foreground cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">Langue</label>
+            <input
+              value="Français"
+              disabled
+              className="w-full px-4 py-3 border border-border rounded-lg bg-accent/40 text-sm text-muted-foreground cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium">Fuseau horaire</label>
+            <input
+              value="Africa/Tunis (GMT+1)"
+              disabled
+              className="w-full px-4 py-3 border border-border rounded-lg bg-accent/40 text-sm text-muted-foreground cursor-not-allowed"
+            />
           </div>
         </div>
+      </div>
 
-        {/* Options */}
-        <div className="pt-6 border-t border-border">
-          <h3 className="font-semibold mb-4">Options</h3>
-          <div className="space-y-4">
-            {[
-              { key: 'emailNotifications' as const, label: 'Notifications par email', desc: 'Envoyer des notifications aux utilisateurs' },
-              { key: 'maintenanceMode' as const, label: 'Mode maintenance', desc: 'Désactiver temporairement le site' },
-            ].map(opt => (
-              <label key={opt.key} className="flex items-center justify-between p-4 bg-accent/50 rounded-lg cursor-pointer">
-                <div>
-                  <div className="font-medium text-sm mb-0.5">{opt.label}</div>
-                  <div className="text-sm text-muted-foreground">{opt.desc}</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings[opt.key]}
-                  onChange={e => setSettings({ ...settings, [opt.key]: e.target.checked })}
-                  className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
-                />
-              </label>
-            ))}
+      {/* Mode maintenance */}
+      <div className={`bg-white border rounded-xl p-6 shadow-sm transition-colors ${maintenanceMode ? 'border-red-200 border-l-4 border-l-red-400' : 'border-amber-100 border-l-4 border-l-amber-400'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${maintenanceMode ? 'bg-red-50' : 'bg-amber-50'}`}>
+              <Settings className={`w-5 h-5 ${maintenanceMode ? 'text-red-600' : 'text-amber-600'}`} />
+            </div>
+            <div>
+              <h3 className="font-semibold">Mode maintenance</h3>
+              <p className="text-sm text-muted-foreground">
+                {maintenanceMode
+                  ? 'Le site est actuellement inaccessible aux étudiants et enseignants.'
+                  : 'Désactiver temporairement le site pour tous les utilisateurs non-admins.'}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleToggleMaintenance}
+            disabled={maintenanceSaving}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 ${maintenanceMode ? 'bg-red-500 focus:ring-red-400' : 'bg-gray-300 focus:ring-amber-400'}`}
+            role="switch"
+            aria-checked={maintenanceMode}
+          >
+            {maintenanceSaving
+              ? <Loader2 className="absolute inset-0 m-auto w-4 h-4 text-white animate-spin" />
+              : <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform ${maintenanceMode ? 'translate-x-6' : 'translate-x-1'}`} />
+            }
+          </button>
         </div>
+        {maintenanceMode && (
+          <div className="mt-4 flex items-start gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-red-700">
+              Le site est en maintenance. Seuls les administrateurs peuvent y accéder.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

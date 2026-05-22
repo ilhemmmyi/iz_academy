@@ -1,4 +1,4 @@
-﻿import { Link, useNavigate } from 'react-router';
+﻿import { Link, useNavigate, useLocation } from 'react-router';
 import { GraduationCap, Menu, X, LayoutDashboard, User, LogOut, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -20,7 +20,13 @@ export function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -49,10 +55,30 @@ export function Navbar() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6 flex-1 justify-center">
-            <Link to="/" className="text-foreground hover:text-primary transition">Accueil</Link>
-            <Link to="/courses" className="text-foreground hover:text-primary transition">Cours</Link>
-            <Link to="/faq" className="text-foreground hover:text-primary transition">FAQ</Link>
-            <Link to="/contact" className="text-foreground hover:text-primary transition">Contact</Link>
+            {([
+              { label: 'Accueil', to: '/', exact: true },
+              { label: 'Cours', to: '/courses', exact: false },
+              { label: 'À propos', to: '/about', exact: true },
+              { label: 'Contact', to: '/contact', exact: true },
+            ] as { label: string; to: string; exact: boolean }[]).map(({ label, to, exact }) => {
+              const active = to.startsWith('/#')
+                ? false
+                : exact ? location.pathname === to : location.pathname.startsWith(to);
+              return (
+                <a
+                  key={to}
+                  href={to.startsWith('/#') ? to : undefined}
+                  onClick={to.startsWith('/#') ? undefined : (e) => { e.preventDefault(); navigate(to); }}
+                  {...(!to.startsWith('/#') ? { role: 'link' } : {})}
+                  className={`relative pb-1 transition cursor-pointer ${active ? 'text-primary font-medium' : 'text-foreground hover:text-primary'}`}
+                >
+                  {label}
+                  {active && (
+                    <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary" />
+                  )}
+                </a>
+              );
+            })}
           </div>
 
           {/* Desktop Auth */}
@@ -133,10 +159,29 @@ export function Navbar() {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden py-4 space-y-3">
-            <Link to="/" className="block py-2 text-foreground hover:text-primary transition" onClick={() => setIsMenuOpen(false)}>Accueil</Link>
-            <Link to="/courses" className="block py-2 text-foreground hover:text-primary transition" onClick={() => setIsMenuOpen(false)}>Cours</Link>
-            <Link to="/faq" className="block py-2 text-foreground hover:text-primary transition" onClick={() => setIsMenuOpen(false)}>FAQ</Link>
-            <Link to="/contact" className="block py-2 text-foreground hover:text-primary transition" onClick={() => setIsMenuOpen(false)}>Contact</Link>
+            {([
+              { label: 'Accueil', to: '/', exact: true },
+              { label: 'Cours', to: '/courses', exact: false },
+              { label: 'À propos', to: '/about', exact: true },
+              { label: 'Contact', to: '/contact', exact: true },
+            ] as { label: string; to: string; exact: boolean }[]).map(({ label, to, exact }) => {
+              const active = to.startsWith('/#')
+                ? false
+                : exact ? location.pathname === to : location.pathname.startsWith(to);
+              return (
+                <a
+                  key={to}
+                  href={to.startsWith('/#') ? to : undefined}
+                  onClick={to.startsWith('/#')
+                    ? () => setIsMenuOpen(false)
+                    : (e) => { e.preventDefault(); navigate(to); setIsMenuOpen(false); }}
+                  className={`flex items-center gap-2 py-2 cursor-pointer ${active ? 'text-primary font-medium' : 'text-foreground hover:text-primary transition'}`}
+                >
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />}
+                  {label}
+                </a>
+              );
+            })}
 
             {!loading && user ? (
               <div className="border-t border-border pt-3">

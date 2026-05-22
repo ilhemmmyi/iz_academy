@@ -23,6 +23,7 @@ import { reportRouter } from './routes/report.routes';
 import { lessonResourceRouter } from './routes/lessonResource.routes';
 import { aiRouter } from './routes/ai.routes';
 import { activityRouter } from './routes/activity.routes';
+import { settingsRouter } from './routes/settings.routes';
 import { errorHandler } from './middlewares/error.middleware';
 
 // M-2 — N'initialiser Sentry que si le DSN est configuré
@@ -73,6 +74,7 @@ app.use('/api/contact-messages', contactMessageRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/lessons', lessonResourceRouter);
 app.use('/api/activities', activityRouter);
+app.use('/api/settings', settingsRouter);
 
 Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);

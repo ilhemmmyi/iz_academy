@@ -22,6 +22,9 @@ const emailWorker = new Worker('emails', async (job) => {
     case 'teacher-created':
       await EmailService.sendTeacherCreated(job.data);
       break;
+    case 'course-published':
+      await EmailService.sendNewCoursePublished(job.data);
+      break;
     default:
       console.warn(`[EmailWorker] Unknown job name: ${job.name}`);
   }

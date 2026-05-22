@@ -340,22 +340,6 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
       learningPlan,
     };
 
-    // -- 6. Persist to DB (upsert so re-runs overwrite old data) -----------
-    if (req.user?.userId) {
-      await prisma.careerCoachData.upsert({
-        where: { userId: req.user.userId },
-        create: {
-          userId: req.user.userId,
-          answers: questionnaire as any,
-          recommendations: result as any,
-        },
-        update: {
-          answers: questionnaire as any,
-          recommendations: result as any,
-        },
-      });
-    }
-
     return res.json(result);
   } catch (err: any) {
     if (axios.isAxiosError(err)) {
@@ -394,29 +378,3 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// GET /api/ai/my-coach — returns saved coach data for the authenticated user
-export const getMyCoachData = async (req: AuthRequest, res: Response) => {
-  try {
-    const data = await prisma.careerCoachData.findUnique({
-      where: { userId: req.user!.userId },
-    });
-    if (!data) return res.json(null);
-    return res.json({
-      answers: data.answers,
-      recommendations: data.recommendations,
-      updatedAt: data.updatedAt,
-    });
-  } catch {
-    return res.status(500).json({ message: 'Failed to fetch coach data.' });
-  }
-};
-
-// DELETE /api/ai/my-coach — removes saved coach data so user can restart
-export const deleteMyCoachData = async (req: AuthRequest, res: Response) => {
-  try {
-    await prisma.careerCoachData.deleteMany({ where: { userId: req.user!.userId } });
-    return res.json({ message: 'Coach data deleted.' });
-  } catch {
-    return res.status(500).json({ message: 'Failed to delete coach data.' });
-  }
-};

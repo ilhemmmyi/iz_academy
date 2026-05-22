@@ -158,6 +158,52 @@ export const EmailService = {
     });
   },
 
+  async sendNewCoursePublished(data: {
+    email: string;
+    name: string;
+    courseTitle: string;
+    courseDescription: string;
+    courseId: string;
+    frontendUrl: string;
+  }) {
+    const courseUrl = `${data.frontendUrl}/course/${esc(data.courseId)}`;
+    await send({
+      to: data.email,
+      subject: `Nouveau cours disponible — ${esc(data.courseTitle)}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff">
+          <div style="background:#4f46e5;padding:32px;text-align:center;border-radius:8px 8px 0 0">
+            <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700">Iz Academy</h1>
+          </div>
+          <div style="padding:40px 32px">
+            <h2 style="color:#111827;margin:0 0 16px">Nouveau cours disponible !</h2>
+            <p style="color:#374151;margin:0 0 8px">Bonjour <strong>${esc(data.name)}</strong>,</p>
+            <p style="color:#374151;margin:0 0 24px">
+              Un nouveau cours vient d'être mis en ligne sur <strong>Iz Academy</strong> :
+            </p>
+            <div style="background:#f3f4f6;border-left:4px solid #4f46e5;border-radius:0 8px 8px 0;padding:20px;margin:0 0 32px">
+              <h3 style="color:#4f46e5;margin:0 0 8px;font-size:18px">${esc(data.courseTitle)}</h3>
+              <p style="color:#6b7280;margin:0;font-size:14px;line-height:1.5">${esc(data.courseDescription)}</p>
+            </div>
+            <div style="text-align:center;margin:0 0 32px">
+              <a href="${courseUrl}" style="background:#4f46e5;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;display:inline-block">
+                Voir le cours →
+              </a>
+            </div>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
+            <p style="color:#9ca3af;font-size:12px;margin:0">
+              Si le bouton ne fonctionne pas, copiez ce lien :<br />
+              <span style="color:#6b7280;word-break:break-all">${courseUrl}</span>
+            </p>
+          </div>
+          <div style="background:#f9fafb;padding:16px;text-align:center;border-radius:0 0 8px 8px">
+            <p style="color:#9ca3af;font-size:12px;margin:0">© 2026 Iz Academy. Tous droits réservés.</p>
+          </div>
+        </div>
+      `,
+    });
+  },
+
   async sendTeacherCreated(data: { email: string; name: string; frontendUrl: string }) {
     await send({
       to: data.email,

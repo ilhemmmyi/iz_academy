@@ -57,10 +57,6 @@ export function AdminPayments() {
             <h1 className="mb-1">Gestion des paiements</h1>
             <p className="text-sm text-muted-foreground">Suivi des revenus et transactions</p>
           </div>
-          <button className="px-4 py-2 border border-border rounded-lg hover:bg-accent transition flex items-center gap-2 text-sm font-medium">
-            <Download className="w-4 h-4" />
-            Exporter CSV
-          </button>
         </div>
 
         {/* Chart + Stats side by side */}

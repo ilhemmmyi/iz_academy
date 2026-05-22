@@ -4,6 +4,8 @@ import { CategoryService } from '../services/category.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../config/prisma';
 import { ProjectModel } from '../models/project.model';
+import { queueEmail } from '../utils/queueEmail';
+import { config } from '../config';
 
 export const CourseController = {
 
@@ -152,12 +154,37 @@ export const CourseController = {
     try {
       const course = await prisma.course.findUnique({ where: { id: String(req.params.id) } });
       if (!course) return res.status(404).json({ message: 'Course not found' });
+
+      const isBeingPublished = !course.isPublished;
+
       const updated = await prisma.course.update({
         where: { id: course.id },
-        data: { isPublished: !course.isPublished },
+        data: { isPublished: isBeingPublished },
       });
-      // C-4: invalidate stale cache after publish toggle
       await CourseService.invalidateCourseCache(course.id);
+
+      // When a course transitions draft → published, notify all active students
+      if (isBeingPublished) {
+        prisma.user.findMany({
+          where: { role: 'STUDENT', isActive: true },
+          select: { email: true, name: true },
+        }).then(async (students) => {
+          for (const s of students) {
+            await queueEmail('course-published', {
+              email: s.email,
+              name: s.name,
+              courseTitle: course.title,
+              courseDescription: course.shortDescription,
+              courseId: course.id,
+              frontendUrl: config.frontendUrl,
+            });
+          }
+          console.log(`[CoursePublish] Queued ${students.length} notification emails for "${course.title}"`);
+        }).catch((err: any) => {
+          console.error('[CoursePublish] Failed to queue notification emails:', err.message);
+        });
+      }
+
       res.json({ isPublished: updated.isPublished });
     } catch {
       res.status(500).json({ message: 'Failed to toggle publish status' });
