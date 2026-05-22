@@ -503,15 +503,7 @@ export function StudentCourseView() {
                           </strong>{' '}
                           pour reprendre la progression ({Math.round(currentWatchedPct)}% acquis)
                         </span>
-                      ) : (
-                        <span className="flex items-center gap-2 text-indigo-600 text-sm font-medium">
-                          <Video className="w-4 h-4" />
-                          Regardez la vidéo jusqu'à 90% pour valider la leçon
-                          {currentWatchedPct > 0 && (
-                            <span className="font-semibold">({Math.round(currentWatchedPct)}%)</span>
-                          )}
-                        </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
