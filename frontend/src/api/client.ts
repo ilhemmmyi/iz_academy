@@ -5,12 +5,12 @@ let accessToken: string | null = null;
 export const setAccessToken = (token: string | null) => { accessToken = token; };
 export const getAccessToken = () => accessToken;
 
+
 // Single refresh at a time — prevents race condition when multiple 401s fire simultaneously
+
 let refreshPromise: Promise<string | null> | null = null;
 
 // Deduplicate concurrent GET requests to the same path.
-// If two components mount simultaneously and call the same endpoint, they share
-// one in-flight Promise instead of firing two identical requests.
 const inFlight = new Map<string, Promise<any>>();
 
 const refreshAccessToken = async (): Promise<string | null> => {
