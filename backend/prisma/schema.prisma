@@ -59,7 +59,6 @@ model User {
   googleId         String?          @unique
   role             Role             @default(STUDENT)
   avatarUrl        String?
-  isActive         Boolean          @default(true)
   formation           String?
   duree               String?
   dateDebut           String?
@@ -121,6 +120,7 @@ model Course {
   level            String
   duration         String
   isPublished      Boolean       @default(false)
+  contentVersion   Int           @default(1)
   categoryId       String
   category         Category      @relation(fields: [categoryId], references: [id])
   teacherId        String
@@ -134,12 +134,25 @@ model Course {
   projects         Project[]
   reviews          CourseReview[]
   resources        CourseResource[]
+  snapshots        CourseSnapshot[]
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 
   @@index([teacherId])
   @@index([isPublished])
   @@index([categoryId])
+}
+
+model CourseSnapshot {
+  id           String   @id @default(cuid())
+  courseId     String
+  version      Int
+  snapshotData Json
+  createdAt    DateTime @default(now())
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, version])
+  @@index([courseId])
 }
 
 model CourseResource {
@@ -155,14 +168,16 @@ model CourseResource {
 }
 
 model Module {
-  id       String   @id @default(cuid())
-  title    String
-  order    Int
-  courseId String
-  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons  Lesson[]
+  id         String    @id @default(cuid())
+  title      String
+  order      Int
+  courseId   String
+  archivedAt DateTime?
+  course     Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons    Lesson[]
 
   @@index([courseId])
+  @@index([archivedAt])
 }
 
 model Lesson {
@@ -174,15 +189,17 @@ model Lesson {
   duration        String?
   durationSeconds Float            @default(0)
   order           Int
-  moduleId    String
-  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  progress LessonProgress[]
-  quiz     Quiz?            @relation(fields: [quizId], references: [id], onDelete: SetNull)
-  quizId   String?
-  comments LessonComment[]
+  archivedAt      DateTime?
+  moduleId        String
+  module          Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress        LessonProgress[]
+  quiz            Quiz?            @relation(fields: [quizId], references: [id], onDelete: SetNull)
+  quizId          String?
+  comments        LessonComment[]
   lessonResources LessonResource[]
 
   @@index([moduleId])
+  @@index([archivedAt])
 }
 
 model LessonResource {
@@ -216,21 +233,22 @@ model LessonProgress {
 }
 
 model Enrollment {
-  id          String           @id @default(cuid())
-  userId      String
-  courseId    String
-  status      EnrollmentStatus @default(PENDING)
-  message     String?
-  phone       String?
-  address     String?
-  educationLevel String?
-  studentStatus  String?
-  isCompleted Boolean          @default(false)
-  completedAt DateTime?
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id                     String           @id @default(cuid())
+  userId                 String
+  courseId               String
+  status                 EnrollmentStatus @default(PENDING)
+  message                String?
+  phone                  String?
+  address                String?
+  educationLevel         String?
+  studentStatus          String?
+  isCompleted            Boolean          @default(false)
+  completedAt            DateTime?
+  enrolledContentVersion Int              @default(1)
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course                 Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -355,11 +373,13 @@ model Project {
   description  String
   instructions String
   courseId     String
+  archivedAt   DateTime?
   course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
   submissions  ProjectSubmission[]
   createdAt    DateTime            @default(now())
 
   @@index([courseId])
+  @@index([archivedAt])
 }
 
 model ProjectSubmission {

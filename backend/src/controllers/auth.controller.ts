@@ -34,7 +34,6 @@ export const AuthController = {
       });
     } catch (err: any) {
       if (err.message === 'INVALID_CREDENTIALS') return res.status(401).json({ message: 'Invalid credentials' });
-      if (err.message === 'ACCOUNT_DISABLED') return res.status(403).json({ message: 'Account disabled' });
       if (err.message === 'EMAIL_NOT_VERIFIED') return res.status(403).json({ message: 'Veuillez vérifier votre email avant de vous connecter', code: 'EMAIL_NOT_VERIFIED' });
       console.error('[login]', err);
       res.status(500).json({ message: 'Login failed' });
@@ -116,7 +115,6 @@ export const AuthController = {
       });
     } catch (err: any) {
       if (err.message === 'INVALID_FIREBASE_TOKEN') return res.status(401).json({ message: 'Invalid Firebase token' });
-      if (err.message === 'ACCOUNT_DISABLED') return res.status(403).json({ message: 'Account disabled' });
       console.error('[googleLogin]', err);
       res.status(500).json({ message: 'Google login failed' });
     }

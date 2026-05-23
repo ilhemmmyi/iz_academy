@@ -6,9 +6,17 @@ export const ProjectModel = {
   findById: (id: string) =>
     prisma.project.findUnique({ where: { id } }),
 
+  // Only active (non-archived) projects — used for current-version students and public views.
   findByCourse: (courseId: string) =>
     prisma.project.findMany({
-      where: { courseId },
+      where: { courseId, archivedAt: null },
+      orderBy: { createdAt: 'asc' },
+    }),
+
+  // Fetch specific projects by ID list — used to serve snapshot projects to old-version students.
+  findByIds: (ids: string[]) =>
+    prisma.project.findMany({
+      where: { id: { in: ids } },
       orderBy: { createdAt: 'asc' },
     }),
 

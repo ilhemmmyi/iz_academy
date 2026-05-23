@@ -14,7 +14,7 @@ export const ContactMessageService = {
 
     // Notification aux admins (sans bloquer la réponse HTTP)
     const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN', isActive: true },
+      where: { role: 'ADMIN' },
       select: { email: true },
     });
 

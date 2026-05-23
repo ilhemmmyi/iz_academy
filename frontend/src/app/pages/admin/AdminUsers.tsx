@@ -31,7 +31,6 @@ type ApiUser = {
   name: string;
   email: string;
   role: string;
-  isActive: boolean;
   formation?: string;
   duree?: string;
   dateDebut?: string;
@@ -1056,10 +1055,6 @@ export function AdminUsers() {
                   <Badge>
                     {selectedUserObj.role.toLowerCase() === 'student' ? 'Étudiant' : 'Formateur'}
                   </Badge>
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Statut</div>
-                  <div className="font-medium">{selectedUserObj.isActive ? 'Actif' : 'Inactif'}</div>
                 </div>
                 {selectedUserObj.formation && (
                   <div>

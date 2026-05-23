@@ -17,9 +17,17 @@ export const EnrollmentModel = {
     courseId: string,
     message?: string,
     extraInfo?: { phone?: string; address?: string; educationLevel?: string; studentStatus?: string },
+    enrolledContentVersion?: number,
   ) =>
     prisma.enrollment.create({
-      data: { userId, courseId, message, status: 'PENDING', ...extraInfo },
+      data: {
+        userId,
+        courseId,
+        message,
+        status: 'PENDING',
+        ...extraInfo,
+        ...(enrolledContentVersion !== undefined ? { enrolledContentVersion } : {}),
+      },
     }),
 
   updateStatus: (id: string, status: 'APPROVED' | 'REJECTED') =>

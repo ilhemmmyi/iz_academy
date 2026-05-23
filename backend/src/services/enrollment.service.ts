@@ -20,12 +20,31 @@ export const EnrollmentService = {
   ) {
     const existing = await EnrollmentModel.findByUserAndCourse(userId, courseId);
     if (existing) throw new Error('ALREADY_ENROLLED');
-    return EnrollmentModel.create(userId, courseId, message, extraInfo);
+
+    // Record the current content version so we can update it at approval time.
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { contentVersion: true },
+    });
+    return EnrollmentModel.create(userId, courseId, message, extraInfo, course?.contentVersion ?? 1);
   },
 
   async updateStatus(id: string, status: 'APPROVED' | 'REJECTED') {
     const enrollment = await EnrollmentModel.updateStatus(id, status);
-    // Auto-create a payment record when an enrollment is approved
+    if (status === 'APPROVED') {
+      // Stamp the current content version at approval time so the student's
+      // experience is anchored to the content that exists when they gain access.
+      const course = await prisma.course.findUnique({
+        where: { id: enrollment.courseId },
+        select: { contentVersion: true },
+      });
+      if (course) {
+        await prisma.enrollment.update({
+          where: { id },
+          data: { enrolledContentVersion: course.contentVersion },
+        });
+      }
+    }
     if (status === 'APPROVED') {
       const alreadyPaid = await prisma.payment.findFirst({
         where: { userId: enrollment.userId, courseId: enrollment.courseId },

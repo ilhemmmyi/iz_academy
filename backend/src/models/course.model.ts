@@ -14,12 +14,12 @@ export const CourseModel = {
       price: true, level: true, duration: true, createdAt: true, isPublished: true,
       category: { select: { id: true, name: true } },
       teacher: { select: { id: true, name: true } },
-      // C-5: use counts instead of loading every lesson row
       _count: { select: { modules: true } },
       modules: {
+        where: { archivedAt: null },
         select: {
           id: true, title: true, order: true,
-          _count: { select: { lessons: true } },
+          _count: { select: { lessons: { where: { archivedAt: null } } } },
         },
         orderBy: { order: 'asc' },
       },
@@ -37,10 +37,11 @@ export const CourseModel = {
       teacher: { select: { id: true, name: true } },
       _count: { select: { modules: true } },
       modules: {
+        where: { archivedAt: null },
         select: {
           id: true, title: true, order: true,
-          _count: { select: { lessons: true } },
-          lessons: { orderBy: { order: 'asc' }, select: { id: true } },
+          _count: { select: { lessons: { where: { archivedAt: null } } } },
+          lessons: { where: { archivedAt: null }, orderBy: { order: 'asc' }, select: { id: true } },
         },
         orderBy: { order: 'asc' },
       },
@@ -52,13 +53,15 @@ export const CourseModel = {
     select: {
       id: true, title: true, shortDescription: true, thumbnailUrl: true,
       price: true, level: true, duration: true, createdAt: true, isPublished: true,
+      contentVersion: true,
       category: { select: { id: true, name: true } },
       teacher: { select: { id: true, name: true } },
       _count: { select: { modules: true } },
       modules: {
+        where: { archivedAt: null },
         select: {
           id: true, title: true, order: true,
-          _count: { select: { lessons: true } },
+          _count: { select: { lessons: { where: { archivedAt: null } } } },
         },
         orderBy: { order: 'asc' },
       },
@@ -66,14 +69,17 @@ export const CourseModel = {
     orderBy: { createdAt: 'desc' },
   }),
 
+  // Live view — only non-archived content.
   findById: (id: string) => prisma.course.findUnique({
     where: { id },
     include: {
       category: true,
       teacher: { select: { id: true, name: true, avatarUrl: true } },
       modules: {
+        where: { archivedAt: null },
         include: {
           lessons: {
+            where: { archivedAt: null },
             include: {
               quiz: { include: { questions: true } },
             },
@@ -82,7 +88,10 @@ export const CourseModel = {
         },
         orderBy: { order: 'asc' },
       },
-      projects: { orderBy: { createdAt: 'asc' } },
+      projects: {
+        where: { archivedAt: null },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   }),
 
@@ -92,27 +101,52 @@ export const CourseModel = {
 
   delete: (id: string) => prisma.course.delete({ where: { id } }),
 
-  getProgress: async (courseId: string, userId: string) => {
-    // Select only columns needed for progress calculation (avoids loading videoUrl, description, etc.)
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-      select: {
-        modules: {
-          select: {
-            lessons: {
-              select: { id: true, durationSeconds: true, quizId: true },
-              orderBy: { order: 'asc' },
+  /**
+   * Calculate course progress for a student.
+   * When snapshotLessonIds is provided the student is on an old content version
+   * and progress is computed only against those specific lesson IDs.
+   */
+  getProgress: async (courseId: string, userId: string, snapshotLessonIds?: string[]) => {
+    let allLessons: { id: string; durationSeconds: number; quizId: string | null }[];
+
+    if (snapshotLessonIds && snapshotLessonIds.length > 0) {
+      // Old-version student: load those exact lessons (may be archived).
+      const rows = await prisma.lesson.findMany({
+        where: { id: { in: snapshotLessonIds } },
+        select: { id: true, durationSeconds: true, quizId: true },
+      });
+      allLessons = rows;
+    } else {
+      // Current-version student: only non-archived lessons.
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: {
+          modules: {
+            where: { archivedAt: null },
+            select: {
+              lessons: {
+                where: { archivedAt: null },
+                select: { id: true, durationSeconds: true, quizId: true },
+                orderBy: { order: 'asc' },
+              },
             },
           },
         },
-      },
-    });
-    if (!course) return { total: 0, completed: 0, percentage: 0, projectStatus: null, hasCertificate: false, completedLessonIds: [], videoProgress: {}, passedQuizLessonIds: [], lessonDurations: {} };
-    const allLessons = course.modules.flatMap(m => m.lessons);
+      });
+      if (!course) {
+        return {
+          total: 0, completed: 0, percentage: 0,
+          projectStatus: null, hasCertificate: false,
+          completedLessonIds: [], videoProgress: {},
+          passedQuizLessonIds: [], lessonDurations: {},
+        };
+      }
+      allLessons = course.modules.flatMap(m => m.lessons);
+    }
+
     const totalLessons = allLessons.length;
     const allLessonIds = allLessons.map(l => l.id);
 
-    // Use direct lessonId list instead of join-in-WHERE for index efficiency
     const [allProgress, submissionRows, certRows] = await Promise.all([
       prisma.lessonProgress.findMany({
         where: { userId, lessonId: { in: allLessonIds } },
@@ -135,7 +169,6 @@ export const CourseModel = {
       videoProgress[p.lessonId] = { watchedSeconds: p.watchedSeconds, durationSeconds: p.durationSeconds };
     }
 
-    // lesson.durationSeconds is kept up-to-date by saveVideoProgress; supplement with user's own records
     const lessonDurations: Record<string, number> = {};
     for (const l of allLessons) {
       lessonDurations[l.id] = l.durationSeconds ?? 0;
@@ -144,7 +177,6 @@ export const CourseModel = {
       lessonDurations[p.lessonId] = Math.max(lessonDurations[p.lessonId] ?? 0, p.durationSeconds ?? 0);
     }
 
-    // Determine which lessons' quizzes the student has passed
     const passedQuizLessonIds: string[] = [];
     const lessonsWithQuizzes = allLessons.filter(l => l.quizId);
     if (lessonsWithQuizzes.length > 0) {
@@ -165,7 +197,6 @@ export const CourseModel = {
     const projectStatus = submissionRows[0]?.status ?? null;
     const hasCertificate = !!certRows;
 
-    // Compute total/watched durations for the lesson progress share
     const totalDuration = allLessons.reduce((acc, l) => acc + Math.max(lessonDurations[l.id] ?? 0, 1), 0);
     const watchedDuration = allProgress.reduce((acc, p) => {
       const lessonDuration = Math.max(p.durationSeconds || 0, lessonDurations[p.lessonId] || 0, 1);

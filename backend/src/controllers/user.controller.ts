@@ -141,7 +141,7 @@ export const UserController = {
 
   async updateUser(req: AuthRequest, res: Response) {
     try {
-      const { role, isActive, formation, duree, dateDebut, name, email } = req.body;
+      const { role, formation, duree, dateDebut, name, email } = req.body;
 
       const targetUser = await prisma.user.findUnique({
         where: { id: String(req.params.id) },
@@ -162,7 +162,6 @@ export const UserController = {
           }
           data.role = role;
         }
-        if (isActive !== undefined) data.isActive = Boolean(isActive);
         if (formation !== undefined) data.formation = formation;
         if (duree !== undefined) data.duree = duree;
         if (dateDebut !== undefined && dateDebut !== '') data.dateDebut = dateDebut;

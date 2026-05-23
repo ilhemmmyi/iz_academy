@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CourseController } from '../controllers/course.controller';
-import { authenticate } from '../middlewares/auth.middleware';
+import { authenticate, optionalAuthenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { createCategorySchema, createCourseSchema } from '../validators/course.validators';
@@ -16,8 +16,8 @@ courseRouter.get('/admin', authenticate, requireRole('ADMIN', 'TEACHER'), Course
 courseRouter.get('/mine', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.getMyCourses);
 
 courseRouter.get('/', CourseController.getAll);
-courseRouter.get('/:id', CourseController.getById);
-courseRouter.get('/:id/projects', CourseController.getProjects);
+courseRouter.get('/:id', optionalAuthenticate, CourseController.getById);
+courseRouter.get('/:id/projects', optionalAuthenticate, CourseController.getProjects);
 courseRouter.get('/:id/project-submissions', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.getCourseSubmissions);
 courseRouter.get('/:id/progress', authenticate, CourseController.getProgress);
 courseRouter.get('/:id/reviews', CourseController.getReviews);

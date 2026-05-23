@@ -55,7 +55,6 @@ export const usersApi = {
     id: string,
     data: {
       role?: string;
-      isActive?: boolean;
       formation?: string;
       duree?: string;
       dateDebut?: string;

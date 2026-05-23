@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { CourseService } from '../services/course.service';
 import { CategoryService } from '../services/category.service';
+import { CourseSnapshotService } from '../services/courseSnapshot.service';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { prisma } from '../config/prisma';
 import { ProjectModel } from '../models/project.model';
@@ -86,9 +87,50 @@ export const CourseController = {
     }
   },
 
+  /**
+   * Version-aware course detail endpoint.
+   * - Teachers / Admins: always see live content.
+   * - Enrolled students whose enrolledContentVersion < course.contentVersion: served from snapshot.
+   * - Everyone else: live content.
+   */
   async getById(req: Request, res: Response) {
     try {
-      const course = await CourseService.getById(String(req.params.id));
+      const courseId = String(req.params.id);
+      const userId = (req as AuthRequest).user?.userId;
+      const userRole = (req as AuthRequest).user?.role;
+
+      // Teachers and admins always see the latest live content.
+      const isStaff = userRole === 'ADMIN' || userRole === 'TEACHER';
+
+      if (userId && !isStaff) {
+        const enrollment = await prisma.enrollment.findUnique({
+          where: { userId_courseId: { userId, courseId } },
+          select: { status: true, enrolledContentVersion: true },
+        });
+
+        if (enrollment?.status === 'APPROVED') {
+          const courseVersion = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: { contentVersion: true },
+          });
+
+          if (
+            courseVersion &&
+            enrollment.enrolledContentVersion < courseVersion.contentVersion
+          ) {
+            const snapshot = await CourseSnapshotService.getForVersion(
+              courseId,
+              enrollment.enrolledContentVersion,
+            );
+            if (snapshot) {
+              return res.json(snapshot.snapshotData);
+            }
+            // Snapshot missing (shouldn't happen) — fall through to live.
+          }
+        }
+      }
+
+      const course = await CourseService.getById(courseId);
       res.json(course);
     } catch (err: any) {
       if (err.message === 'COURSE_NOT_FOUND') return res.status(404).json({ message: 'Course not found' });
@@ -96,9 +138,43 @@ export const CourseController = {
     }
   },
 
+  /**
+   * Version-aware projects endpoint.
+   * Old-version enrolled students receive the projects from their snapshot.
+   */
   async getProjects(req: Request, res: Response) {
     try {
-      const projects = await ProjectModel.findByCourse(String(req.params.id));
+      const courseId = String(req.params.id);
+      const userId = (req as AuthRequest).user?.userId;
+      const userRole = (req as AuthRequest).user?.role;
+      const isStaff = userRole === 'ADMIN' || userRole === 'TEACHER';
+
+      if (userId && !isStaff) {
+        const enrollment = await prisma.enrollment.findUnique({
+          where: { userId_courseId: { userId, courseId } },
+          select: { status: true, enrolledContentVersion: true },
+        });
+
+        if (enrollment?.status === 'APPROVED') {
+          const courseVersion = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: { contentVersion: true },
+          });
+
+          if (courseVersion && enrollment.enrolledContentVersion < courseVersion.contentVersion) {
+            const snapshot = await CourseSnapshotService.getForVersion(
+              courseId,
+              enrollment.enrolledContentVersion,
+            );
+            if (snapshot) {
+              const data = snapshot.snapshotData as any;
+              return res.json(data.projects ?? []);
+            }
+          }
+        }
+      }
+
+      const projects = await ProjectModel.findByCourse(courseId);
       res.json(projects);
     } catch {
       res.status(500).json({ message: 'Failed to fetch projects' });
@@ -163,23 +239,22 @@ export const CourseController = {
       });
       await CourseService.invalidateCourseCache(course.id);
 
-      // When a course transitions draft → published, notify all active students
+      // Notify only enrolled+approved students when draft → published.
       if (isBeingPublished) {
-        prisma.user.findMany({
-          where: { role: 'STUDENT', isActive: true },
-          select: { email: true, name: true },
-        }).then(async (students) => {
-          for (const s of students) {
+        prisma.enrollment.findMany({
+          where: { courseId: course.id, status: 'APPROVED' },
+          include: { user: { select: { email: true, name: true } } },
+        }).then(async (enrollments) => {
+          for (const e of enrollments) {
             await queueEmail('course-published', {
-              email: s.email,
-              name: s.name,
+              email: e.user.email,
+              name: e.user.name,
               courseTitle: course.title,
               courseDescription: course.shortDescription,
               courseId: course.id,
               frontendUrl: config.frontendUrl,
             });
           }
-          console.log(`[CoursePublish] Queued ${students.length} notification emails for "${course.title}"`);
         }).catch((err: any) => {
           console.error('[CoursePublish] Failed to queue notification emails:', err.message);
         });
@@ -191,9 +266,43 @@ export const CourseController = {
     }
   },
 
+  /**
+   * Version-aware progress endpoint.
+   * Old-version students have their progress computed against their snapshot lesson IDs.
+   */
   async getProgress(req: AuthRequest, res: Response) {
     try {
-      const progress = await CourseService.getProgress(String(req.params.id), req.user!.userId);
+      const courseId = String(req.params.id);
+      const userId = req.user!.userId;
+
+      let snapshotLessonIds: string[] | undefined;
+
+      const enrollment = await prisma.enrollment.findUnique({
+        where: { userId_courseId: { userId, courseId } },
+        select: { enrolledContentVersion: true, status: true },
+      });
+
+      if (enrollment?.status === 'APPROVED') {
+        const courseVersion = await prisma.course.findUnique({
+          where: { id: courseId },
+          select: { contentVersion: true },
+        });
+
+        if (courseVersion && enrollment.enrolledContentVersion < courseVersion.contentVersion) {
+          const snapshot = await CourseSnapshotService.getForVersion(
+            courseId,
+            enrollment.enrolledContentVersion,
+          );
+          if (snapshot) {
+            const data = snapshot.snapshotData as any;
+            snapshotLessonIds = (data.modules ?? []).flatMap(
+              (m: any) => (m.lessons ?? []).map((l: any) => l.id as string),
+            );
+          }
+        }
+      }
+
+      const progress = await CourseService.getProgress(courseId, userId, snapshotLessonIds);
       res.json(progress);
     } catch {
       res.status(500).json({ message: 'Failed to fetch progress' });
@@ -237,4 +346,3 @@ export const CourseController = {
     }
   },
 };
-

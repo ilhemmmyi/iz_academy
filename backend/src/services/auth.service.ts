@@ -38,7 +38,6 @@ export const AuthService = {
     if (!user.password) throw new Error('INVALID_CREDENTIALS');
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new Error('INVALID_CREDENTIALS');
-    if (!user.isActive) throw new Error('ACCOUNT_DISABLED');
     if (!user.isVerified) throw new Error('EMAIL_NOT_VERIFIED');
     return user;
   },
@@ -60,8 +59,7 @@ export const AuthService = {
     });
     if (!stored || stored.expiresAt < new Date()) throw new Error('INVALID_REFRESH');
     verifyRefreshToken(token); // validate signature (in-memory, no DB)
-    // Verify both isActive and isVerified — a disabled or unverified account must not renew
-    if (!stored.user || !stored.user.isActive || !stored.user.isVerified) throw new Error('INVALID_REFRESH');
+    if (!stored.user || !stored.user.isVerified) throw new Error('INVALID_REFRESH');
 
     // Delete old token + create new tokens in parallel (independent operations)
     const [tokens] = await Promise.all([
@@ -78,7 +76,7 @@ export const AuthService = {
   async forgotPassword(email: string) {
     const user = await prisma.user.findUnique({ where: { email } });
     // Always return success — never reveal whether the email exists
-    if (!user || !user.isActive) return;
+    if (!user) return;
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await prisma.user.update({
@@ -144,7 +142,6 @@ export const AuthService = {
           data: { googleId: uid, isVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
         });
       }
-      if (!user.isActive) throw new Error('ACCOUNT_DISABLED');
     } else {
       user = await prisma.user.create({
         data: { name: displayName, email, googleId: uid, role: 'STUDENT', isVerified: true },

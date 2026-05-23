@@ -521,9 +521,14 @@ export function AdminCourseView() {
         objectives: objectives.filter(o => o.trim()),
         thumbnailUrl: thumbnailUrl || null,
         ...(selectedTeacherId && selectedTeacherId !== '__admin__' ? { teacherId: selectedTeacherId } : {}),
+        // Include IDs so the backend can diff-upsert instead of delete-all-recreate.
+        // Existing items have real DB cuid IDs; newly added items have temp timestamp
+        // IDs that won't match any DB record and will be created fresh.
         modules: sections.map(s => ({
+          id: s.id,
           title: s.title,
           lessons: s.lessons.map(l => ({
+            id: l.id,
             title: l.title,
             description: l.description || undefined,
             videoUrl: l.videoUrl || undefined,
@@ -538,7 +543,7 @@ export function AdminCourseView() {
         })),
         projects: projects
           .filter(p => p.title.trim())
-          .map(p => ({ title: p.title, description: p.description, instructions: p.instructions })),
+          .map(p => ({ id: p.id, title: p.title, description: p.description, instructions: p.instructions })),
       });
 
       // Upload pending lesson resources using refreshed lesson IDs

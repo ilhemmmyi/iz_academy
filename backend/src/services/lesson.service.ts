@@ -4,19 +4,56 @@ import { getPresignedUrl } from '../utils/storage';
 import { config } from '../config';
 import { LessonModel } from '../models/lesson.model';
 import { EnrollmentModel } from '../models/enrollment.model';
+import { CourseSnapshotService } from './courseSnapshot.service';
 
 const LESSON_COMPLETE_THRESHOLD = 1.0;
 const COMPLETE_THRESHOLD_EPSILON = 0.001;
 
-/** Shared helper: check if course is fully complete and emit certificate if so. */
+/**
+ * Version-aware certificate check.
+ * Old-version students: certificate eligibility is computed against the lesson
+ * IDs captured in their snapshot so that a content update by the admin doesn't
+ * block or incorrectly grant certificates.
+ */
 async function checkAndIssueCertificate(userId: string, lessonId: string) {
   const lesson = await LessonModel.findById(lessonId);
   if (!lesson?.module?.courseId) return;
   const courseId = lesson.module.courseId;
-  const [total, done] = await Promise.all([
-    prisma.lesson.count({ where: { module: { courseId } } }),
-    LessonModel.countCompleted(userId, courseId),
-  ]);
+
+  let total: number;
+  let done: number;
+
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { userId, courseId, status: 'APPROVED' },
+    select: { enrolledContentVersion: true },
+  });
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { contentVersion: true },
+  });
+
+  if (enrollment && course && enrollment.enrolledContentVersion < course.contentVersion) {
+    // Student is on an old version — count only their snapshot's lessons.
+    const snapshot = await CourseSnapshotService.getForVersion(courseId, enrollment.enrolledContentVersion);
+    if (snapshot) {
+      const data = snapshot.snapshotData as any;
+      const snapshotLessonIds: string[] = (data.modules ?? []).flatMap(
+        (m: any) => (m.lessons ?? []).map((l: any) => l.id as string),
+      );
+      total = snapshotLessonIds.length;
+      done = await LessonModel.countCompletedByIds(userId, snapshotLessonIds);
+    } else {
+      // Snapshot missing — fall back to non-archived count.
+      total = await prisma.lesson.count({ where: { module: { courseId }, archivedAt: null } });
+      done = await LessonModel.countCompleted(userId, courseId);
+    }
+  } else {
+    // Current-version student: only non-archived lessons count.
+    total = await prisma.lesson.count({ where: { module: { courseId }, archivedAt: null } });
+    done = await LessonModel.countCompleted(userId, courseId);
+  }
+
   if (total > 0 && done >= total) {
     certificateQueue.add('issue', { userId, courseId }).catch((err) =>
       console.error('Certificate queue error:', err)
