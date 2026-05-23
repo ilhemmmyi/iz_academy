@@ -239,25 +239,19 @@ export const CourseController = {
       });
       await CourseService.invalidateCourseCache(course.id);
 
-      // Notify only enrolled+approved students when draft → published.
+      // Un seul job avec jobId fixe → BullMQ rejette automatiquement un doublon
+      // si le cours est republié avant que le job soit traité (double-clic, bug UI…).
       if (isBeingPublished) {
-        prisma.enrollment.findMany({
-          where: { courseId: course.id, status: 'APPROVED' },
-          include: { user: { select: { email: true, name: true } } },
-        }).then(async (enrollments) => {
-          for (const e of enrollments) {
-            await queueEmail('course-published', {
-              email: e.user.email,
-              name: e.user.name,
-              courseTitle: course.title,
-              courseDescription: course.shortDescription,
-              courseId: course.id,
-              frontendUrl: config.frontendUrl,
-            });
-          }
-        }).catch((err: any) => {
-          console.error('[CoursePublish] Failed to queue notification emails:', err.message);
-        });
+        await queueEmail(
+          'course-published',
+          {
+            courseId: course.id,
+            courseTitle: course.title,
+            courseDescription: course.shortDescription ?? '',
+            frontendUrl: config.frontendUrl,
+          },
+          { jobId: `course-published:${course.id}` },
+        );
       }
 
       res.json({ isPublished: updated.isPublished });

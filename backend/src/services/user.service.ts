@@ -4,7 +4,7 @@ import { UserModel, toSafeUser } from '../models/user.model';
 import { CertificateModel } from '../models/certificate.model';
 import { ProjectModel } from '../models/project.model';
 import { certificateQueue } from '../queues/certificate.queue';
-import { emailQueue } from '../queues/email.queue';
+import { queueEmail } from '../utils/queueEmail';
 import { config } from '../config';
 import { uploadToStorage, deleteFromStorage } from '../utils/storage';
 import { buildCertificatePdf } from '../utils/certificate';
@@ -92,11 +92,11 @@ export const UserService = {
 
     // Notify the new teacher by email (fire-and-forget via queue)
     if (rest.role === 'TEACHER') {
-      emailQueue.add('teacher-created', {
+      await queueEmail('teacher-created', {
         email: user.email,
         name: user.name,
         frontendUrl: config.frontendUrl,
-      }).catch((err) => console.error('[createUser] Email queue error:', err));
+      });
     }
 
     return toSafeUser(user);

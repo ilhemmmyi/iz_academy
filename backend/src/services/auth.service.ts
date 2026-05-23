@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
 import { queueEmail } from '../utils/queueEmail';
-import { EmailService } from '../utils/email';
 import { config } from '../config';
 import { admin } from '../config/firebase';
 
@@ -23,12 +22,12 @@ export const AuthService = {
         emailVerificationExpires: verificationExpires,
       },
     });
-    EmailService.sendVerificationEmail({
+    await queueEmail('verification-email', {
       to: user.email,
       name: user.name,
       token: verificationToken,
       frontendUrl: config.frontendUrl,
-    }).catch((err) => console.error('[register] Verification email error:', err));
+    });
     return { id: user.id, name: user.name, email: user.email, role: user.role };
   },
 
@@ -83,12 +82,12 @@ export const AuthService = {
       where: { id: user.id },
       data: { resetPasswordToken: token, resetPasswordExpires: expires },
     });
-    EmailService.sendPasswordResetEmail({
+    await queueEmail('password-reset', {
       to: user.email,
       name: user.name,
       token,
       frontendUrl: config.frontendUrl,
-    }).catch((err) => console.error('[forgotPassword] Email error:', err));
+    });
   },
 
   async resetPassword(token: string, newPassword: string) {

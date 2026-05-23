@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma';
-import { EmailService } from '../utils/email';
+import { queueEmail } from '../utils/queueEmail';
 
 export const ContactMessageService = {
   async submit(data: { name: string; email: string; subject: string; message: string }) {
@@ -20,14 +20,14 @@ export const ContactMessageService = {
 
     const adminEmails = admins.map((a) => a.email).filter(Boolean);
     if (adminEmails.length > 0) {
-      EmailService.sendContactNotification({
+      await queueEmail('contact-notification', {
         to: adminEmails,
         contactMessageId: contactMessage.id,
         name: contactMessage.name,
         email: contactMessage.email,
         subject: contactMessage.subject,
         message: contactMessage.message,
-      }).catch((err) => console.error('[ContactMessage] Admin notification failed:', err.message));
+      });
     }
 
     return contactMessage;
@@ -72,8 +72,7 @@ export const ContactMessageService = {
       },
     });
 
-    // Envoi direct — pas de queue, l'erreur remonte immédiatement
-    await EmailService.sendContactReply({
+    await queueEmail('contact-reply', {
       to: updated.email,
       name: updated.name,
       subject: updated.subject,

@@ -3,7 +3,7 @@ import { config } from '../config';
 import { prisma } from '../config/prisma';
 import { uploadToStorage } from '../utils/storage';
 import { buildCertificatePdf } from '../utils/certificate';
-import { emailQueue } from '../queues/email.queue';
+import { queueEmail } from '../utils/queueEmail';
 import { CertificateModel } from '../models/certificate.model';
 import { ActivityModel } from '../models/activity.model';
 
@@ -86,7 +86,7 @@ const certWorker = new Worker('certificates', async (job) => {
   ).catch((err) => console.error('[CertWorker] Activity create error:', err));
 
   // ── Send email notification ───────────────────────────────────────────────────
-  await emailQueue.add('certificate', {
+  await queueEmail('certificate', {
     email: user.email,
     name: user.name,
     courseName: course.title,

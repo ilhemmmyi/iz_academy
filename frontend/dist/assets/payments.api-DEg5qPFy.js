@@ -1,0 +1,1 @@
+import{l as e}from"./index-DrngEXqI.js";const m={getAll:()=>e("/payments"),getMine:()=>e("/payments/me"),create:(t,p)=>e("/payments",{method:"POST",body:JSON.stringify({courseId:t,amount:p})})};export{m as p};

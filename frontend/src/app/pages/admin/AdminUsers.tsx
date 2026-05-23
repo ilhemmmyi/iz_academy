@@ -305,10 +305,9 @@ export function AdminUsers() {
   // Delete confirmation
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // Edit student: enrolled courses (for course access removal)
+  // Edit student: enrolled courses (read-only display)
   const [editStudentCourses, setEditStudentCourses] = useState<{ courseId: string; courseTitle: string }[]>([]);
   const [editStudentCoursesLoading, setEditStudentCoursesLoading] = useState(false);
-  const [removingCourseId, setRemovingCourseId] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async (search: string, role: string, pageNum: number) => {
     setLoading(true);
@@ -486,26 +485,6 @@ export function AdminUsers() {
       toast.success('Utilisateur modifié avec succès.');
     } catch {
       toast.error('Erreur lors de la modification.');
-    }
-  };
-
-  const handleRemoveStudentCourseAccess = async (courseId: string) => {
-    if (!editUser) return;
-    setRemovingCourseId(courseId);
-    try {
-      await usersApi.removeStudentCourseAccess(editUser.id, courseId);
-      setEditStudentCourses(prev => prev.filter(c => c.courseId !== courseId));
-      // Refresh overview panel if open for this student
-      if (expandedStudentId === editUser.id) {
-        usersApi.getStudentOverview(editUser.id)
-          .then((data: any) => setOverview(data as StudentOverview))
-          .catch(() => {});
-      }
-      toast.success('Accès au cours supprimé.');
-    } catch {
-      toast.error("Erreur lors de la suppression de l'accès.");
-    } finally {
-      setRemovingCourseId(null);
     }
   };
 
@@ -885,19 +864,8 @@ export function AdminUsers() {
                   ) : (
                     <div className="border border-border rounded-lg divide-y divide-border max-h-48 overflow-y-auto">
                       {editStudentCourses.map(c => (
-                        <div key={c.courseId} className="flex items-center justify-between gap-3 px-3 py-2">
-                          <span className="text-sm truncate" title={c.courseTitle}>{c.courseTitle}</span>
-                          <button
-                            type="button"
-                            disabled={removingCourseId === c.courseId}
-                            onClick={() => handleRemoveStudentCourseAccess(c.courseId)}
-                            className="shrink-0 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
-                            title="Retirer l'accès à ce cours"
-                          >
-                            {removingCourseId === c.courseId
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <Trash2 className="w-3.5 h-3.5" />}
-                          </button>
+                        <div key={c.courseId} className="px-3 py-2">
+                          <span className="text-sm text-slate-700 truncate block" title={c.courseTitle}>{c.courseTitle}</span>
                         </div>
                       ))}
                     </div>

@@ -1,1 +1,0 @@
-import{j as s}from"./vendor-mui-CXlOurzX.js";import{s as o}from"./index-D-EyOm1i.js";function r({className:t,...e}){return s.jsx("div",{"data-slot":"skeleton",className:o("bg-accent animate-pulse rounded-md",t),...e})}export{r as S};
