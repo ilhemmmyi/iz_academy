@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { enrollmentsApi } from '../../api/enrollments.api';
+import { IzCoach } from './IzCoach';
 
 interface StudentLayoutProps {
   children: React.ReactNode;
@@ -360,6 +361,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
         </main>
 
       </div>
+      <IzCoach />
     </div>
   );
 }

@@ -15,7 +15,6 @@ export const UserModel = {
 export const toSafeUser = (user: any) => {
   const {
     password,
-    twoFactorSecret,
     emailVerificationToken,
     emailVerificationExpires,
     resetPasswordToken,

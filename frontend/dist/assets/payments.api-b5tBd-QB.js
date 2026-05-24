@@ -1,0 +1,1 @@
+import{m as e}from"./index-CB2vPno2.js";const a={getAll:()=>e("/payments"),getMine:()=>e("/payments/me"),create:(t,m)=>e("/payments",{method:"POST",body:JSON.stringify({courseId:t,amount:m})})};export{a as p};

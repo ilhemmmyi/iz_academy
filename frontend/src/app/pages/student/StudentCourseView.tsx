@@ -20,6 +20,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { LessonComments } from '../../components/LessonComments';
+import { CourseRatingSection } from '../../components/CourseRatingSection';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 
@@ -712,6 +713,14 @@ export function StudentCourseView() {
                 </Link>
               </div>
             </div>
+
+            {/* Course rating */}
+            {courseId && (
+              <CourseRatingSection
+                courseId={courseId}
+                canRate={progress.hasCertificate}
+              />
+            )}
 
           </div>
         </div>
