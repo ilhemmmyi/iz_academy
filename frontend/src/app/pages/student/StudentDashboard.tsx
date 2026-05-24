@@ -90,6 +90,91 @@ function ProgressDonut({ courses }: { courses: { title: string; pct: number; col
   );
 }
 
+// ── Welcome banner illustration ──────────────────────────────────────────────
+function DashboardIllustration() {
+  return (
+    <svg
+      viewBox="0 0 280 180"
+      className="w-52 lg:w-64 h-auto"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      {/* Background blobs */}
+      <circle cx="242" cy="90" r="118" fill="#c7d2fe" fillOpacity="0.28" />
+      <circle cx="268" cy="22" r="52" fill="#a5b4fc" fillOpacity="0.22" />
+      <circle cx="248" cy="172" r="38" fill="#ddd6fe" fillOpacity="0.35" />
+
+      {/* Main dashboard card */}
+      <rect x="16" y="12" width="172" height="154" rx="14" fill="white" fillOpacity="0.92" />
+      <rect x="16" y="12" width="172" height="154" rx="14" stroke="#e0e7ff" strokeWidth="1.5" />
+
+      {/* Card header */}
+      <rect x="16" y="12" width="172" height="40" rx="14" fill="#6366f1" />
+      <rect x="16" y="38" width="172" height="14" fill="#6366f1" />
+
+      {/* Header dots */}
+      <circle cx="36" cy="32" r="4" fill="white" fillOpacity="0.38" />
+      <circle cx="50" cy="32" r="4" fill="white" fillOpacity="0.38" />
+      <circle cx="64" cy="32" r="4" fill="white" fillOpacity="0.38" />
+
+      {/* Header title lines */}
+      <rect x="82" y="27" width="66" height="7" rx="3.5" fill="white" fillOpacity="0.42" />
+      <rect x="82" y="38" width="44" height="5" rx="2.5" fill="white" fillOpacity="0.22" />
+
+      {/* Progress row 1 */}
+      <rect x="34" y="66" width="48" height="5" rx="2.5" fill="#e2e8f0" />
+      <rect x="34" y="76" width="136" height="9" rx="4.5" fill="#f1f5f9" />
+      <rect x="34" y="76" width="96" height="9" rx="4.5" fill="#6366f1" />
+
+      {/* Progress row 2 */}
+      <rect x="34" y="93" width="34" height="5" rx="2.5" fill="#e2e8f0" />
+      <rect x="34" y="103" width="136" height="9" rx="4.5" fill="#f1f5f9" />
+      <rect x="34" y="103" width="62" height="9" rx="4.5" fill="#8b5cf6" />
+
+      {/* Progress row 3 */}
+      <rect x="34" y="120" width="56" height="5" rx="2.5" fill="#e2e8f0" />
+      <rect x="34" y="130" width="136" height="9" rx="4.5" fill="#f1f5f9" />
+      <rect x="34" y="130" width="112" height="9" rx="4.5" fill="#14b8a6" />
+
+      {/* Bottom mini pills */}
+      <rect x="34" y="149" width="40" height="9" rx="4.5" fill="#eef2ff" />
+      <rect x="82" y="149" width="40" height="9" rx="4.5" fill="#f0fdf4" />
+      <rect x="130" y="149" width="40" height="9" rx="4.5" fill="#fffbeb" />
+
+      {/* Floating metric badge */}
+      <rect x="196" y="42" width="72" height="62" rx="12" fill="white" />
+      <rect x="196" y="42" width="72" height="62" rx="12" stroke="#dde4ff" strokeWidth="1.5" />
+      <circle cx="218" cy="68" r="15" fill="#eef2ff" />
+      <circle cx="218" cy="68" r="11" fill="none" stroke="#e0e7ff" strokeWidth="3.5" />
+      <circle cx="218" cy="68" r="11" fill="none" stroke="#6366f1" strokeWidth="3.5"
+        strokeDasharray="48 21" strokeLinecap="round"
+        transform="rotate(-90 218 68)" />
+      <rect x="240" y="58" width="22" height="5" rx="2.5" fill="#e0e7ff" />
+      <rect x="240" y="66" width="16" height="4" rx="2"   fill="#c7d2fe" />
+      <rect x="240" y="74" width="20" height="4" rx="2"   fill="#e0e7ff" />
+      <rect x="240" y="82" width="14" height="4" rx="2"   fill="#ede9fe" />
+
+      {/* Graduation cap */}
+      <ellipse cx="244" cy="154" rx="20" ry="5" fill="#4f46e5" fillOpacity="0.1" />
+      <polygon points="232,148 244,140 256,148 244,155" fill="#6366f1" />
+      <ellipse cx="244" cy="148" rx="14" ry="4" fill="#818cf8" />
+      <rect x="243" y="148" width="2" height="14" rx="1" fill="#4338ca" />
+      <path d="M238 158 Q244 165 250 158" stroke="#4338ca" strokeWidth="2" fill="none" strokeLinecap="round" />
+
+      {/* Sparkle star */}
+      <path d="M263 16 L266.2 25.4 L276 25.4 L268.4 31.2 L271.6 40.6 L263 34.8 L254.4 40.6 L257.6 31.2 L250 25.4 L259.8 25.4 Z" fill="#fbbf24" />
+      <circle cx="250" cy="11" r="2.5" fill="#fde68a" />
+      <circle cx="278" cy="47" r="2"   fill="#fde68a" />
+
+      {/* Dot cluster (right middle) */}
+      <circle cx="193" cy="108" r="4"   fill="#a5b4fc" />
+      <circle cx="200" cy="122" r="2.5" fill="#c4b5fd" />
+      <circle cx="186" cy="120" r="2"   fill="#93c5fd" />
+    </svg>
+  );
+}
+
 // ── time-ago helper ───────────────────────────────────────────────────────────
 function timeAgo(d: string) {
   const diff = Date.now() - new Date(d).getTime();
@@ -164,35 +249,45 @@ export function StudentDashboard() {
 
         {/* Welcome banner */}
         <div className="overflow-hidden rounded-2xl border border-indigo-200 bg-indigo-50/80 shadow-sm">
-          <div className="px-6 py-5 flex flex-col gap-4">
-            <div>
-              <p className="text-indigo-400 text-xs font-medium mb-0.5">Tableau de bord étudiant</p>
-              <h1 className="text-xl font-bold text-indigo-900 mb-1">
-                Bonjour, {user?.name?.split(' ')[0] || 'Étudiant'} 👋
-              </h1>
-              <p className="text-indigo-500 text-sm">
-                Continuez sur votre lancée — chaque leçon vous rapproche de votre objectif.
-              </p>
+          <div className="px-6 py-5 flex items-center gap-4">
+
+            {/* Left: text + stat pills */}
+            <div className="flex flex-col gap-4 flex-1 min-w-0">
+              <div>
+                <p className="text-indigo-400 text-xs font-medium mb-0.5">Tableau de bord étudiant</p>
+                <h1 className="text-xl font-bold text-indigo-900 mb-1">
+                  Bonjour, {user?.name?.split(' ')[0] || 'Étudiant'} 
+                </h1>s
+                <p className="text-indigo-500 text-sm">
+                  Continuez sur votre lancée — chaque leçon vous rapproche de votre objectif.
+                </p>
+              </div>
+
+              {/* Stat pills */}
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { icon: BookOpen, label: 'Cours en cours', value: loading ? '…' : String(enrollments.length) },
+                  { icon: Clock,    label: 'Apprentissage',  value: loading ? '…' : hoursLabel },
+                  { icon: Award,    label: 'Certificats',    value: loading ? '…' : String(certCount) },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-white border border-indigo-100 rounded-lg px-3 py-2">
+                    <div className="p-1.5 bg-indigo-100 rounded-md shrink-0">
+                      <s.icon className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <div>
+                      <div className="text-base font-bold text-indigo-900 leading-tight">{s.value}</div>
+                      <div className="text-[11px] text-indigo-400 leading-tight">{s.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Stat pills */}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { icon: BookOpen, label: 'Cours en cours', value: loading ? '…' : String(enrollments.length) },
-                { icon: Clock,    label: 'Apprentissage',  value: loading ? '…' : hoursLabel },
-                { icon: Award,    label: 'Certificats',    value: loading ? '…' : String(certCount) },
-              ].map((s, i) => (
-                <div key={i} className="flex items-center gap-2 bg-white border border-indigo-100 rounded-lg px-3 py-2">
-                  <div className="p-1.5 bg-indigo-100 rounded-md shrink-0">
-                    <s.icon className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  <div>
-                    <div className="text-base font-bold text-indigo-900 leading-tight">{s.value}</div>
-                    <div className="text-[11px] text-indigo-400 leading-tight">{s.label}</div>
-                  </div>
-                </div>
-              ))}
+            {/* Right: illustration — hidden on mobile, visible md+ */}
+            <div className="hidden md:block shrink-0 -my-5 -mr-6 self-end">
+              <DashboardIllustration />
             </div>
+
           </div>
         </div>
 

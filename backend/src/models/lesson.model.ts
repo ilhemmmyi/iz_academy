@@ -105,13 +105,6 @@ export const LessonModel = {
       data: { quizId },
     }),
 
-  // Kept for backwards compat — no longer called by course update but may be used elsewhere.
-  updateManyNullQuizByCourse: (courseId: string) =>
-    prisma.lesson.updateMany({
-      where: { module: { courseId } },
-      data: { quizId: null },
-    }),
-
   findWithQuiz: (lessonId: string) =>
     prisma.lesson.findUnique({
       where: { id: lessonId },

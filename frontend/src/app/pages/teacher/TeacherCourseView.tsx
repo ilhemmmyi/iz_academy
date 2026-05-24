@@ -21,6 +21,7 @@ import { lessonsApi } from '../../../api/lessons.api';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 import { LessonComments } from '../../components/LessonComments';
+import { LessonResourceManager } from '../../components/LessonResourceManager';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
@@ -242,28 +243,14 @@ export function TeacherCourseView() {
                       <Video className="w-4 h-4" /> {selectedLesson.duration}
                     </span>
                   )}
-                  {lessonResources.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Ressources de la leçon</p>
-                      {lessonResources.map(r => (
-                        <a
-                          key={r.id}
-                          href={r.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 p-2 rounded-lg border border-border hover:bg-accent transition text-sm"
-                        >
-                          <div className="p-1 bg-primary/10 rounded flex-shrink-0">
-                            {r.type === 'LINK'
-                              ? <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                              : <FileText className="w-3.5 h-3.5 text-primary" />}
-                          </div>
-                          <span className="flex-1 truncate font-medium">{r.title}</span>
-                          {r.type === 'FILE' && <Download className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
-                        </a>
-                      ))}
-                    </div>
-                  )}
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Ressources de la leçon</p>
+                    <LessonResourceManager
+                      lessonId={selectedLesson.id}
+                      resources={lessonResources}
+                      onResourcesChange={setLessonResources}
+                    />
+                  </div>
                 </div>
               )}
             </div>

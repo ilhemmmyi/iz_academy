@@ -1,15 +1,8 @@
 import { Navbar } from '../components/Navbar';
 import { Footer } from '../components/Footer';
 import { Mail, Phone, MapPin } from 'lucide-react';
-import { Navigate } from 'react-router';
-import { useAuth } from '../../context/AuthContext';
 
 export function Contact() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Chargement...</div>;
-  if (user) return <Navigate to="/" replace />;
-
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
