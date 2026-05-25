@@ -1,0 +1,64 @@
+/*
+  Gilroy – self-hosted
+  Place the following files in  frontend/public/fonts/ :
+    Gilroy-Light.woff2 / .woff       (weight 300)
+    Gilroy-Regular.woff2 / .woff     (weight 400)
+    Gilroy-Medium.woff2 / .woff      (weight 500)
+    Gilroy-SemiBold.woff2 / .woff    (weight 600)
+    Gilroy-Bold.woff2 / .woff        (weight 700)
+    Gilroy-ExtraBold.woff2 / .woff   (weight 800)
+*/
+
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Light.woff2') format('woff2'),
+       url('/fonts/Gilroy-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Regular.woff2') format('woff2'),
+       url('/fonts/Gilroy-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Medium.woff2') format('woff2'),
+       url('/fonts/Gilroy-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-SemiBold.woff2') format('woff2'),
+       url('/fonts/Gilroy-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-Bold.woff2') format('woff2'),
+       url('/fonts/Gilroy-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gilroy';
+  src: url('/fonts/Gilroy-ExtraBold.woff2') format('woff2'),
+       url('/fonts/Gilroy-ExtraBold.woff') format('woff');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
