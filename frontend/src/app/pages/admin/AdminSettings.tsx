@@ -4,9 +4,9 @@ import { useState } from 'react';
 
 export function AdminSettings() {
   const [settings, setSettings] = useState({
-    siteName: 'Iz Academy',
+    siteName: 'Iz Solution',
     siteEmail: 'nourslama60@gmail.com',
-    supportEmail: 'support@izacademy.com',
+    supportEmail: 'support@izsolution.com',
     currency: 'DT',
     language: 'fr',
     timezone: 'Europe/Paris',

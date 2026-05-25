@@ -26,7 +26,6 @@ export function StudentProjects() {
   const { courseId } = useParams();
   const [projects, setProjects] = useState<Project[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [allLessonsCompleted, setAllLessonsCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Project | null>(null);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
@@ -42,19 +41,11 @@ export function StudentProjects() {
     Promise.all([
       projectsApi.getByCourse(courseId),
       projectsApi.mySubmissions(),
-      coursesApi.getProgress(courseId).catch(() => ({ completedLessonIds: [] })),
-      coursesApi.getById(courseId).catch(() => null),
-    ]).then(([proj, subs, progress, course]) => {
+      coursesApi.getProgress(courseId).catch(() => ({})),
+    ]).then(([proj, subs, progress]) => {
       setProjects(proj as Project[]);
       setSubmissions((subs as Submission[]).filter((s: Submission) => s.projectId && proj.some((p: Project) => p.id === s.projectId)));
       setCourseProgressPct((progress as any).percentage ?? 0);
-      if (course) {
-        const allLessons = (course.modules || []).flatMap((m: any) => m.lessons || []);
-        setAllLessonsCompleted(
-          allLessons.length > 0 &&
-          allLessons.every((l: any) => (progress.completedLessonIds || []).includes(l.id))
-        );
-      }
     }).catch(() => {}).finally(() => setLoading(false));
   }, [courseId]);
 
@@ -140,12 +131,6 @@ export function StudentProjects() {
           <p className="text-muted-foreground">Choisissez un projet à réaliser pour valider vos compétences</p>
         </div>
 
-        {!allLessonsCompleted && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-800">
-            <strong>Leçons non complétées :</strong> Vous devez terminer toutes les leçons du cours pour pouvoir soumettre un projet.
-          </div>
-        )}
-
         {loading ? (
           <div className="bg-white border border-border rounded-xl p-12 text-center text-muted-foreground">
             Chargement des projets...
@@ -207,7 +192,7 @@ export function StudentProjects() {
             )}
 
             {/* Resubmit form — shown when teacher requested improvement */}
-            {allLessonsCompleted && getSubmission(selected.id)?.status === 'NEEDS_IMPROVEMENT' && (
+            {getSubmission(selected.id)?.status === 'NEEDS_IMPROVEMENT' && (
               <div className="border-t-2 border-dashed border-orange-300 pt-4 mt-2">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertCircle className="w-4 h-4 text-orange-500" />
@@ -283,7 +268,7 @@ export function StudentProjects() {
             )}
 
             {/* Submit form — only shown when no submission exists for THIS project yet */}
-            {allLessonsCompleted && !getSubmission(selected.id) && (
+            {!getSubmission(selected.id) && (
               <div className="border-t border-border pt-4">
                 {hasBlockingCourseSubmission ? (
                   /* Student already submitted a different project for this course */

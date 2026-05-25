@@ -144,7 +144,7 @@ export function AdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="mb-2">Tableau de bord administrateur</h1>
-            <p className="text-muted-foreground">Vue d'ensemble de la plateforme Iz Academy</p>
+            <p className="text-muted-foreground">Vue d'ensemble de la plateforme Iz Solution</p>
           </div>
 
         </div>

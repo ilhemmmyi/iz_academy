@@ -29,7 +29,7 @@ export function ForgotPassword() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <GraduationCap className="w-10 h-10 text-primary" />
-            <span className="font-semibold text-2xl">Iz Academy</span>
+            <span className="font-semibold text-2xl">Iz Solution</span>
           </Link>
         </div>
 

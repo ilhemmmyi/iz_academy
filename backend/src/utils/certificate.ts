@@ -41,7 +41,7 @@ export async function buildCertificatePdf(
       .fillColor('#f59e0b')
       .fontSize(12)
       .font('Helvetica-Bold')
-      .text('IZ ACADEMY', 0, 60, { align: 'center', width: W, characterSpacing: 5 });
+      .text('IZ SOLUTION', 0, 60, { align: 'center', width: W, characterSpacing: 5 });
 
     // Title
     doc
@@ -116,7 +116,7 @@ export async function buildCertificatePdf(
        .lineWidth(1)
        .stroke('#f59e0b');
     doc.fillColor('#f59e0b').fontSize(9).font('Helvetica-Bold')
-       .text('IZ Academy', W / 2 - 55, rowY + 55, { width: 110, align: 'center' });
+       .text('IZ Solution', W / 2 - 55, rowY + 55, { width: 110, align: 'center' });
 
     // Right: cert ID
     const rightX = W - 60 - colW;

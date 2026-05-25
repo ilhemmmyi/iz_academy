@@ -43,7 +43,7 @@ export function LandingPage() {
             {/* Left content */}
             <div className="max-w-xl">
               <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-primary">
-                Apprenez à votre rythme avec Iz Academy
+                Apprenez à votre rythme avec Iz Solution
               </h1>
 
               <p className="text-xl text-gray-600 mb-8">
@@ -72,36 +72,57 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right stats card */}
-            <div className="hidden md:flex justify-end">
-              <div className="bg-white/70 backdrop-blur-lg rounded-2xl p-8 border border-gray-200 shadow-lg w-full max-w-md transition-all duration-300 hover:shadow-[0_0_40px_rgba(223,98,160,0.4)]">
-                <div className="grid grid-cols-2 gap-6 text-center">
-                  <div>
-                    <div className="text-4xl font-bold mb-2">{courses.length > 0 ? `${courses.length}+` : '—'}</div>
-                    <div className="text-gray-600">Cours disponibles</div>
-                  </div>
+            {/* Right — person photo + floating badges */}
+            <div className="hidden md:flex justify-end items-center">
+              <div className="relative w-full max-w-lg h-[260px]">
 
-                  <div>
-                    <div className="text-4xl font-bold mb-2">
-                      <Award className="w-10 h-10 mx-auto text-primary" />
-                    </div>
-                    <div className="text-gray-600">Certifications</div>
-                  </div>
+                {/* Circular purple background blob */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[300px] rounded-full bg-gradient-to-br from-blue-700 via-blue-500 to-blue-400 opacity-30" />
+                {/* Dashed ring */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[255px] h-[335px] rounded-full border-[3px] border-dashed border-blue-600 opacity-25" />
 
-                  <div>
-                    <div className="text-4xl font-bold mb-2">
-                      <Users className="w-10 h-10 mx-auto text-primary" />
-                    </div>
-                    <div className="text-gray-600">Formateurs experts</div>
-                  </div>
+                {/* Person photo — shifted down so image bottom aligns exactly with section bottom */}
+                <img
+                  src={new URL('./image-removebg-preview.png', import.meta.url).href}
+                  alt="Étudiant apprenant en ligne"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[21%] z-10 h-[145%] w-auto select-none pointer-events-none drop-shadow-xl"
+                />
 
+                {/* Floating badge — top left: cours */}
+                <div className="absolute top-1/2 -translate-y-1/2 -left-4 z-30 bg-white/75 backdrop-blur-sm rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 border border-violet-100">
+                  <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                    <BookOpen className="w-5 h-5 text-violet-600" />
+                  </div>
                   <div>
-                    <div className="text-4xl font-bold mb-2">
-                      <TrendingUp className="w-10 h-10 mx-auto text-primary" />
-                    </div>
-                    <div className="text-gray-600">Progression suivie</div>
+                    <p className="text-lg font-bold text-gray-800 leading-none">{courses.length > 0 ? `${courses.length}+` : '10+'}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Cours disponibles</p>
                   </div>
                 </div>
+
+                {/* Floating badge — top right: étudiants */}
+                <div className="absolute top-10 -right-4 z-20 bg-white/75 backdrop-blur-sm rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 border border-indigo-100">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+                    <Users className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-800 leading-none">100%</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Satisfaction</p>
+                  </div>
+                </div>
+
+                
+
+                {/* Floating badge — bottom right: certif */}
+                <div className="absolute bottom-14 -right-4 z-20 bg-white/75 backdrop-blur-sm rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 border border-emerald-100">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                    <Award className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800 leading-none">Certifié</p>
+                    <p className="text-xs text-gray-500 mt-0.5">À la fin du cours</p>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -113,7 +134,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl mb-4">
-              Pourquoi choisir Iz Academy ?
+              Pourquoi choisir Iz Solution ?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Une plateforme complète pour votre apprentissage en ligne
@@ -266,7 +287,7 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl mb-4">
-              Découvrez Iz Academy en action
+              Découvrez Iz Solution en action
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Explorez notre plateforme et voyez comment elle facilite
@@ -288,7 +309,7 @@ export function LandingPage() {
                 <>
                   <img
                     src="https://images.unsplash.com/photo-1771054244019-96f9db9720b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbmxpbmUlMjBsZWFybmluZyUyMHZpZGVvJTIwY29uZmVyZW5jZSUyMGVkdWNhdGlvbnxlbnwxfHx8fDE3NzM1MTI2Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                    alt="Démo de la plateforme Iz Academy"
+                    alt="Démo de la plateforme Iz Solution"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition">

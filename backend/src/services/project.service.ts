@@ -2,7 +2,6 @@ import { prisma } from '../config/prisma';
 import { SubmissionStatus } from '.prisma/client';
 import { certificateQueue } from '../queues/certificate.queue';
 import { ProjectModel } from '../models/project.model';
-import { LessonModel } from '../models/lesson.model';
 import { ActivityService } from './activity.service';
 
 export const ProjectService = {
@@ -12,16 +11,8 @@ export const ProjectService = {
     if (!project) throw Object.assign(new Error('Project not found'), { code: 'NOT_FOUND' });
 
     const courseId = project.courseId;
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-      include: { modules: { include: { lessons: true } } },
-    });
-    if (!course) throw Object.assign(new Error('Course not found'), { code: 'NOT_FOUND' });
-
-    const allLessonIds = course.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
-    const completedCount = await LessonModel.countCompletedByIds(studentId, allLessonIds);
-    if (completedCount < allLessonIds.length) {
-      throw Object.assign(new Error('Lessons incomplete'), { code: 'LESSONS_INCOMPLETE' });
+    if (!await prisma.course.findUnique({ where: { id: courseId } })) {
+      throw Object.assign(new Error('Course not found'), { code: 'NOT_FOUND' });
     }
 
     // One submission per COURSE (not per project).
@@ -127,23 +118,7 @@ export const ProjectService = {
     const { studentId, project } = submission;
     const courseId = project.courseId;
 
-    // Pre-flight: verify lesson completion before queuing
-    const course = await prisma.course.findUnique({
-      where: { id: courseId },
-      include: { modules: { include: { lessons: { select: { id: true } } } } },
-    });
-    if (!course) throw Object.assign(new Error('Course not found'), { code: 'NOT_FOUND' });
-
-    const allLessonIds = course.modules.flatMap((m: any) => m.lessons.map((l: any) => l.id));
-    const completedCount = await LessonModel.countCompletedByIds(studentId, allLessonIds);
-    if (completedCount < allLessonIds.length) {
-      throw Object.assign(
-        new Error('Student has not completed all lessons yet'),
-        { code: 'LESSONS_INCOMPLETE' },
-      );
-    }
-
-    // All 4 conditions met — enqueue certificate generation
+    // Enqueue certificate generation
     await certificateQueue.add(
       'generate',
       { userId: studentId, courseId },

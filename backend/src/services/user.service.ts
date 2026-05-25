@@ -151,7 +151,7 @@ export const UserService = {
     const cert = await CertificateModel.findByIdForPdf(id, userId);
     if (!cert) throw Object.assign(new Error('Certificate not found'), { code: 'NOT_FOUND' });
 
-    const tutorName = (cert.course as any)?.teacher?.name ?? 'IZ Academy';
+    const tutorName = (cert.course as any)?.teacher?.name ?? 'IZ Solution';
     const pdfBuffer = await buildCertificatePdf(
       (cert.user as any).name,
       (cert.course as any).title,

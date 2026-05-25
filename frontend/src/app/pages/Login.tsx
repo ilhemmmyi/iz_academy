@@ -67,7 +67,7 @@ export function Login() {
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center gap-2 mb-6">
               <GraduationCap className="w-10 h-10 text-primary" />
-              <span className="font-semibold text-2xl">Iz Academy</span>
+              <span className="font-semibold text-2xl">Iz Solution</span>
             </Link>
 
             <h1 className="text-3xl font-bold mb-2">
@@ -232,7 +232,7 @@ export function Login() {
         <div className="max-w-xl text-center">
 
           <h2 className="text-4xl font-bold text-gray-900 leading-tight mb-6">
-            Développez vos compétences avec Iz Academy
+            Développez vos compétences avec Iz Solution
           </h2>
 
           <p className="text-lg text-gray-600 leading-relaxed">

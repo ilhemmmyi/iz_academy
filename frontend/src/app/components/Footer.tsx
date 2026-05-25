@@ -38,7 +38,7 @@ export function Footer() {
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-2.5">
               <GraduationCap className="w-8 h-8 shrink-0" />
-              <span className="font-semibold text-xl">Iz Academy</span>
+              <span className="font-semibold text-xl">Iz Solution</span>
             </div>
 
             <p className="text-primary-foreground/75 text-sm leading-relaxed max-w-sm">
@@ -91,7 +91,7 @@ export function Footer() {
         {/* ── Bottom bar ──────────────────────────────────────────────────── */}
         <div className="border-t border-primary-foreground/15 mt-12 pt-6 text-center">
           <p className="text-primary-foreground/60 text-xs">
-            &copy; 2026 Iz Academy. Tous droits réservés.
+            &copy; 2026 Iz Solution. Tous droits réservés.
           </p>
         </div>
 

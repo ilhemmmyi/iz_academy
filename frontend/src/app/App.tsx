@@ -33,7 +33,7 @@ function MaintenancePage() {
       <div className="text-center max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <GraduationCap className="w-8 h-8 text-primary" />
-          <span className="font-semibold text-xl">Iz Academy</span>
+          <span className="font-semibold text-xl">Iz Solution</span>
         </div>
         <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-10 h-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -42,7 +42,7 @@ function MaintenancePage() {
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Site en maintenance</h1>
         <p className="text-gray-600 mb-6 leading-relaxed">
-          Iz Academy est temporairement indisponible. Nous effectuons une maintenance pour améliorer votre expérience. Nous revenons très bientôt !
+          Iz Solution est temporairement indisponible. Nous effectuons une maintenance pour améliorer votre expérience. Nous revenons très bientôt !
         </p>
         <div className="bg-white rounded-xl border border-border px-6 py-4 text-sm text-muted-foreground">
           Pour toute urgence, contactez-nous :{' '}

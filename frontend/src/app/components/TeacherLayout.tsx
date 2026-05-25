@@ -85,7 +85,7 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
 
               <Link to="/" className="flex items-center gap-2">
                 <GraduationCap className="w-8 h-8 text-primary" />
-                <span className="font-semibold text-xl">Iz Academy</span>
+                <span className="font-semibold text-xl">Iz Solution</span>
               </Link>
 
               <span className="hidden sm:inline px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">

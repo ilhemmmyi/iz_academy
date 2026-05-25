@@ -15,26 +15,11 @@ const certWorker = new Worker('certificates', async (job) => {
   // Condition 1 + 2: fetch course with its lessons
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    include: {
-      teacher: { select: { name: true } },
-      modules: { include: { lessons: { select: { id: true } } } },
-    },
+    include: { teacher: { select: { name: true } } },
   });
   if (!course) throw new Error(`Course not found: ${courseId}`);
 
-  const allLessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
-
-  // Condition 1: student has completed every lesson
-  const completedCount = await prisma.lessonProgress.count({
-    where: { userId, lessonId: { in: allLessonIds }, completed: true },
-  });
-  if (completedCount < allLessonIds.length) {
-    throw new Error(
-      `Lessons not complete: ${completedCount}/${allLessonIds.length} for user ${userId}`,
-    );
-  }
-
-  // Condition 2 + 3: project submitted and teacher-validated
+  // Condition: project submitted and teacher-validated
   const submission = await prisma.projectSubmission.findFirst({
     where: {
       studentId: userId,
@@ -60,7 +45,7 @@ const certWorker = new Worker('certificates', async (job) => {
   // ── Create DB record first so we have a stable cert.id to embed in the PDF ───
   const certRecord = existing ?? (await CertificateModel.create(userId, courseId));
 
-  const tutorName = (course as any).teacher?.name ?? 'IZ Academy';
+  const tutorName = (course as any).teacher?.name ?? 'IZ Solution';
 
   // ── Generate PDF ──────────────────────────────────────────────────────────────
   const pdfBuffer = await buildCertificatePdf(

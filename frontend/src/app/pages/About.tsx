@@ -49,10 +49,10 @@ export function About() {
         <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-blue-100 to-pink-100" />
         <div className="relative max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-primary">
-            À propos d'Iz Academy
+            À propos d'Iz Solution
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Iz Academy est une plateforme d'apprentissage en ligne conçue pour aider chaque
+            Iz Solution est une plateforme d'apprentissage en ligne conçue pour aider chaque
             apprenant à développer ses compétences à son propre rythme, avec des formateurs
             experts et des certifications reconnues.
           </p>
@@ -119,7 +119,7 @@ export function About() {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl mb-4">Questions fréquentes</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Trouvez les réponses à vos questions sur Iz Academy
+              Trouvez les réponses à vos questions sur Iz Solution
             </p>
           </div>
 

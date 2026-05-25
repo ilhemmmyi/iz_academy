@@ -85,7 +85,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
 
               <Link to="/" className="flex items-center gap-2">
                 <GraduationCap className="w-8 h-8 text-primary" />
-                <span className="font-semibold text-xl">Iz Academy</span>
+                <span className="font-semibold text-xl">Iz Solution</span>
               </Link>
             </div>
 

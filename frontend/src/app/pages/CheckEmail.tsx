@@ -10,7 +10,7 @@ export function CheckEmail() {
       <div className="w-full max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 mb-8">
           <GraduationCap className="w-10 h-10 text-primary" />
-          <span className="font-semibold text-2xl">Iz Academy</span>
+          <span className="font-semibold text-2xl">Iz Solution</span>
         </Link>
 
         <div className="bg-white border border-border rounded-xl p-10">

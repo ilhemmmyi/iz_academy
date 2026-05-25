@@ -258,7 +258,7 @@ export function StudentDashboard() {
                 <p className="text-indigo-400 text-xs font-medium mb-0.5">Tableau de bord étudiant</p>
                 <h1 className="text-xl font-bold text-indigo-900 mb-1">
                   Bonjour, {user?.name?.split(' ')[0] || 'Étudiant'} 
-                </h1>s
+                </h1>
                 <p className="text-indigo-500 text-sm">
                   Continuez sur votre lancée — chaque leçon vous rapproche de votre objectif.
                 </p>
