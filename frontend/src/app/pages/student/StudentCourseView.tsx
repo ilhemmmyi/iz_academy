@@ -15,12 +15,13 @@ import {
   Download,
   Play,
   ExternalLink,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { LessonComments } from '../../components/LessonComments';
-import { CourseRatingSection } from '../../components/CourseRatingSection';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 
@@ -66,6 +67,8 @@ export function StudentCourseView() {
     lessonDurations: Record<string, number>;
     projectStatus: string | null;
     hasCertificate: boolean;
+    accessExpiresAt: string | null;
+    isExpired: boolean;
   }>({
     completedLessonIds: [],
     videoProgress: {},
@@ -73,6 +76,8 @@ export function StudentCourseView() {
     lessonDurations: {},
     projectStatus: null,
     hasCertificate: false,
+    accessExpiresAt: null,
+    isExpired: false,
   });
   const [loading, setLoading] = useState(true);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
@@ -109,6 +114,8 @@ export function StudentCourseView() {
         lessonDurations: { ...(prev.lessonDurations || {}), ...(p.lessonDurations || {}) },
         projectStatus: p.projectStatus ?? null,
         hasCertificate: p.hasCertificate ?? false,
+        accessExpiresAt: p.accessExpiresAt ?? null,
+        isExpired: p.isExpired ?? false,
       }));
     } catch {}
   }, [courseId]);
@@ -133,7 +140,7 @@ export function StudentCourseView() {
       resourcesApi.getResources(courseId).catch(() => []),
     ]).then(([c, p, res]) => {
       setCourse(c);
-      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [], lessonDurations: p.lessonDurations || {}, projectStatus: p.projectStatus ?? null, hasCertificate: p.hasCertificate ?? false });
+      setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [], lessonDurations: p.lessonDurations || {}, projectStatus: p.projectStatus ?? null, hasCertificate: p.hasCertificate ?? false, accessExpiresAt: p.accessExpiresAt ?? null, isExpired: p.isExpired ?? false });
       setCourseResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
       if (firstLesson) {
@@ -300,6 +307,10 @@ export function StudentCourseView() {
   /* ── lesson selection ─────────────────────────────────────── */
 
   const handleSelectLesson = (lesson: any) => {
+    if (progress.isExpired) {
+      toast.error("Votre accès à ce cours a expiré.");
+      return;
+    }
     if (!isUnlockedHelper(lesson.id)) {
       if (isQuizBlockedHelper(lesson.id)) {
         toast.error('Vous devez réussir le quiz de la leçon précédente pour continuer');
@@ -346,7 +357,7 @@ export function StudentCourseView() {
           <div className="bg-white border border-border rounded-xl p-12 text-center">
             <BookOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Cours introuvable</h2>
-            <Link to="/student/courses" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition">
+            <Link to="/student" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition">
               Retour à mes cours
             </Link>
           </div>
@@ -419,17 +430,83 @@ export function StudentCourseView() {
     );
   };
 
+  const daysRemaining = (): number | null => {
+    if (!progress.accessExpiresAt) return null;
+    const diff = new Date(progress.accessExpiresAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
   /* ── render ───────────────────────────────────────────────── */
+
+  // Full-page expired screen
+  if (progress.isExpired) {
+    return (
+      <StudentLayout>
+        <div className="max-w-2xl mx-auto mt-16">
+          <div className="bg-white border border-red-200 rounded-2xl p-10 text-center shadow-sm">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-xl font-bold text-red-700 mb-2">Accès expiré</h2>
+            <p className="text-muted-foreground mb-1">
+              Votre accès au cours <span className="font-semibold text-foreground">{course.title}</span> a expiré.
+            </p>
+            {progress.accessExpiresAt && (
+              <p className="text-sm text-muted-foreground mb-6">
+                Date d'expiration :{' '}
+                {new Date(progress.accessExpiresAt).toLocaleDateString('fr-FR', {
+                  day: 'numeric', month: 'long', year: 'numeric',
+                })}
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground mb-6">
+              Pour retrouver accès au contenu, contactez un administrateur ou réinscrivez-vous au cours.
+            </p>
+            <Link
+              to="/student"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition text-sm font-medium"
+            >
+              Retour au tableau de bord
+            </Link>
+          </div>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
     <StudentLayout liveProgress={{ courseId: courseId!, pct: progressPct }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to="/student/courses" className="text-primary hover:underline mb-2 inline-block">
+          <Link to="/student" className="text-primary hover:underline mb-2 inline-block">
             ← Retour à mes cours
           </Link>
           <h1 className="mb-2">{course.title}</h1>
           <p className="text-muted-foreground">Par {course.teacher?.name || 'Formateur'}</p>
+
+          {/* Access expiry warning (≤7 days remaining) */}
+          {(() => {
+            const days = daysRemaining();
+            if (days === null || days > 7) return null;
+            return (
+              <div className={`mt-3 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium ${
+                days <= 2
+                  ? 'bg-red-50 border border-red-200 text-red-700'
+                  : 'bg-amber-50 border border-amber-200 text-amber-700'
+              }`}>
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                {days === 0
+                  ? "Votre accès à ce cours expire aujourd'hui !"
+                  : `Votre accès expire dans ${days} jour${days > 1 ? 's' : ''}.`}
+                {progress.accessExpiresAt && (
+                  <span className="ml-auto flex items-center gap-1 text-xs opacity-75">
+                    <Clock className="w-3.5 h-3.5" />
+                    {new Date(progress.accessExpiresAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -713,14 +790,6 @@ export function StudentCourseView() {
                 </Link>
               </div>
             </div>
-
-            {/* Course rating */}
-            {courseId && (
-              <CourseRatingSection
-                courseId={courseId}
-                canRate={progress.hasCertificate}
-              />
-            )}
 
           </div>
         </div>

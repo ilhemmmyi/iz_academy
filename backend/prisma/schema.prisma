@@ -245,6 +245,8 @@ model Enrollment {
   isCompleted            Boolean          @default(false)
   completedAt            DateTime?
   enrolledContentVersion Int              @default(1)
+  startDate              DateTime?
+  accessExpiresAt        DateTime?
   user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   course                 Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
   createdAt              DateTime         @default(now())

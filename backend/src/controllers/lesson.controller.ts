@@ -12,8 +12,9 @@ export const LessonController = {
       res.json({ message: 'Lesson completed' });
     } catch (err: any) {
       console.error(`[Controller Complete] Error:`, err);
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Lesson not found' });
-      if (err.code === 'NOT_ENROLLED') return res.status(403).json({ message: 'Not enrolled in this course' });
+      if (err.code === 'NOT_FOUND')      return res.status(404).json({ message: 'Lesson not found' });
+      if (err.code === 'NOT_ENROLLED')   return res.status(403).json({ message: 'Not enrolled in this course' });
+      if (err.code === 'ACCESS_EXPIRED') return res.status(403).json({ message: 'ACCESS_EXPIRED' });
       res.status(500).json({ message: 'Failed to complete lesson' });
     }
   },
@@ -40,6 +41,8 @@ export const LessonController = {
       if (err.status === 404 || err.message === 'Lesson not found') {
         return res.status(404).json({ message: 'Lesson not found' });
       }
+      if (err.code === 'ACCESS_EXPIRED') return res.status(403).json({ message: 'ACCESS_EXPIRED' });
+      if (err.code === 'NOT_ENROLLED')   return res.status(403).json({ message: 'Not enrolled in this course' });
       res.status(500).json({ message: 'Failed to save video progress' });
     }
   },
@@ -62,6 +65,9 @@ export const LessonController = {
     } catch (err: any) {
       if (err.message === 'NOT_YOUR_COURSE' || err.message === 'NOT_ENROLLED') {
         return res.status(403).json({ message: err.message === 'NOT_YOUR_COURSE' ? 'Not your course' : 'Not enrolled' });
+      }
+      if (err.code === 'ACCESS_EXPIRED' || err.message === 'ACCESS_EXPIRED') {
+        return res.status(403).json({ message: 'ACCESS_EXPIRED' });
       }
       if (err.message === 'QUIZ_REQUIRED') {
         return res.status(403).json({ message: 'QUIZ_REQUIRED' });

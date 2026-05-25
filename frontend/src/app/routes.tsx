@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { LandingPage } from "./pages/LandingPage";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -107,6 +107,7 @@ export const router = createBrowserRouter([
   },
 
   // Student Routes
+  { path: "/student/courses", element: <Navigate to="/student" replace /> },
   { path: "/student", element: <StudentGuard><StudentDashboard /></StudentGuard> },
   { path: "/student/course/:courseId", element: <StudentGuard><StudentCourseView /></StudentGuard> },
   { path: "/student/quiz/:courseId", element: <StudentGuard><StudentQuiz /></StudentGuard> },

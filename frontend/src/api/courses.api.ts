@@ -35,11 +35,4 @@ export const coursesApi = {
 
   getProgress: (id: string) => apiClient(`/courses/${id}/progress`),
 
-  getReviews: (id: string) => apiClient(`/courses/${id}/reviews`),
-
-  submitReview: (id: string, rating: number, comment?: string) =>
-    apiClient(`/courses/${id}/reviews`, {
-      method: 'POST',
-      body: JSON.stringify({ rating, comment }),
-    }),
 };

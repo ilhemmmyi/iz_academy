@@ -249,6 +249,12 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                         const pct: number = liveProgress?.courseId === courseId ? liveProgress.pct : storedPct;
                         const isActive = activeCourseId === courseId;
 
+                        const expired = !!enrollment.accessExpiresAt && new Date() > new Date(enrollment.accessExpiresAt);
+                        const daysLeft = !expired && enrollment.accessExpiresAt
+                          ? Math.ceil((new Date(enrollment.accessExpiresAt).getTime() - Date.now()) / 86400000)
+                          : null;
+                        const expiringSoon = daysLeft !== null && daysLeft <= 7;
+
                         return (
                           <Link
                             key={courseId}
@@ -261,35 +267,41 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                             }`}
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium leading-snug truncate">
+                              <p className={`text-xs font-medium leading-snug truncate ${
+                                !isActive && expired ? 'text-red-500' : ''
+                              }`}>
                                 {enrollment.course.title}
                               </p>
 
-                              {/* Progress bar */}
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <div
-                                  className={`flex-1 h-1 rounded-full overflow-hidden ${
+                              {expired ? (
+                                <p className="text-[10px] text-red-400 mt-0.5">Accès expiré</p>
+                              ) : (
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <div className={`flex-1 h-1 rounded-full overflow-hidden ${
                                     isActive ? 'bg-primary-foreground/30' : 'bg-slate-100'
-                                  }`}
-                                >
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-500 ${
-                                      isActive ? 'bg-primary-foreground' : pct >= 100 ? 'bg-emerald-500' : 'bg-primary'
-                                    }`}
-                                    style={{ width: `${Math.min(pct, 100)}%` }}
-                                  />
+                                  }`}>
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-500 ${
+                                        isActive ? 'bg-primary-foreground' : pct >= 100 ? 'bg-emerald-500' : 'bg-primary'
+                                      }`}
+                                      style={{ width: `${Math.min(pct, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-[10px] shrink-0 tabular-nums ${
+                                    isActive ? 'text-primary-foreground/80'
+                                    : expiringSoon ? 'text-amber-500'
+                                    : 'text-muted-foreground'
+                                  }`}>
+                                    {expiringSoon ? `${daysLeft}j` : `${pct}%`}
+                                  </span>
                                 </div>
-                                <span
-                                  className={`text-[10px] shrink-0 tabular-nums ${
-                                    isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                                  }`}
-                                >
-                                  {pct}%
-                                </span>
-                              </div>
+                              )}
                             </div>
 
-                            {pct >= 100 && !isActive && (
+                            {expired && !isActive && (
+                              <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                            )}
+                            {!expired && pct >= 100 && !isActive && (
                               <Award className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                             )}
                           </Link>

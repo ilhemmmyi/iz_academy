@@ -273,7 +273,7 @@ export const CourseController = {
 
       const enrollment = await prisma.enrollment.findUnique({
         where: { userId_courseId: { userId, courseId } },
-        select: { enrolledContentVersion: true, status: true },
+        select: { enrolledContentVersion: true, status: true, accessExpiresAt: true },
       });
 
       if (enrollment?.status === 'APPROVED') {
@@ -297,46 +297,12 @@ export const CourseController = {
       }
 
       const progress = await CourseService.getProgress(courseId, userId, snapshotLessonIds);
-      res.json(progress);
+      const accessExpiresAt = enrollment?.accessExpiresAt ?? null;
+      const isExpired = accessExpiresAt ? new Date() > accessExpiresAt : false;
+      res.json({ ...progress, accessExpiresAt: accessExpiresAt?.toISOString() ?? null, isExpired });
     } catch {
       res.status(500).json({ message: 'Failed to fetch progress' });
     }
   },
 
-  async getReviews(req: Request, res: Response) {
-    try {
-      const courseId = String(req.params.id);
-      const reviews = await prisma.courseReview.findMany({
-        where: { courseId },
-        include: { user: { select: { id: true, name: true } } },
-        orderBy: { createdAt: 'desc' },
-      });
-      const avg = reviews.length
-        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-        : 0;
-      res.json({ reviews, average: Math.round(avg * 10) / 10, total: reviews.length });
-    } catch {
-      res.status(500).json({ message: 'Failed to fetch reviews' });
-    }
-  },
-
-  async submitReview(req: AuthRequest, res: Response) {
-    try {
-      const courseId = String(req.params.id);
-      const userId = req.user!.userId;
-      const { rating, comment } = req.body;
-      if (!rating || rating < 1 || rating > 5) {
-        return res.status(400).json({ message: 'Rating must be between 1 and 5' });
-      }
-      const review = await prisma.courseReview.upsert({
-        where: { userId_courseId: { userId, courseId } },
-        update: { rating: Number(rating), comment: comment?.trim() || null },
-        create: { userId, courseId, rating: Number(rating), comment: comment?.trim() || null },
-        include: { user: { select: { id: true, name: true } } },
-      });
-      res.json(review);
-    } catch {
-      res.status(500).json({ message: 'Failed to submit review' });
-    }
-  },
 };

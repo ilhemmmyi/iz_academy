@@ -9,6 +9,7 @@ import {
   MessageSquare,
   FolderKanban,
   Activity,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
@@ -290,6 +291,49 @@ export function StudentDashboard() {
 
           </div>
         </div>
+
+        {/* Expiry alerts */}
+        {!loading && (() => {
+          const now = Date.now();
+          const expired = enrollments.filter(e =>
+            e.accessExpiresAt && new Date(e.accessExpiresAt).getTime() < now
+          );
+          const expiringSoon = enrollments.filter(e =>
+            e.accessExpiresAt &&
+            new Date(e.accessExpiresAt).getTime() >= now &&
+            Math.ceil((new Date(e.accessExpiresAt).getTime() - now) / 86400000) <= 7
+          );
+          if (expired.length === 0 && expiringSoon.length === 0) return null;
+          return (
+            <div className="space-y-2">
+              {expired.map((e: any) => (
+                <div key={e.id} className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm">
+                  <Lock className="w-4 h-4 text-red-500 shrink-0" />
+                  <span className="text-red-700 flex-1 min-w-0">
+                    Votre accès au cours <span className="font-semibold">{e.course.title}</span> a expiré.
+                  </span>
+                  <Link to={`/student/course/${e.course.id}`} className="text-xs text-red-600 hover:underline shrink-0">
+                    Voir →
+                  </Link>
+                </div>
+              ))}
+              {expiringSoon.map((e: any) => {
+                const days = Math.ceil((new Date(e.accessExpiresAt).getTime() - now) / 86400000);
+                return (
+                  <div key={e.id} className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+                    <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-amber-700 flex-1 min-w-0">
+                      <span className="font-semibold">{e.course.title}</span> expire dans {days} jour{days > 1 ? 's' : ''}.
+                    </span>
+                    <Link to={`/student/course/${e.course.id}`} className="text-xs text-amber-600 hover:underline shrink-0">
+                      Voir →
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* Progression + Chart */}
         <div className="grid lg:grid-cols-3 gap-6">

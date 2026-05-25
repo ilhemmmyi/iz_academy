@@ -20,8 +20,6 @@ courseRouter.get('/:id', optionalAuthenticate, CourseController.getById);
 courseRouter.get('/:id/projects', optionalAuthenticate, CourseController.getProjects);
 courseRouter.get('/:id/project-submissions', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.getCourseSubmissions);
 courseRouter.get('/:id/progress', authenticate, CourseController.getProgress);
-courseRouter.get('/:id/reviews', CourseController.getReviews);
-courseRouter.post('/:id/reviews', authenticate, CourseController.submitReview);
 
 courseRouter.post('/', authenticate, requireRole('ADMIN'), validate(createCourseSchema),CourseController.create);
 courseRouter.put('/:id', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.update);

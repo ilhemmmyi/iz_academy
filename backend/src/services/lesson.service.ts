@@ -9,6 +9,19 @@ import { CourseSnapshotService } from './courseSnapshot.service';
 const LESSON_COMPLETE_THRESHOLD = 1.0;
 const COMPLETE_THRESHOLD_EPSILON = 0.001;
 
+function assertAccessNotExpired(enrollment: { accessExpiresAt: Date | null } | null) {
+  if (!enrollment) {
+    const err: any = new Error('Not enrolled');
+    err.code = 'NOT_ENROLLED';
+    throw err;
+  }
+  if (enrollment.accessExpiresAt && new Date() > enrollment.accessExpiresAt) {
+    const err: any = new Error('Access expired');
+    err.code = 'ACCESS_EXPIRED';
+    throw err;
+  }
+}
+
 /**
  * Version-aware certificate check.
  * Old-version students: certificate eligibility is computed against the lesson
@@ -72,11 +85,7 @@ export const LessonService = {
       throw err;
     }
     const enrolled = await EnrollmentModel.findApproved(userId, lesson.module.courseId);
-    if (!enrolled) {
-      const err: any = new Error('Not enrolled');
-      err.code = 'NOT_ENROLLED';
-      throw err;
-    }
+    assertAccessNotExpired(enrolled);
     await LessonModel.upsertProgress(userId, lessonId, {
       completed: true,
       completedAt: new Date(),
@@ -102,6 +111,11 @@ export const LessonService = {
       const err: any = new Error('Lesson not found');
       err.status = 404;
       throw err;
+    }
+
+    if (lesson.module?.courseId) {
+      const enrolled = await EnrollmentModel.findApproved(userId, lesson.module.courseId);
+      assertAccessNotExpired(enrolled);
     }
 
     const progress = await LessonModel.getProgress(userId, lessonId);
@@ -184,7 +198,7 @@ export const LessonService = {
         if (!course || course.teacherId !== userId) throw new Error('NOT_YOUR_COURSE');
       } else {
         const enrolled = await EnrollmentModel.findApproved(userId, courseId);
-        if (!enrolled) throw new Error('NOT_ENROLLED');
+        assertAccessNotExpired(enrolled);
 
         // Enforce sequential quiz progression lock
         const canAccess = await LessonService.canUnlock(lessonId, userId);

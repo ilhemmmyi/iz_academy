@@ -3,6 +3,7 @@ import { queueEmail } from '../utils/queueEmail';
 import { EnrollmentModel } from '../models/enrollment.model';
 import { ActivityModel } from '../models/activity.model';
 import { withCache } from '../utils/cache';
+import { parseDurationToDays } from '../utils/parseDuration';
 import {
   calculateCourseProgressPercentage,
   getLessonProgressPercentage,
@@ -32,16 +33,24 @@ export const EnrollmentService = {
   async updateStatus(id: string, status: 'APPROVED' | 'REJECTED') {
     const enrollment = await EnrollmentModel.updateStatus(id, status);
     if (status === 'APPROVED') {
-      // Stamp the current content version at approval time so the student's
-      // experience is anchored to the content that exists when they gain access.
+      // Stamp the current content version + compute access expiry from course duration.
       const course = await prisma.course.findUnique({
         where: { id: enrollment.courseId },
-        select: { contentVersion: true },
+        select: { contentVersion: true, duration: true },
       });
       if (course) {
+        const startDate = new Date();
+        const durationDays = course.duration ? parseDurationToDays(course.duration) : null;
+        const accessExpiresAt = durationDays != null
+          ? new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000)
+          : null;
         await prisma.enrollment.update({
           where: { id },
-          data: { enrolledContentVersion: course.contentVersion },
+          data: {
+            enrolledContentVersion: course.contentVersion,
+            startDate,
+            ...(accessExpiresAt ? { accessExpiresAt } : {}),
+          },
         });
       }
     }
