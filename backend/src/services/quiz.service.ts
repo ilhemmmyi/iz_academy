@@ -19,6 +19,7 @@ export const QuizService = {
 
     const enrolled = await EnrollmentModel.findApproved(userId, lesson.module.courseId);
     if (!enrolled) throw new Error('NOT_ENROLLED');
+    if (enrolled.accessExpiresAt && enrolled.accessExpiresAt < new Date()) throw new Error('ACCESS_EXPIRED');
 
     const progress = await prisma.lessonProgress.findUnique({
       where: { userId_lessonId: { userId, lessonId } },
@@ -38,6 +39,7 @@ export const QuizService = {
 
     const enrolled = await EnrollmentModel.findApproved(userId, quiz.courseId);
     if (!enrolled) throw new Error('NOT_ENROLLED');
+    if (enrolled.accessExpiresAt && enrolled.accessExpiresAt < new Date()) throw new Error('ACCESS_EXPIRED');
 
     // All lessons associated with this quiz must be completed first
     if (quiz.lessons.length > 0) {

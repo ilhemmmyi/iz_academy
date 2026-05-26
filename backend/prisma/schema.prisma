@@ -64,11 +64,11 @@ model User {
   dateDebut           String?
   hasCompletedCoach   Boolean          @default(false)
   mustChangePassword          Boolean          @default(false)
-  isVerified                  Boolean          @default(true)
-  emailVerificationToken      String?          @unique
-  emailVerificationExpires    DateTime?
-  resetPasswordToken          String?          @unique
-  resetPasswordExpires        DateTime?
+  isVerified                      Boolean          @default(true)
+  emailVerificationTokenHash      String?          @unique  // SHA-256 hash of raw token; raw token sent by email only
+  emailVerificationExpires        DateTime?
+  passwordResetTokenHash          String?          @unique  // SHA-256 hash of raw token; raw token sent by email only
+  resetPasswordExpires            DateTime?
   phone               String?
   address             String?
   educationLevel      String?
@@ -449,6 +449,27 @@ model SiteSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  correlationId String?
+  actorId       String?  // null for system/unauthenticated actions
+  actorRole     String?
+  action        String   // e.g. "AUTH.LOGIN", "COURSE.DELETE"
+  targetType    String?  // e.g. "User", "Course", "Enrollment"
+  targetId      String?
+  payload       Json?    // sanitized metadata — never contains passwords or tokens
+  ipAddress     String?
+  userAgent     String?
+  checksum      String?  // HMAC-SHA256 over canonical record fields; verify with AUDIT_HMAC_SECRET
+  createdAt     DateTime @default(now())
+
+  // Append-only: no updatedAt, no update/delete routes
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }
 
 model Activity {

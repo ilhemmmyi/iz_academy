@@ -7,6 +7,7 @@ import { prisma } from '../config/prisma';
 import { ProjectModel } from '../models/project.model';
 import { queueEmail } from '../utils/queueEmail';
 import { config } from '../config';
+import { AuditService, AuditAction, extractRequestContext } from '../services/audit.service';
 
 export const CourseController = {
 
@@ -195,6 +196,7 @@ export const CourseController = {
       const { teacherId: requestedTeacherId, ...rest } = req.body;
       const teacherId = requestedTeacherId || req.user!.userId;
       const course = await CourseService.create({ ...rest, teacherId });
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.COURSE_CREATE, targetType: 'Course', targetId: course.id, payload: { title: course.title, teacherId: course.teacherId }, ...extractRequestContext(req) });
       res.status(201).json(course);
     } catch {
       res.status(500).json({ message: 'Failed to create course' });
@@ -220,6 +222,7 @@ export const CourseController = {
   async delete(req: AuthRequest, res: Response) {
     try {
       await CourseService.delete(String(req.params.id));
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.COURSE_DELETE, targetType: 'Course', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.json({ message: 'Course deleted' });
     } catch {
       res.status(500).json({ message: 'Failed to delete course' });
@@ -238,6 +241,7 @@ export const CourseController = {
         data: { isPublished: isBeingPublished },
       });
       await CourseService.invalidateCourseCache(course.id);
+      AuditService.admin({ actorId: (req as AuthRequest).user!.userId, actorRole: (req as AuthRequest).user!.role, action: isBeingPublished ? AuditAction.COURSE_PUBLISH : AuditAction.COURSE_UNPUBLISH, targetType: 'Course', targetId: course.id, ...extractRequestContext(req) });
 
       // Un seul job avec jobId fixe → BullMQ rejette automatiquement un doublon
       // si le cours est republié avant que le job soit traité (double-clic, bug UI…).

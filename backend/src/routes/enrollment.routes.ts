@@ -4,10 +4,11 @@ import { authenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { enrollmentRequestSchema, enrollmentStatusSchema } from '../validators/enrollment.validators';
+import { enrollmentRequestLimiter } from '../middlewares/rate-limit.middleware';
 
 export const enrollmentRouter = Router();
 
-enrollmentRouter.post('/', authenticate, validate(enrollmentRequestSchema), EnrollmentController.request);
+enrollmentRouter.post('/', authenticate, enrollmentRequestLimiter, validate(enrollmentRequestSchema), EnrollmentController.request);
 enrollmentRouter.get('/', authenticate, requireRole('ADMIN'), EnrollmentController.getAll);
 enrollmentRouter.get('/me', authenticate, EnrollmentController.getMyEnrollments);
 enrollmentRouter.get('/watch-stats', authenticate, EnrollmentController.getWatchStats);

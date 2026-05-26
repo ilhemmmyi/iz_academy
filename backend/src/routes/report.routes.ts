@@ -2,11 +2,12 @@ import { Router } from 'express';
 import { ReportController } from '../controllers/report.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
+import { reportLimiter } from '../middlewares/rate-limit.middleware';
 
 export const reportRouter = Router();
 
 // Any authenticated user can submit a report
-reportRouter.post('/', authenticate, ReportController.create);
+reportRouter.post('/', authenticate, reportLimiter, ReportController.create);
 
 // Admin only: list all reports
 reportRouter.get('/', authenticate, requireRole('ADMIN'), ReportController.getAll);

@@ -1,8 +1,7 @@
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { prisma } from '../config/prisma';
 import { generateAccessToken } from '../utils/jwt';
-import { generateRefreshToken, hashRefreshToken } from '../utils/tokenUtils';
+import { generateSecureToken, hashToken, generateRefreshToken, hashRefreshToken } from '../utils/tokenUtils';
 import { queueEmail } from '../utils/queueEmail';
 import { config } from '../config';
 import { admin } from '../config/firebase';
@@ -13,20 +12,20 @@ export const AuthService = {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new Error('EMAIL_EXISTS');
     const hashed = await bcrypt.hash(password, 12);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const rawVerificationToken = generateSecureToken();
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const user = await prisma.user.create({
       data: {
         name, email, password: hashed, role: 'STUDENT',
         isVerified: false,
-        emailVerificationToken: verificationToken,
+        emailVerificationTokenHash: hashToken(rawVerificationToken),
         emailVerificationExpires: verificationExpires,
       },
     });
     await queueEmail('verification-email', {
       to: user.email,
       name: user.name,
-      token: verificationToken,
+      token: rawVerificationToken,
       frontendUrl: config.frontendUrl,
     });
     return { id: user.id, name: user.name, email: user.email, role: user.role };
@@ -76,31 +75,35 @@ export const AuthService = {
     return tokens;
   },
 
-  async logout(rawToken: string) {
+  async logout(rawToken: string): Promise<{ userId: string | null }> {
     const tokenHash = hashRefreshToken(rawToken);
+    // Resolve userId before deleting so the audit log has a real actorId.
+    const stored = await prisma.refreshToken.findUnique({ where: { tokenHash }, select: { userId: true } });
     await prisma.refreshToken.deleteMany({ where: { tokenHash } });
+    return { userId: stored?.userId ?? null };
   },
 
   async forgotPassword(email: string) {
     const user = await prisma.user.findUnique({ where: { email } });
     // Always return success — never reveal whether the email exists
     if (!user) return;
-    const token = crypto.randomBytes(32).toString('hex');
+    const rawResetToken = generateSecureToken();
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await prisma.user.update({
       where: { id: user.id },
-      data: { resetPasswordToken: token, resetPasswordExpires: expires },
+      data: { passwordResetTokenHash: hashToken(rawResetToken), resetPasswordExpires: expires },
     });
     await queueEmail('password-reset', {
       to: user.email,
       name: user.name,
-      token,
+      token: rawResetToken,
       frontendUrl: config.frontendUrl,
     });
   },
 
   async resetPassword(token: string, newPassword: string) {
-    const user = await prisma.user.findUnique({ where: { resetPasswordToken: token } });
+    const tokenHash = hashToken(token);
+    const user = await prisma.user.findUnique({ where: { passwordResetTokenHash: tokenHash } });
     if (!user) throw new Error('INVALID_TOKEN');
     if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
       throw new Error('TOKEN_EXPIRED');
@@ -110,29 +113,32 @@ export const AuthService = {
       where: { id: user.id },
       data: {
         password: hashed,
-        resetPasswordToken: null,
+        passwordResetTokenHash: null,
         resetPasswordExpires: null,
         isVerified: true,
         mustChangePassword: false,
-        emailVerificationToken: null,
+        emailVerificationTokenHash: null,
         emailVerificationExpires: null,
       },
     });
     // Invalidate all existing sessions after a password reset
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+    return { userId: user.id };
   },
 
   async verifyEmail(token: string) {
-    const user = await prisma.user.findUnique({ where: { emailVerificationToken: token } });
+    const tokenHash = hashToken(token);
+    const user = await prisma.user.findUnique({ where: { emailVerificationTokenHash: tokenHash } });
     if (!user) throw new Error('INVALID_TOKEN');
     if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
       throw new Error('TOKEN_EXPIRED');
     }
     await prisma.user.update({
       where: { id: user.id },
-      data: { isVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
+      data: { isVerified: true, emailVerificationTokenHash: null, emailVerificationExpires: null },
     });
     await queueEmail('welcome', { name: user.name, email: user.email });
+    return { userId: user.id };
   },
 
   async googleLogin(uid: string, email: string, displayName: string, firebaseToken: string) {
@@ -149,7 +155,7 @@ export const AuthService = {
       if (!user.googleId) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { googleId: uid, isVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
+          data: { googleId: uid, isVerified: true, emailVerificationTokenHash: null, emailVerificationExpires: null },
         });
       }
     } else {

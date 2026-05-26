@@ -36,7 +36,7 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-100 via-blue-100 to-pink-100" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100" />
 
         <div className="relative max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">

@@ -2,11 +2,12 @@ import { Router } from 'express';
 import { ProjectController } from '../controllers/project.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
+import { projectSubmitLimiter } from '../middlewares/rate-limit.middleware';
 
 export const projectRouter = Router();
 
-// Student 
-projectRouter.post('/:projectId/submit', authenticate, requireRole('STUDENT'), ProjectController.submit);
+// Student
+projectRouter.post('/:projectId/submit', authenticate, requireRole('STUDENT'), projectSubmitLimiter, ProjectController.submit);
 projectRouter.get('/my-submissions', authenticate, requireRole('STUDENT'), ProjectController.mySubmissions);
 projectRouter.delete('/submissions/:submissionId', authenticate, requireRole('STUDENT'), ProjectController.deleteSubmission);
 
@@ -14,5 +15,5 @@ projectRouter.delete('/submissions/:submissionId', authenticate, requireRole('ST
 projectRouter.get('/teacher/submissions', authenticate, requireRole('TEACHER', 'ADMIN'), ProjectController.teacherSubmissions);
 projectRouter.put('/submissions/:submissionId/review', authenticate, requireRole('TEACHER', 'ADMIN'), ProjectController.review);
 
-// Admin 
+// Admin
 projectRouter.get('/submissions/pending-approval', authenticate, requireRole('ADMIN'), ProjectController.listValidatedPendingApproval);

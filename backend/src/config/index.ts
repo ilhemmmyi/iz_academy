@@ -3,6 +3,7 @@ const required = [
   'DATABASE_URL',
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET',
+  'CSRF_SECRET',
   'FRONTEND_URL',
   'REDIS_URL',
   'SUPABASE_URL',
@@ -33,11 +34,18 @@ if (
   process.exit(1);
 }
 
+// Warn if AUDIT_HMAC_SECRET is missing — checksums will be skipped, not fatal.
+if (!process.env.AUDIT_HMAC_SECRET) {
+  console.warn('[config] AUDIT_HMAC_SECRET is not set — audit log checksums will be disabled.');
+}
+
 export const config = {
   port: Number(process.env.PORT) || 4000,
   nodeEnv: process.env.NODE_ENV || 'development',
   jwtAccessSecret: jwtAccess,
   jwtRefreshSecret: jwtRefresh,
+  csrfSecret: process.env.CSRF_SECRET!,
+  auditHmacSecret: process.env.AUDIT_HMAC_SECRET || null,
   jwtAccessExpires: process.env.JWT_ACCESS_EXPIRES || '15m',
   jwtRefreshExpires: process.env.JWT_REFRESH_EXPIRES || '7d',
   frontendUrl: process.env.FRONTEND_URL!,
@@ -59,4 +67,9 @@ export const config = {
   quizPassThreshold: Number(process.env.QUIZ_PASS_THRESHOLD) || 80,
   huggingFaceApiKey: process.env.HUGGINGFACE_API_KEY || '',
   huggingFaceModel: process.env.HUGGINGFACE_MODEL || 'microsoft/Phi-3.5-mini-instruct',
+  rateLimits: {
+    authMax:         Number(process.env.RATE_LIMIT_AUTH_MAX)        || 5,
+    uploadMax:       Number(process.env.RATE_LIMIT_UPLOAD_MAX)      || 20,
+    certificateMax:  Number(process.env.RATE_LIMIT_CERTIFICATE_MAX) || 5,
+  },
 };

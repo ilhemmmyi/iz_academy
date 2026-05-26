@@ -1,9 +1,11 @@
 import { prisma } from '../config/prisma';
 import { uploadToStorage, deleteFromStorage } from '../utils/storage';
+import { assertActiveEnrollment } from '../utils/enrollmentGuard';
 
 export const LessonResourceService = {
 
-  async getByLesson(lessonId: string) {
+  async getByLesson(lessonId: string, userId: string, userRole: string) {
+    await LessonResourceService._checkReadAccess(lessonId, userId, userRole);
     return prisma.lessonResource.findMany({
       where: { lessonId },
       orderBy: { createdAt: 'asc' },
@@ -34,6 +36,21 @@ export const LessonResourceService = {
       await deleteFromStorage(resource.url).catch(() => {});
     }
     await prisma.lessonResource.delete({ where: { id } });
+  },
+
+  // Internal helper — read access for ADMIN, course teacher, or actively enrolled student
+  async _checkReadAccess(lessonId: string, userId: string, userRole: string) {
+    if (userRole === 'ADMIN') return;
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: { module: { include: { course: { select: { id: true, teacherId: true } } } } },
+    });
+    if (!lesson) throw Object.assign(new Error('Lesson not found'), { code: 'NOT_FOUND' });
+    if (userRole === 'TEACHER') {
+      if (lesson.module.course.teacherId !== userId) throw Object.assign(new Error('Forbidden'), { code: 'FORBIDDEN' });
+      return;
+    }
+    await assertActiveEnrollment(userId, lesson.module.course.id);
   },
 
   // Internal helper — verify the requester is ADMIN or teacher of the course owning this lesson

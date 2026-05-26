@@ -3,21 +3,24 @@ import { AuthController } from '../controllers/auth.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { registerSchema, loginSchema, googleLoginSchema, resetPasswordSchema } from '../validators/auth.validators';
-import rateLimit from 'express-rate-limit';
+import {
+  authLoginLimiter,
+  authRegisterLimiter,
+  authForgotPasswordLimiter,
+  authResetPasswordLimiter,
+  authRefreshLimiter,
+} from '../middlewares/rate-limit.middleware';
 
 export const authRouter = Router();
 
-const isDev = process.env.NODE_ENV !== 'production';
-const loginLimiter = rateLimit({ windowMs: 3 * 60 * 1000, max: isDev ? 100 : 10, standardHeaders: true, legacyHeaders: false });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: isDev ? 100 : 5, standardHeaders: true, legacyHeaders: false });
-const forgotPasswordLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: isDev ? 100 : 3, standardHeaders: true, legacyHeaders: false });
-const resetPasswordLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: isDev ? 100 : 5, standardHeaders: true, legacyHeaders: false });
+// GET — safe method, no CSRF token required, issues a fresh CSRF token pair
+authRouter.get('/csrf-token', AuthController.getCsrfToken);
 
 authRouter.get('/verify-email', AuthController.verifyEmail);
-authRouter.post('/forgot-password', forgotPasswordLimiter, AuthController.forgotPassword);
-authRouter.post('/reset-password', resetPasswordLimiter, validate(resetPasswordSchema), AuthController.resetPassword);
-authRouter.post('/register', registerLimiter, validate(registerSchema), AuthController.register);
-authRouter.post('/login', loginLimiter, validate(loginSchema), AuthController.login);
-authRouter.post('/google', loginLimiter, validate(googleLoginSchema), AuthController.googleLogin);
-authRouter.post('/refresh', AuthController.refresh);
+authRouter.post('/forgot-password', authForgotPasswordLimiter, AuthController.forgotPassword);
+authRouter.post('/reset-password', authResetPasswordLimiter, validate(resetPasswordSchema), AuthController.resetPassword);
+authRouter.post('/register', authRegisterLimiter, validate(registerSchema), AuthController.register);
+authRouter.post('/login', authLoginLimiter, validate(loginSchema), AuthController.login);
+authRouter.post('/google', authLoginLimiter, validate(googleLoginSchema), AuthController.googleLogin);
+authRouter.post('/refresh', authRefreshLimiter, AuthController.refresh);
 authRouter.post('/logout', AuthController.logout);

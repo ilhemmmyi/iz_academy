@@ -25,6 +25,10 @@ import { aiRouter } from './routes/ai.routes';
 import { activityRouter } from './routes/activity.routes';
 import { settingsRouter } from './routes/settings.routes';
 import { errorHandler } from './middlewares/error.middleware';
+import { csrfProtection } from './middlewares/csrf.middleware';
+import { correlationIdMiddleware } from './middlewares/correlationId.middleware';
+import { auditLogRouter } from './routes/auditLog.routes';
+import { AuditService, extractRequestContext } from './services/audit.service';
 
 // M-2 — N'initialiser Sentry que si le DSN est configuré
 if (config.sentryDsn && !config.sentryDsn.includes('xxx')) {
@@ -32,6 +36,13 @@ if (config.sentryDsn && !config.sentryDsn.includes('xxx')) {
 }
 
 const app = express();
+
+// Trust the first upstream proxy hop so req.ip reflects the real client IP
+// from X-Forwarded-For. Safe only when deployed behind a single reverse proxy
+// (Nginx, AWS ALB, etc.). In development this is a no-op (direct connections).
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 app.use(helmet());
 
@@ -43,6 +54,11 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
+app.use(correlationIdMiddleware);
+
+// CSRF protection — must come after cookieParser, before routes.
+// See middlewares/csrf.middleware.ts for full threat-model documentation.
+app.use(csrfProtection);
 
 // Global rate limit — 200 req/min per IP (excludes auth routes which have stricter limits)
 const globalLimiter = rateLimit({
@@ -50,6 +66,17 @@ const globalLimiter = rateLimit({
   max: process.env.NODE_ENV === 'production' ? 200 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  handler(req, res) {
+    AuditService.security({
+      actorId: null,
+      action: 'SECURITY.RATE_LIMIT',
+      targetType: 'Route',
+      targetId: req.path,
+      payload: { method: req.method },
+      ...extractRequestContext(req),
+    });
+    res.status(429).json({ success: false, error: 'Too many requests' });
+  },
 });
 app.use(globalLimiter);
 
@@ -75,6 +102,7 @@ app.use('/api/reports', reportRouter);
 app.use('/api/lessons', lessonResourceRouter);
 app.use('/api/activities', activityRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/audit-logs', auditLogRouter);
 
 Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);

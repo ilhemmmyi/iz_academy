@@ -21,6 +21,7 @@ export const QuizController = {
       res.json(quiz);
     } catch (err: any) {
       if (err.message === 'NOT_ENROLLED') return res.status(403).json({ message: 'Not enrolled in this course' });
+      if (err.message === 'ACCESS_EXPIRED') return res.status(403).json({ message: 'Your access to this course has expired' });
       if (err.message === 'LESSON_NOT_COMPLETED') return res.status(403).json({ message: 'You must complete the lesson before taking the quiz' });
       res.status(500).json({ message: 'Failed to fetch quiz' });
     }
@@ -34,6 +35,7 @@ export const QuizController = {
     } catch (err: any) {
       if (err.message === 'QUIZ_NOT_FOUND') return res.status(404).json({ message: 'Quiz not found' });
       if (err.message === 'NOT_ENROLLED') return res.status(403).json({ message: 'You are not enrolled in this course' });
+      if (err.message === 'ACCESS_EXPIRED') return res.status(403).json({ message: 'Your access to this course has expired' });
       if (err.message === 'LESSON_NOT_COMPLETED') return res.status(403).json({ message: 'You must complete the lesson before taking the quiz' });
       res.status(500).json({ message: 'Failed to submit quiz' });
     }

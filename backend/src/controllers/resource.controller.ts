@@ -6,9 +6,10 @@ export const ResourceController = {
 
   async getResources(req: AuthRequest, res: Response) {
     try {
-      const resources = await ResourceService.getByCourse(String(req.params.courseId));
+      const resources = await ResourceService.getByCourse(String(req.params.courseId), req.user!.userId, req.user!.role);
       res.json(resources);
-    } catch {
+    } catch (err: any) {
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
       res.status(500).json({ message: 'Failed to fetch resources' });
     }
   },
@@ -29,7 +30,7 @@ export const ResourceController = {
 
   async deleteResource(req: AuthRequest, res: Response) {
     try {
-      await ResourceService.delete(String(req.params.id), req.user!.userId);
+      await ResourceService.delete(String(req.params.id), req.user!.userId, req.user!.role);
       res.json({ message: 'Resource deleted' });
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Resource not found' });

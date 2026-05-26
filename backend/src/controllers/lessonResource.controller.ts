@@ -6,9 +6,11 @@ export const LessonResourceController = {
 
   async getResources(req: AuthRequest, res: Response) {
     try {
-      const resources = await LessonResourceService.getByLesson(String(req.params.lessonId));
+      const resources = await LessonResourceService.getByLesson(String(req.params.lessonId), req.user!.userId, req.user!.role);
       res.json(resources);
-    } catch {
+    } catch (err: any) {
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
       res.status(500).json({ message: 'Failed to fetch lesson resources' });
     }
   },

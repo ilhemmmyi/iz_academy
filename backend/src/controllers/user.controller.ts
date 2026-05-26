@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { UserService } from '../services/user.service';
 import { prisma } from '../config/prisma';
+import { AuditService, AuditAction, extractRequestContext } from '../services/audit.service';
 
 export const UserController = {
 
@@ -83,6 +84,7 @@ export const UserController = {
         return res.status(400).json({ message: 'Cannot delete your own account' });
       }
       await UserService.deleteUser(String(req.params.id), req.user!.userId);
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_DELETE, targetType: 'User', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.json({ message: 'User deleted' });
     } catch (err: any) {
       res.status(500).json({ message: 'Failed to delete user' });
@@ -103,6 +105,7 @@ export const UserController = {
         return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
       }
       const user = await UserService.createUser({ name, email, role: normalizedRole, formation, duree, dateDebut, password });
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_CREATE, targetType: 'User', targetId: user.id, payload: { email: user.email, role: user.role }, ...extractRequestContext(req) });
       res.status(201).json(user);
     } catch (err: any) {
       if (err.code === 'CONFLICT') return res.status(409).json({ message: 'Email already in use' });
@@ -129,6 +132,7 @@ export const UserController = {
         newPassword,
         typeof currentPassword === 'string' && currentPassword.length > 0 ? currentPassword : undefined,
       );
+      AuditService.auth({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.AUTH_PASSWORD_CHANGE, targetType: 'User', targetId: req.user!.userId, ...extractRequestContext(req) });
       res.json({ message: 'Password changed successfully' });
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Utilisateur introuvable.' });
@@ -169,7 +173,11 @@ export const UserController = {
         if (email !== undefined) data.email = email;
       }
 
-      res.json(await UserService.updateUser(String(req.params.id), data));
+      const updated = await UserService.updateUser(String(req.params.id), data);
+      if (data.role !== undefined && data.role !== targetUser.role) {
+        AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_ROLE_CHANGE, targetType: 'User', targetId: String(req.params.id), payload: { oldRole: targetUser.role, newRole: data.role }, ...extractRequestContext(req) });
+      }
+      res.json(updated);
     } catch (err: any) {
       console.error('[updateUser] error:', err?.message, err?.meta);
       res.status(500).json({ message: 'Failed to update user' });
@@ -179,6 +187,7 @@ export const UserController = {
   async resetPassword(req: AuthRequest, res: Response) {
     try {
       const result = await UserService.resetPassword(String(req.params.id));
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_PASSWORD_RESET_ADMIN, targetType: 'User', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.json(result);
     } catch {
       res.status(500).json({ message: 'Failed to reset password' });
@@ -248,6 +257,7 @@ export const UserController = {
         return res.status(400).json({ message: 'courseIds must be an array' });
       }
       await UserService.assignCourses(req.user!.userId, String(req.params.id), courseIds);
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_ASSIGN_COURSES, targetType: 'User', targetId: String(req.params.id), payload: { courseIds }, ...extractRequestContext(req) });
       res.json({ message: 'Courses assigned successfully' });
     } catch (err: any) {
       console.error('[assignCourses] error:', err?.message, err?.meta);
@@ -271,6 +281,7 @@ export const UserController = {
       const userId = String(req.params.userId);
       const courseId = String(req.params.courseId);
       await prisma.certificate.deleteMany({ where: { userId, courseId } });
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.CERTIFICATE_REVOKE, targetType: 'Certificate', payload: { userId, courseId }, ...extractRequestContext(req) });
       res.json({ message: 'Certificate revoked' });
     } catch {
       res.status(500).json({ message: 'Failed to revoke certificate' });
@@ -282,6 +293,7 @@ export const UserController = {
       const studentId = String(req.params.id);
       const courseId = String(req.params.courseId);
       await UserService.removeStudentCourseAccess(studentId, courseId);
+      AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_REMOVE_COURSE_ACCESS, targetType: 'User', targetId: studentId, payload: { courseId }, ...extractRequestContext(req) });
       res.json({ message: 'Course access removed' });
     } catch {
       res.status(500).json({ message: 'Failed to remove course access' });

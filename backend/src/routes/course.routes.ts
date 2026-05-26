@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CourseController } from '../controllers/course.controller';
 import { authenticate, optionalAuthenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
+import { requireCourseOwnership } from '../middlewares/courseOwnership.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { createCategorySchema, createCourseSchema } from '../validators/course.validators';
 
@@ -18,10 +19,10 @@ courseRouter.get('/mine', authenticate, requireRole('ADMIN', 'TEACHER'), CourseC
 courseRouter.get('/', CourseController.getAll);
 courseRouter.get('/:id', optionalAuthenticate, CourseController.getById);
 courseRouter.get('/:id/projects', optionalAuthenticate, CourseController.getProjects);
-courseRouter.get('/:id/project-submissions', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.getCourseSubmissions);
+courseRouter.get('/:id/project-submissions', authenticate, requireRole('ADMIN', 'TEACHER'), requireCourseOwnership, CourseController.getCourseSubmissions);
 courseRouter.get('/:id/progress', authenticate, CourseController.getProgress);
 
 courseRouter.post('/', authenticate, requireRole('ADMIN'), validate(createCourseSchema),CourseController.create);
-courseRouter.put('/:id', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.update);
-courseRouter.patch('/:id/publish', authenticate, requireRole('ADMIN', 'TEACHER'), CourseController.togglePublish);
+courseRouter.put('/:id', authenticate, requireRole('ADMIN', 'TEACHER'), requireCourseOwnership, CourseController.update);
+courseRouter.patch('/:id/publish', authenticate, requireRole('ADMIN', 'TEACHER'), requireCourseOwnership, CourseController.togglePublish);
 courseRouter.delete('/:id', authenticate, requireRole('ADMIN'), CourseController.delete);

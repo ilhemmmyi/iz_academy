@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { ContactMessageController } from '../controllers/contactMessage.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/rbac.middleware';
+import { contactLimiter } from '../middlewares/rate-limit.middleware';
 
 export const contactMessageRouter = Router();
 
-contactMessageRouter.post('/', ContactMessageController.submit);
+contactMessageRouter.post('/', contactLimiter, ContactMessageController.submit);
 contactMessageRouter.get('/', authenticate, requireRole('ADMIN'), ContactMessageController.getAll);
 contactMessageRouter.patch('/:id/read', authenticate, requireRole('ADMIN'), ContactMessageController.markRead);
 contactMessageRouter.post('/:id/reply', authenticate, requireRole('ADMIN'), ContactMessageController.reply);

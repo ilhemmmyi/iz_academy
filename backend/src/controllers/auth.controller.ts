@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
+import { issueCsrfToken } from '../middlewares/csrf.middleware';
+import { AuditService, AuditAction, extractRequestContext } from '../services/audit.service';
 
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -10,10 +12,16 @@ const REFRESH_COOKIE_OPTIONS = {
 
 export const AuthController = {
 
+  getCsrfToken(req: Request, res: Response) {
+    const token = issueCsrfToken(req, res);
+    res.json({ csrfToken: token });
+  },
+
   async register(req: Request, res: Response) {
     try {
       const { name, email, password } = req.body;
       const user = await AuthService.register(name, email, password);
+      AuditService.log({ actorId: user.id, actorRole: user.role, action: AuditAction.AUTH_REGISTER, targetType: 'User', targetId: user.id, payload: { email: user.email, name: user.name }, ...extractRequestContext(req) });
       res.status(201).json({ message: 'Account created', user });
     } catch (err: any) {
       if (err.message === 'EMAIL_EXISTS') return res.status(409).json({ message: 'Email already in use' });
@@ -27,6 +35,7 @@ export const AuthController = {
       const { email, password } = req.body;
       const user = await AuthService.login(email, password);
       const { accessToken, refreshToken } = await AuthService.issueTokens(user.id, user.role, user.email);
+      AuditService.log({ actorId: user.id, actorRole: user.role, action: AuditAction.AUTH_LOGIN, targetType: 'User', targetId: user.id, payload: { email: user.email }, ...extractRequestContext(req) });
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
         accessToken,
@@ -54,7 +63,12 @@ export const AuthController = {
 
   async logout(req: Request, res: Response) {
     const token = req.cookies.refreshToken;
-    if (token) await AuthService.logout(token);
+    let actorId: string | null = null;
+    if (token) {
+      const result = await AuthService.logout(token);
+      actorId = result.userId;
+    }
+    AuditService.auth({ actorId, action: AuditAction.AUTH_LOGOUT, ...extractRequestContext(req) });
     res.clearCookie('refreshToken');
     res.json({ message: 'Logged out' });
   },
@@ -65,7 +79,9 @@ export const AuthController = {
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ message: 'Email requis' });
       }
-      await AuthService.forgotPassword(email.trim().toLowerCase());
+      const normalized = email.trim().toLowerCase();
+      await AuthService.forgotPassword(normalized);
+      AuditService.log({ actorId: null, action: AuditAction.AUTH_PASSWORD_RESET_REQUEST, targetType: 'User', payload: { email: normalized }, ...extractRequestContext(req) });
       res.json({ message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' });
     } catch (err) {
       console.error('[forgotPassword]', err);
@@ -76,7 +92,8 @@ export const AuthController = {
   async resetPassword(req: Request, res: Response) {
     try {
       const { token, password } = req.body;
-      await AuthService.resetPassword(String(token), String(password));
+      const { userId } = await AuthService.resetPassword(String(token), String(password));
+      AuditService.log({ actorId: userId, action: AuditAction.AUTH_PASSWORD_RESET_COMPLETE, targetType: 'User', targetId: userId, ...extractRequestContext(req) });
       res.json({ message: 'Mot de passe réinitialisé avec succès' });
     } catch (err: any) {
       if (err.message === 'INVALID_TOKEN') return res.status(400).json({ message: 'Lien invalide', code: 'INVALID_TOKEN' });
@@ -90,7 +107,8 @@ export const AuthController = {
     try {
       const { token } = req.query as { token: string };
       if (!token) return res.status(400).json({ message: 'Token manquant' });
-      await AuthService.verifyEmail(token);
+      const { userId } = await AuthService.verifyEmail(token);
+      AuditService.log({ actorId: userId, action: AuditAction.AUTH_EMAIL_VERIFIED, targetType: 'User', targetId: userId, ...extractRequestContext(req) });
       res.json({ message: 'Email vérifié avec succès' });
     } catch (err: any) {
       if (err.message === 'INVALID_TOKEN') return res.status(400).json({ message: 'Lien invalide' });
@@ -108,6 +126,7 @@ export const AuthController = {
       }
       const user = await AuthService.googleLogin(uid, email, displayName, firebaseToken);
       const { accessToken, refreshToken } = await AuthService.issueTokens(user.id, user.role, user.email);
+      AuditService.log({ actorId: user.id, actorRole: user.role, action: AuditAction.AUTH_GOOGLE_LOGIN, targetType: 'User', targetId: user.id, payload: { email: user.email }, ...extractRequestContext(req) });
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
         accessToken,

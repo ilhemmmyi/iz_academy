@@ -3,34 +3,34 @@ import { SubmissionStatus } from '.prisma/client';
 import { certificateQueue } from '../queues/certificate.queue';
 import { ProjectModel } from '../models/project.model';
 import { ActivityService } from './activity.service';
+import { assertActiveEnrollment } from '../utils/enrollmentGuard';
 
 export const ProjectService = {
 
   async submit(studentId: string, projectId: string, githubUrl: string, comment?: string) {
+    // Step 1 — resolve project and its parent courseId.
     const project = await ProjectModel.findById(projectId);
     if (!project) throw Object.assign(new Error('Project not found'), { code: 'NOT_FOUND' });
 
-    const courseId = project.courseId;
-    if (!await prisma.course.findUnique({ where: { id: courseId } })) {
-      throw Object.assign(new Error('Course not found'), { code: 'NOT_FOUND' });
-    }
+    const { courseId } = project;
 
-    // One submission per COURSE (not per project).
-    // Find any existing submission for this student in this course.
+    // Step 2 — enrollment gate (throws FORBIDDEN if not enrolled or access expired).
+    // Must run before any DB write, queue job, or file upload confirmation.
+    await assertActiveEnrollment(studentId, courseId);
+
+    // Step 3 — one submission per COURSE; allow resubmit only on NEEDS_IMPROVEMENT.
     const existingForCourse = await prisma.projectSubmission.findFirst({
       where: { studentId, courseId },
     });
 
-    if (existingForCourse) {
-      // Allow resubmission only when the teacher asked for improvements
-      if (existingForCourse.status !== 'NEEDS_IMPROVEMENT') {
-        throw Object.assign(
-          new Error('Vous avez déjà soumis un projet pour ce cours.'),
-          { code: 'ALREADY_SUBMITTED' },
-        );
-      }
+    if (existingForCourse && existingForCourse.status !== 'NEEDS_IMPROVEMENT') {
+      throw Object.assign(
+        new Error('Vous avez déjà soumis un projet pour ce cours.'),
+        { code: 'ALREADY_SUBMITTED' },
+      );
     }
 
+    // Step 4 — persist submission.
     return ProjectModel.upsertSubmission({
       projectId,
       studentId,
@@ -61,8 +61,32 @@ export const ProjectService = {
    * Teacher validates or requests improvements on a submission.
    * When VALIDATED, the certificate is auto-generated without any admin intervention.
    * If status is NEEDS_IMPROVEMENT, any existing certificate is revoked.
+   *
+   * Teachers may only review submissions belonging to their own courses.
+   * ADMINs may review any submission.
    */
-  async review(submissionId: string, status: SubmissionStatus, feedback?: string) {
+  async review(
+    submissionId: string,
+    status: SubmissionStatus,
+    feedback: string | undefined,
+    requesterId: string,
+    requesterRole: string,
+  ) {
+    if (requesterRole !== 'ADMIN') {
+      const existing = await prisma.projectSubmission.findUnique({
+        where: { id: submissionId },
+        include: { project: { select: { courseId: true } } },
+      });
+      if (!existing) throw Object.assign(new Error('Submission not found'), { code: 'NOT_FOUND' });
+      const course = await prisma.course.findUnique({
+        where: { id: existing.project.courseId },
+        select: { teacherId: true },
+      });
+      if (!course || course.teacherId !== requesterId) {
+        throw Object.assign(new Error('Forbidden'), { code: 'FORBIDDEN' });
+      }
+    }
+
     const submission = await ProjectModel.updateSubmission(submissionId, status, feedback);
     const studentId = (submission as any).studentId;
     const courseId = (submission as any).project?.courseId;
