@@ -1,7 +1,8 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '../config/prisma';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt';
+import { generateAccessToken } from '../utils/jwt';
+import { generateRefreshToken, hashRefreshToken } from '../utils/tokenUtils';
 import { queueEmail } from '../utils/queueEmail';
 import { config } from '../config';
 import { admin } from '../config/firebase';
@@ -41,35 +42,43 @@ export const AuthService = {
     return user;
   },
 
+  /**
+   * Generate an access token (JWT) + a refresh token (opaque random bytes).
+   * Only the SHA-256 hash of the refresh token is persisted — the raw token
+   * is returned to the caller and sent to the client via an httpOnly cookie.
+   */
   async issueTokens(userId: string, role: string, email: string) {
-    const payload = { userId, role, email };
-    const accessToken = generateAccessToken(payload);
-    const refreshToken = generateRefreshToken(payload);
+    const accessToken = generateAccessToken({ userId, role, email });
+    const rawRefreshToken = generateRefreshToken();
+    const tokenHash = hashRefreshToken(rawRefreshToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await prisma.refreshToken.create({ data: { token: refreshToken, userId, expiresAt } });
-    return { accessToken, refreshToken };
+    await prisma.refreshToken.create({ data: { tokenHash, userId, expiresAt } });
+    // Return raw token — it exists only in memory and in the client cookie
+    return { accessToken, refreshToken: rawRefreshToken };
   },
 
-  async refresh(token: string) {
-    // Single query: fetch token + user in one round trip
+  async refresh(rawToken: string) {
+    const tokenHash = hashRefreshToken(rawToken);
+    // Single query: fetch stored hash + user in one round trip
     const stored = await prisma.refreshToken.findUnique({
-      where: { token },
+      where: { tokenHash },
       include: { user: true },
     });
     if (!stored || stored.expiresAt < new Date()) throw new Error('INVALID_REFRESH');
-    verifyRefreshToken(token); // validate signature (in-memory, no DB)
     if (!stored.user || !stored.user.isVerified) throw new Error('INVALID_REFRESH');
 
-    // Delete old token + create new tokens in parallel (independent operations)
+    // Token rotation: atomically delete old hash and issue new tokens.
+    // Prevents replay attacks — each refresh token is single-use.
     const [tokens] = await Promise.all([
       this.issueTokens(stored.user.id, stored.user.role, stored.user.email),
-      prisma.refreshToken.delete({ where: { token } }),
+      prisma.refreshToken.delete({ where: { tokenHash } }),
     ]);
     return tokens;
   },
 
-  async logout(token: string) {
-    await prisma.refreshToken.deleteMany({ where: { token } });
+  async logout(rawToken: string) {
+    const tokenHash = hashRefreshToken(rawToken);
+    await prisma.refreshToken.deleteMany({ where: { tokenHash } });
   },
 
   async forgotPassword(email: string) {
@@ -109,6 +118,8 @@ export const AuthService = {
         emailVerificationExpires: null,
       },
     });
+    // Invalidate all existing sessions after a password reset
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   },
 
   async verifyEmail(token: string) {
