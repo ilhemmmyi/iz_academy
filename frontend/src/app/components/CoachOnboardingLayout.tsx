@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router';
-import { GraduationCap, LogOut } from 'lucide-react';
+﻿import { Link, useNavigate } from 'react-router';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface Props {
@@ -21,8 +21,8 @@ export function CoachOnboardingLayout({ children }: Props) {
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2">
-              <GraduationCap className="w-8 h-8 text-primary" />
-              <span className="font-semibold text-xl">Iz Solution</span>
+              <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto" />
+            <span className="font-semibold text-xl">Iz Solution</span>
             </Link>
 
             {user && (

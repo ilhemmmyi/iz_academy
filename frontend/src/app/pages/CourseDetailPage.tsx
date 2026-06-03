@@ -266,7 +266,7 @@ export function CourseDetailPage() {
                   ) : enrollmentStatus === 'PENDING' ? (
                     <Button className="w-full" disabled variant="outline">
                       <Hourglass className="w-5 h-5 mr-2" />
-                      En attente d'approbation
+                      Veuillez compléter le processus de paiement
                     </Button>
                   ) : enrollmentStatus === 'REJECTED' ? (
                     <div className="space-y-3">

@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router';
-import { GraduationCap, Mail, Lock, User } from 'lucide-react';
+﻿import { Link, useNavigate } from 'react-router';
+import { Mail, Lock, User } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { authApi } from '../../api/auth.api';
@@ -50,12 +50,23 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      <div className="flex-1 flex items-center justify-center p-8 bg-accent/30">
-        <div className="w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center relative overflow-hidden py-12 px-4"
+      style={{ background: 'linear-gradient(150deg, #F5F3FF 0%, #EDE9FE 45%, #DBEAFE 100%)' }}
+    >
+      {/* Background blobs */}
+      <div className="absolute -top-20 -right-20 w-[480px] h-[480px] rounded-full pointer-events-none"
+        style={{ background: '#C4B5FD', opacity: 0.3, filter: 'blur(90px)' }} />
+      <div className="absolute -bottom-20 -left-20 w-[420px] h-[420px] rounded-full pointer-events-none"
+        style={{ background: '#93C5FD', opacity: 0.28, filter: 'blur(90px)' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full pointer-events-none"
+        style={{ background: '#F9A8D4', opacity: 0.16, filter: 'blur(80px)' }} />
+
+      {/* Form — centered */}
+      <div className="relative w-full max-w-md">
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center gap-2 mb-6">
-              <GraduationCap className="w-10 h-10 text-primary" />
+              <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
               <span className="font-semibold text-2xl">Iz Solution</span>
             </Link>
             <h1 className="mb-2">Créer un compte</h1>
@@ -64,7 +75,7 @@ export function Register() {
             </p>
           </div>
 
-          <div className="bg-white border border-border rounded-xl p-8">
+          <div className="bg-white/85 backdrop-blur-sm border border-white/60 rounded-2xl p-8 shadow-lg">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="name" className="block mb-2">
@@ -202,34 +213,6 @@ export function Register() {
               </Link>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="hidden lg:block flex-1 bg-gradient-to-br from-primary via-primary to-[#1a1a2e] text-primary-foreground p-12">
-        <div className="h-full flex flex-col justify-center max-w-lg mx-auto">
-          <h2 className="text-4xl mb-6">Rejoignez plus de 5000 étudiants</h2>
-          <p className="text-xl text-primary-foreground/90 mb-8">
-            Commencez à apprendre dès aujourd'hui et obtenez des compétences reconnues.
-          </p>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="text-center">
-              <div className="text-4xl font-bold mb-2">150+</div>
-              <div className="text-primary-foreground/80">Cours disponibles</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold mb-2">50+</div>
-              <div className="text-primary-foreground/80">Formateurs experts</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold mb-2">5000+</div>
-              <div className="text-primary-foreground/80">Étudiants actifs</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold mb-2">95%</div>
-              <div className="text-primary-foreground/80">Taux de satisfaction</div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

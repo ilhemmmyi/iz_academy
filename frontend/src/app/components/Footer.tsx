@@ -1,5 +1,5 @@
-import { Link } from 'react-router';
-import { GraduationCap, Linkedin, Facebook, Instagram } from 'lucide-react';
+﻿import { Link } from 'react-router';
+import { Linkedin, Facebook, Instagram } from 'lucide-react';
 
 const SOCIAL_LINKS = [
   {
@@ -37,7 +37,7 @@ export function Footer() {
           {/* Brand + Social */}
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-2.5">
-              <GraduationCap className="w-8 h-8 shrink-0" />
+              <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto brightness-0 invert" />
               <span className="font-semibold text-xl">Iz Solution</span>
             </div>
 

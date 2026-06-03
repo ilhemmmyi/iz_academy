@@ -1,6 +1,6 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router';
-import { GraduationCap, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { authApi } from '../../api/auth.api';
 
 export function ForgotPassword() {
@@ -28,8 +28,8 @@ export function ForgotPassword() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <GraduationCap className="w-10 h-10 text-primary" />
-            <span className="font-semibold text-2xl">Iz Solution</span>
+            <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
+              <span className="font-semibold text-2xl">Iz Solution</span>
           </Link>
         </div>
 

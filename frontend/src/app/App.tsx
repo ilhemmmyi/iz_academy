@@ -1,4 +1,4 @@
-import { RouterProvider } from 'react-router';
+﻿import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { Toaster } from './components/ui/sonner';
 import { AuthProvider } from '../context/AuthContext';
@@ -7,7 +7,6 @@ import { FloatingChatWidget } from './components/FloatingChatWidget';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 import { Component, ErrorInfo, ReactNode, useState, useEffect } from 'react';
 import { settingsApi } from '../api/settings.api';
-import { GraduationCap } from 'lucide-react';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -32,8 +31,8 @@ function MaintenancePage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-pink-50 px-4">
       <div className="text-center max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <GraduationCap className="w-8 h-8 text-primary" />
-          <span className="font-semibold text-xl">Iz Solution</span>
+          <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto" />
+            <span className="font-semibold text-xl">Iz Solution</span>
         </div>
         <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-10 h-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">

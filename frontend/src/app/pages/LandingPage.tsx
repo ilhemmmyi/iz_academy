@@ -36,7 +36,11 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative py-20 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100" />
+        <img
+          src="/hero-bg.svg"
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+        />
 
         <div className="relative max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -76,14 +80,9 @@ export function LandingPage() {
             <div className="hidden md:flex justify-end items-center">
               <div className="relative w-full max-w-lg h-[260px]">
 
-                {/* Circular purple background blob */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[300px] rounded-full bg-gradient-to-br from-blue-700 via-blue-500 to-blue-400 opacity-30" />
-                {/* Dashed ring */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[255px] h-[335px] rounded-full border-[3px] border-dashed border-blue-600 opacity-25" />
-
                 {/* Person photo — shifted down so image bottom aligns exactly with section bottom */}
                 <img
-                  src={new URL('./image-removebg-preview.png', import.meta.url).href}
+                  src={new URL('./Capture_d_écran_2026-06-03_154635-removebg-preview.png', import.meta.url).href}
                   alt="Étudiant apprenant en ligne"
                   className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[21%] z-10 h-[145%] w-auto select-none pointer-events-none drop-shadow-xl"
                 />

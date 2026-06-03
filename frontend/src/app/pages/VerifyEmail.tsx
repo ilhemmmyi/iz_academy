@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { GraduationCap, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { authApi } from '../../api/auth.api';
 
 type Status = 'loading' | 'success' | 'error';
@@ -29,8 +29,8 @@ export function VerifyEmail() {
     <div className="min-h-screen flex items-center justify-center bg-accent/30 p-8">
       <div className="w-full max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 mb-8">
-          <GraduationCap className="w-10 h-10 text-primary" />
-          <span className="font-semibold text-2xl">Iz Solution</span>
+          <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
+              <span className="font-semibold text-2xl">Iz Solution</span>
         </Link>
 
         <div className="bg-white border border-border rounded-xl p-10">

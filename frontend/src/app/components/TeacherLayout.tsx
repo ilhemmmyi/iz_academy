@@ -1,9 +1,8 @@
-import { Link, useLocation, useNavigate } from 'react-router';
+﻿import { Link, useLocation, useNavigate } from 'react-router';
 import {
   LayoutDashboard,
   Users,
   MessageSquare,
-  GraduationCap,
   Menu,
   LogOut,
   User,
@@ -84,8 +83,8 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
               </button>
 
               <Link to="/" className="flex items-center gap-2">
-                <GraduationCap className="w-8 h-8 text-primary" />
-                <span className="font-semibold text-xl">Iz Solution</span>
+                <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto" />
+            <span className="font-semibold text-xl">Iz Solution</span>
               </Link>
 
               <span className="hidden sm:inline px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">

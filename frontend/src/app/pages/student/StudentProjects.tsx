@@ -276,6 +276,31 @@ export function StudentProjects() {
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     Vous avez déjà soumis un projet pour ce cours. Une seule soumission est autorisée.
                   </div>
+                ) : courseProgressPct < 70 ? (
+                  /* Progression insuffisante — locked until 70% */
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
+                      <div>
+                        <p className="font-medium text-slate-700 mb-0.5">Progression insuffisante</p>
+                        <p>
+                          Vous devez compléter <span className="font-semibold">toutes les leçons</span> de ce cours pour pouvoir soumettre ce projet.
+                       </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary/50 transition-all rounded-full" style={{ width: `${courseProgressPct}%` }} />
+                      </div>
+                    </div>
+                    <button
+                      disabled
+                      className="px-4 py-2 bg-primary/40 text-primary-foreground/70 rounded-lg flex items-center gap-2 text-sm cursor-not-allowed"
+                    >
+                      <Send className="w-4 h-4" />
+                      Soumettre le projet
+                    </button>
+                  </div>
                 ) : !showSubmitForm ? (
                   <button
                     onClick={() => setShowSubmitForm(true)}
