@@ -35,15 +35,29 @@ export function FloatingChatWidget() {
       await contactApi.submit({
         name: effectiveName,
         email: effectiveEmail,
-        subject: user ? `Message de ${user.name} (utilisateur connecté)` : 'Message visiteur',
+        subject: 'Message visiteur',
         message: effectiveMessage,
       });
       setSent(true);
       setMessage('');
       setName('');
       setEmail('');
-    } catch {
-      toast.error("Impossible d'envoyer le message. Réessayez.");
+    } catch (err) {
+      console.error('[ContactForm]', err);
+      const raw = err instanceof Error ? err.message : '';
+      let msg = "Impossible d'envoyer le message. Réessayez.";
+      if (!raw || raw === 'Failed to fetch' || raw.toLowerCase().includes('network')) {
+        msg = 'Serveur inaccessible. Vérifiez votre connexion.';
+      } else if (raw.includes('All fields are required')) {
+        msg = 'Tous les champs sont requis.';
+      } else if (raw.toLowerCase().includes('email')) {
+        msg = 'Adresse e-mail invalide.';
+      } else if (raw.includes('CSRF')) {
+        msg = 'Erreur de sécurité. Rechargez la page et réessayez.';
+      } else if (raw.includes('Too many') || raw.includes('many requests')) {
+        msg = 'Trop de tentatives. Réessayez dans une heure.';
+      }
+      toast.error(msg);
     } finally {
       setSending(false);
     }

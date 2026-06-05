@@ -1,3 +1,48 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* ── Hero Section animations ───────────────────────────────────── */
+@keyframes hero-float-a {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-7px) rotate(0.4deg); }
+}
+@keyframes hero-float-b {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-5px) rotate(-0.3deg); }
+}
+@keyframes hero-float-c {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes hero-badge-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes hero-headline-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes hero-content-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hero-float-card-1 {
+  animation: hero-float-a 4.2s ease-in-out infinite;
+}
+.hero-float-card-2 {
+  animation: hero-float-b 5.1s ease-in-out infinite 0.7s;
+}
+.hero-float-card-3 {
+  animation: hero-float-c 4.6s ease-in-out infinite 1.4s;
+}
+.hero-anim-badge {
+  animation: hero-badge-in 0.5s cubic-bezier(0.16,1,0.3,1) both 0.1s;
+}
+.hero-anim-headline {
+  animation: hero-headline-in 0.6s cubic-bezier(0.16,1,0.3,1) both 0.25s;
+}
+.hero-anim-content {
+  animation: hero-content-in 0.6s cubic-bezier(0.16,1,0.3,1) both 0.4s;
+}

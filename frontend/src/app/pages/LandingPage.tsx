@@ -11,6 +11,7 @@ import {
   Play,
   Clock,
   Layers,
+  Zap,
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { useState, useEffect } from 'react';
@@ -34,99 +35,388 @@ export function LandingPage() {
     <div className="min-h-screen flex flex-col scroll-smooth">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 overflow-hidden">
-        <img
-          src="/hero-bg.svg"
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
-        />
+      {/* ══════════════════════════════════════════
+      HERO SECTION — Premium Redesign
+      ══════════════════════════════════════════ */}
+      <section
+        className="relative overflow-hidden py-14"
+        style={{
+  background: `
+    radial-gradient(circle at 80% 50%, rgba(139,127,255,0.22) 0%, transparent 60%),
+    radial-gradient(circle at 0% 100%, rgba(139,127,255,0.18) 0%, transparent 55%),
+    linear-gradient(180deg,#ffffff 0%,#f7f7ff 60%,#f1f3ff 100%)
+  `,
+}}
+      >
+        {/* Dotted grid — top-right quadrant only, masked at edges */}
+        <div
+  aria-hidden="true"
+  className="absolute pointer-events-none select-none"
+  style={{
+    top: 0,
+    right: 0,
+    width: '70%',
+    height: '70%',
 
-        <div className="relative max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            {/* Left content */}
-            <div className="max-w-xl">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-primary">
-                Apprenez à votre rythme avec Iz Solution
-              </h1>
+    // stronger + slightly larger dots
+    backgroundImage:
+      'radial-gradient(rgba(139,127,255,0.25) 1.5px, transparent 1.5px)',
 
-              <p className="text-xl text-gray-600 mb-8">
-                Développez vos compétences avec nos cours en ligne de qualité.
-                Formateurs experts, projets pratiques et certification garantie.
-              </p>
+    // tighter spacing = more visible pattern
+    backgroundSize: '18px 18px',
 
-              <div className="flex flex-wrap gap-4">
-                <a
-                  href="#demo"
-                  className="px-8 py-3 text-white rounded-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(56,82,233,0.5)] inline-flex items-center gap-2"
+    // softer fade instead of harsh cutoff
+    maskImage:
+      'radial-gradient(ellipse 80% 80% at 92% 18%, black 25%, transparent 75%)',
+    WebkitMaskImage:
+      'radial-gradient(ellipse 80% 80% at 92% 18%, black 25%, transparent 75%)',
+  }}
+/>
+
+        {/* ── Content ───────────────────────────────── */}
+        <div className="relative max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+
+            {/* ─── LEFT COLUMN ──────────────────────── */}
+            <div className="max-w-[520px]">
+
+              {/* Top badge */}
+              <div
+                className="hero-anim-badge inline-flex items-center gap-2 px-3.5 py-1 rounded-full mb-4 select-none"
+                style={{
+                  background: 'linear-gradient(130deg, rgba(245,243,255,0.95) 0%, rgba(238,242,255,0.95) 100%)',
+                  border: '1px solid rgba(139,92,246,0.28)',
+                  boxShadow: '0 2px 10px rgba(124,58,237,0.1), 0 1px 2px rgba(0,0,0,0.04)',
+                }}
+              >
+                <span
+                  className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }}
+                >
+                  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M6 0.75L7.39 3.95L11 4.41L8.5 6.85L9.16 10.5L6 8.82L2.84 10.5L3.5 6.85L1 4.41L4.61 3.95L6 0.75Z" fill="white" />
+                  </svg>
+                </span>
+                <span className="text-[11.5px] font-semibold tracking-wide" style={{ color: '#5b21b6' }}>
+                  La meilleure plateforme pour apprendre en ligne
+                </span>
+              </div>
+
+              {/* Main headline */}
+              <h1
+                className="hero-anim-headline font-bold leading-[1.07] tracking-[-0.02em] mb-3"
+                style={{ fontSize: 'clamp(1.95rem, 3.3vw, 2.5rem)' }}
+              >
+                <span className="block" style={{ color: '#0c0c1d' }}>Apprenez.</span>
+                <span
+                  className="block"
                   style={{
-                    backgroundImage: 'linear-gradient(90deg, #000000, #000000)',
+                    backgroundImage: 'linear-gradient(105deg, #7c3aed 0%, #4f46e5 55%, #6366f1 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    paddingBottom: '0.1em',
                   }}
                 >
-                  Voir démonstration
-                  <ArrowRight className="w-5 h-5" />
-                </a>
+                  Progressez.
+                </span>
+                <span className="block" style={{ color: '#0c0c1d' }}>Réalisez vos objectifs.</span>
+              </h1>
 
+              {/* Description */}
+              <p
+                className="hero-anim-content text-[14.5px] leading-relaxed mb-5"
+                style={{ color: '#71717a', maxWidth: '400px' }}
+              >
+                Développez vos compétences avec des cours créés par des experts.<br />
+                Projets pratiques, suivi personnalisé et certification reconnue.
+              </p>
+
+              {/* CTA buttons */}
+              <div className="hero-anim-content flex flex-wrap items-center gap-3 mb-6">
+                <a
+                  href="#demo"
+                  className="inline-flex items-center gap-2 px-5 py-[8px] rounded-xl text-white text-sm font-semibold transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] active:scale-[0.98] select-none"
+                  style={{
+                    background: '#0f0f1a',
+                    boxShadow: '0 4px 14px rgba(15,15,26,0.32), 0 1px 3px rgba(15,15,26,0.18)',
+                  }}
+                >
+                  Voir la démonstration
+                  <ArrowRight style={{ width: '15px', height: '15px' }} />
+                </a>
                 <Link
                   to="/courses"
-                  className="px-8 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition-all duration-300 hover:shadow-[0_0_25px_rgba(105,63,203,0.3)]"
+                  className="inline-flex items-center gap-2 px-5 py-[8px] rounded-xl text-sm font-semibold bg-white transition-all duration-200 hover:bg-violet-50 hover:border-violet-300 hover:translate-y-[-1px] active:scale-[0.98] select-none"
+                  style={{
+                    border: '1.5px solid rgba(0,0,0,0.11)',
+                    color: '#18181b',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                  }}
                 >
+                  <BookOpen style={{ width: '14px', height: '14px', color: '#7c3aed' }} />
                   Découvrir les cours
                 </Link>
               </div>
-            </div>
 
-            {/* Right — person photo + floating badges */}
-            <div className="hidden md:flex justify-end items-center">
-              <div className="relative w-full max-w-lg h-[260px]">
+              {/* Stats row */}
+              <div className="hero-anim-content flex items-center gap-0">
 
-                {/* Person photo — shifted down so image bottom aligns exactly with section bottom */}
-                <img
-                  src={new URL('./Capture_d_écran_2026-06-03_154635-removebg-preview.png', import.meta.url).href}
-                  alt="Étudiant apprenant en ligne"
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[21%] z-10 h-[145%] w-auto select-none pointer-events-none drop-shadow-xl"
-                />
-
-                {/* Floating badge — top left: cours */}
-                <div className="absolute top-1/2 -translate-y-1/2 -left-4 z-30 bg-white/75 backdrop-blur-sm rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 border border-violet-100">
-                  <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                    <BookOpen className="w-5 h-5 text-violet-600" />
+                {/* Metric 1 — Étudiants */}
+                <div className="flex items-center gap-2 pr-4">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(245,243,255,0.95)', border: '1px solid rgba(167,139,250,0.22)' }}
+                  >
+                    <Users style={{ width: '13px', height: '13px', color: '#7c3aed' }} />
                   </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-800 leading-none">{courses.length > 0 ? `${courses.length}+` : '10+'}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Cours disponibles</p>
-                  </div>
+                  <span className="text-[12.5px] font-bold" style={{ color: '#0c0c1d' }}>500+&nbsp;</span>
+                  <span className="text-[11.5px]" style={{ color: '#a1a1aa' }}>Étudiants</span>
                 </div>
 
-                {/* Floating badge — top right: étudiants */}
-                <div className="absolute top-10 -right-4 z-20 bg-white/75 backdrop-blur-sm rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 border border-indigo-100">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
-                    <Users className="w-5 h-5 text-indigo-600" />
+                {/* Divider */}
+                <div className="h-5 w-px mx-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.1)' }} />
+
+                {/* Metric 2 — Cours */}
+                <div className="flex items-center gap-2 pr-4">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(238,242,255,0.95)', border: '1px solid rgba(99,102,241,0.2)' }}
+                  >
+                    <BookOpen style={{ width: '13px', height: '13px', color: '#4f46e5' }} />
                   </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-800 leading-none">100%</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Satisfaction</p>
-                  </div>
+                  <span className="text-[12.5px] font-bold" style={{ color: '#0c0c1d' }}>
+                    {courses.length > 0 ? `${courses.length}+` : '10+'}&nbsp;
+                  </span>
+                  <span className="text-[11.5px]" style={{ color: '#a1a1aa' }}>Cours</span>
                 </div>
 
-                
+                {/* Divider */}
+                <div className="h-5 w-px mx-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.1)' }} />
 
-                {/* Floating badge — bottom right: certif */}
-                <div className="absolute bottom-14 -right-4 z-20 bg-white/75 backdrop-blur-sm rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3 border border-emerald-100">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-                    <Award className="w-5 h-5 text-emerald-600" />
+                {/* Metric 3 — Satisfaction */}
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(236,253,245,0.95)', border: '1px solid rgba(16,185,129,0.2)' }}
+                  >
+                    <TrendingUp style={{ width: '13px', height: '13px', color: '#059669' }} />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-800 leading-none">Certifié</p>
-                    <p className="text-xs text-gray-500 mt-0.5">À la fin du cours</p>
-                  </div>
+                  <span className="text-[12.5px] font-bold" style={{ color: '#0c0c1d' }}>98%&nbsp;</span>
+                  <span className="text-[11.5px]" style={{ color: '#a1a1aa' }}>Satisfaction</span>
                 </div>
 
               </div>
             </div>
+            {/* END LEFT COLUMN */}
+
+           {/* ─── RIGHT COLUMN ─────────────────────── */}
+<div className="hidden md:flex justify-center items-center">
+  <div className="relative w-full max-w-lg h-[270px]">
+
+    {/* Purple circle — solid flat disc, soft edge fade */}
+    <div
+      className="absolute z-0"
+      style={{
+        width: '360px',
+        height: '360px',
+        borderRadius: '50%',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        background:
+          'radial-gradient(circle, rgba(167,139,250,0.58) 0%, rgba(167,139,250,0.56) 62%, rgba(167,139,250,0.22) 84%, transparent 100%)',
+      }}
+    />
+
+    {/* Outer ring */}
+    <div
+      className="absolute z-0"
+      style={{
+        width: '460px',
+        height: '460px',
+        borderRadius: '50%',
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)',
+        border: '1px solid rgba(139,127,255,.10)',
+      }}
+    />
+
+    {/* Student image — transparent PNG sits in front of the circle (no clip) */}
+    <div
+      className="absolute z-20"
+      style={{
+        width: '390px',
+        height: '430px',
+        left: '45%',
+        top: '40%',
+        transform: 'translate(-50%, -52%)',
+      }}
+    >
+      <img
+        src={
+          new URL(
+            './Capture_d_écran_2026-06-03_154635-removebg-preview (1).png',
+            import.meta.url
+          ).href
+        }
+        alt="Étudiant apprenant en ligne"
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          objectPosition: 'center bottom',
+          filter: 'drop-shadow(0 16px 32px rgba(15,15,26,0.16))',
+        }}
+      />
+    </div>
+
+    {/* Small glow */}
+    <div
+      className="absolute"
+      style={{
+        width: '100px',
+        height: '100px',
+        borderRadius: '50%',
+        background: 'rgba(139,127,255,.18)',
+        filter: 'blur(40px)',
+        left: '10px',
+        top: '20px',
+      }}
+    />
+
+    {/* Right blob */}
+    <div
+      className="absolute"
+      style={{
+        width: '300px',
+        height: '300px',
+        right: '-60px',
+        bottom: '-70px',
+        borderRadius: '60% 40% 55% 45%',
+        background:
+          'linear-gradient(135deg, rgba(139,127,255,.12), rgba(139,127,255,.04))',
+      }}
+    />
+
+    
+
+    {/* Wave decoration */}
+    <div
+      className="absolute z-30"
+      style={{
+        bottom: '10px',
+        left: '0px',
+      }}
+    >
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          style={{
+            width: 40 - i * 8,
+            height: 4,
+            borderRadius: 999,
+            background: '#7c3aed',
+            transform: 'rotate(-25deg)',
+            opacity: 0.75,
+            marginTop: i ? 8 : 0,
+            marginLeft: i * 14,
+          }}
+        />
+      ))}
+    </div>
+
+    {/* Floating Card 1 */}
+    <div className="hero-float-card-1 absolute z-30 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-none select-none"
+      style={{
+        top: '27%',
+        left: '-28px',
+        background: 'rgba(255,255,255,.94)',
+        backdropFilter: 'blur(18px)',
+        border: '1px solid rgba(167,139,250,0.22)',
+        boxShadow:
+          '0 8px 28px rgba(124,58,237,0.13), 0 2px 8px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: 'rgba(245,243,255,1)' }}
+      >
+        <BookOpen style={{ width: '15px', height: '15px', color: '#7c3aed' }} />
+      </div>
+      <div>
+        <p className="text-sm font-bold leading-none" style={{ color: '#0c0c1d' }}>
+          {courses.length > 0 ? `${courses.length}+` : '10+'} cours
+        </p>
+        <p className="text-[10.5px] mt-1 leading-none" style={{ color: '#a1a1aa' }}>
+          Disponibles
+        </p>
+      </div>
+    </div>
+
+    {/* Floating Card 2 */}
+    <div className="hero-float-card-2 absolute z-20 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-none select-none"
+      style={{
+        top: '8%',
+        right: '-28px',
+        background: 'rgba(255,255,255,.94)',
+        backdropFilter: 'blur(18px)',
+        border: '1px solid rgba(124,58,237,0.2)',
+        boxShadow:
+          '0 8px 28px rgba(124,58,237,0.13), 0 2px 8px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: 'rgba(245,243,255,1)' }}
+      >
+        <Zap style={{ width: '15px', height: '15px', color: '#7c3aed' }} />
+      </div>
+      <div>
+        <p className="text-sm font-bold leading-none" style={{ color: '#0c0c1d' }}>
+          Coach IA
+        </p>
+        <p className="text-[10.5px] mt-1 leading-none" style={{ color: '#a1a1aa' }}>
+          Carrière personnalisée
+        </p>
+      </div>
+    </div>
+
+    {/* Floating Card 3 */}
+    <div className="hero-float-card-3 absolute z-20 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-none select-none"
+      style={{
+        bottom: '56px',
+        right: '-28px',
+        background: 'rgba(255,255,255,.94)',
+        backdropFilter: 'blur(18px)',
+        border: '1px solid rgba(16,185,129,0.2)',
+        boxShadow:
+          '0 8px 28px rgba(5,150,105,0.1), 0 2px 8px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: 'rgba(236,253,245,1)' }}
+      >
+        <Award style={{ width: '15px', height: '15px', color: '#059669' }} />
+      </div>
+      <div>
+        <p className="text-sm font-bold leading-none" style={{ color: '#0c0c1d' }}>
+          Certifié
+        </p>
+        <p className="text-[10.5px] mt-1 leading-none" style={{ color: '#a1a1aa' }}>
+          À la fin du cours
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+{/* END RIGHT COLUMN */}
+            {/* END RIGHT COLUMN */}
+
           </div>
         </div>
       </section>
+      {/* END HERO SECTION */}
 
       {/* Features Section */}
       <section className="py-20 px-4 bg-accent/30">
@@ -198,7 +488,10 @@ export function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {courses.map((course: any) => {
-              const lessonCount = course.modules?.reduce((acc: number, m: any) => acc + (m._count?.lessons ?? 0), 0) ?? 0;
+              const lessonCount = course.modules?.reduce(
+                (acc: number, m: any) => acc + (m._count?.lessons ?? 0),
+                0
+              ) ?? 0;
               return (
                 <Link
                   key={course.id}
@@ -209,7 +502,7 @@ export function LandingPage() {
                     <img
                       src={course.thumbnailUrl}
                       alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      className="w-full h-full object-contain group-hover:scale-105 transition duration-300"
                     />
                     {course.level && (
                       <span className="absolute top-2 right-2">
@@ -253,7 +546,9 @@ export function LandingPage() {
                       )}
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <span className="font-semibold text-base">{course.price ? `${course.price} DT` : 'Gratuit'}</span>
+                      <span className="font-semibold text-base">
+                        {course.price ? `${course.price} DT` : 'Gratuit'}
+                      </span>
                       <span className="text-primary flex items-center gap-1 text-sm font-medium">
                         Voir le cours
                         <ArrowRight className="w-4 h-4" />
@@ -329,8 +624,7 @@ export function LandingPage() {
                 <div>
                   <h3 className="font-semibold mb-2">Interface intuitive</h3>
                   <p className="text-muted-foreground text-sm">
-                    Navigation simple et claire pour étudiants, formateurs et
-                    administrateurs
+                    Navigation simple et claire pour étudiants, formateurs et administrateurs
                   </p>
                 </div>
               </div>
@@ -340,12 +634,9 @@ export function LandingPage() {
                   <CheckCircle className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">
-                    Progression en temps réel
-                  </h3>
+                  <h3 className="font-semibold mb-2">Progression en temps réel</h3>
                   <p className="text-muted-foreground text-sm">
-                    Suivez votre avancement et débloquez les quiz après avoir
-                    complété les leçons
+                    Suivez votre avancement et débloquez les quiz après avoir complété les leçons
                   </p>
                 </div>
               </div>
@@ -355,12 +646,9 @@ export function LandingPage() {
                   <CheckCircle className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">
-                    Validation par des experts
-                  </h3>
+                  <h3 className="font-semibold mb-2">Validation par des experts</h3>
                   <p className="text-muted-foreground text-sm">
-                    Vos projets sont évalués par des formateurs professionnels
-                    avec feedback détaillé
+                    Vos projets sont évalués par des formateurs professionnels avec feedback détaillé
                   </p>
                 </div>
               </div>
@@ -370,29 +658,12 @@ export function LandingPage() {
                   <CheckCircle className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">
-                    Certification reconnue
-                  </h3>
+                  <h3 className="font-semibold mb-2">Certification reconnue</h3>
                   <p className="text-muted-foreground text-sm">
-                    Obtenez votre certificat automatiquement en remplissant les
-                    critères de réussite
+                    Obtenez votre certificat automatiquement en remplissant les critères de réussite
                   </p>
                 </div>
               </div>
-
-              {/*<div className="pt-4">
-                <Link
-                  to="/register"
-                  className="px-8 py-3 text-white rounded-lg transition-all duration-300 hover:shadow-[0_0_30px_rgba(56,82,233,0.5)] inline-flex items-center gap-2"
-                  style={{
-                    backgroundImage:
-                      'linear-gradient(90deg, #3852e9, #693fcb)',
-                  }}
-                >
-                  Commencer gratuitement
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-              </div>*/}
             </div>
           </div>
         </div>

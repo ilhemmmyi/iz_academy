@@ -12,23 +12,22 @@ export const ContactMessageService = {
       },
     });
 
-    // Notification aux admins (sans bloquer la réponse HTTP)
-    const admins = await prisma.user.findMany({
-      where: { role: 'ADMIN' },
-      select: { email: true },
-    });
-
-    const adminEmails = admins.map((a) => a.email).filter(Boolean);
-    if (adminEmails.length > 0) {
-      await queueEmail('contact-notification', {
-        to: adminEmails,
-        contactMessageId: contactMessage.id,
-        name: contactMessage.name,
-        email: contactMessage.email,
-        subject: contactMessage.subject,
-        message: contactMessage.message,
-      });
-    }
+    // Fire-and-forget: notify admins without blocking the HTTP response
+    prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } })
+      .then(admins => {
+        const adminEmails = admins.map(a => a.email).filter(Boolean);
+        if (adminEmails.length > 0) {
+          queueEmail('contact-notification', {
+            to: adminEmails,
+            contactMessageId: contactMessage.id,
+            name: contactMessage.name,
+            email: contactMessage.email,
+            subject: contactMessage.subject,
+            message: contactMessage.message,
+          });
+        }
+      })
+      .catch(err => console.error('[ContactService] admin notify failed:', err));
 
     return contactMessage;
   },
