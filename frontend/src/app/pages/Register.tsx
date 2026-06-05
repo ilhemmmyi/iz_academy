@@ -76,7 +76,7 @@ export function Register() {
           </div>
 
           <div className="bg-white/85 backdrop-blur-sm border border-white/60 rounded-2xl p-8 shadow-lg">
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
               <div>
                 <label htmlFor="name" className="block mb-2">
                   Nom complet
@@ -91,6 +91,7 @@ export function Register() {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     placeholder="Votre nom"
+                    autoComplete="off"
                     className="w-full pl-11 pr-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
@@ -111,6 +112,7 @@ export function Register() {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     placeholder="votre@email.com"
+                    autoComplete="off"
                     className="w-full pl-11 pr-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
@@ -131,6 +133,7 @@ export function Register() {
                       setFormData({ ...formData, password: e.target.value })
                     }
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     className="w-full pl-11 pr-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
@@ -151,6 +154,7 @@ export function Register() {
                       setFormData({ ...formData, confirmPassword: e.target.value })
                     }
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     className="w-full pl-11 pr-4 py-3 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   />
