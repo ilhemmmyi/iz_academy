@@ -22,11 +22,18 @@ const server = app.listen(config.port, () => {
   try { require('./workers/certificate.worker'); } catch (e: any) { console.error('[Worker] certificate.worker failed:', e.message); }
 });
 
+let retried = false;
 server.on('error', (err: NodeJS.ErrnoException) => {
-  if (err.code === 'EADDRINUSE') {
+  if (err.code === 'EADDRINUSE' && !retried) {
+    retried = true;
+    console.warn(`[WARN] Port ${config.port} still releasing — retrying in 1.5s...`);
+    server.close();
+    setTimeout(() => server.listen(config.port), 1500);
+  } else if (err.code === 'EADDRINUSE') {
     console.error(`[FATAL] Port ${config.port} is already in use. Stop the other instance first.`);
+    process.exit(1);
   } else {
     console.error('[FATAL] Server error:', err);
+    process.exit(1);
   }
-  process.exit(1);
 });

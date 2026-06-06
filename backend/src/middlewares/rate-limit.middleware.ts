@@ -22,7 +22,7 @@
  *   RATE_LIMIT_CERTIFICATE_MAX=5   Certificate retries per user / hour
  */
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator as rlIpKeyGenerator } from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import { AuditService, extractRequestContext } from '../services/audit.service';
 import type { AuthRequest } from './auth.middleware';
@@ -33,17 +33,18 @@ import type { AuthRequest } from './auth.middleware';
  * Per-user key generator.
  * Authenticated users are rate-limited by userId rather than IP so that
  * users on shared networks (NAT, VPNs) cannot inadvertently block each other.
- * Falls back to IP for requests that reach a user-keyed limiter unauthenticated.
+ * Falls back to IP (via the library helper that normalises IPv6) for unauthenticated requests.
  */
 export const userKeyGenerator = (req: Request): string =>
-  (req as AuthRequest).user?.userId ?? req.ip ?? 'anonymous';
+  (req as AuthRequest).user?.userId ?? rlIpKeyGenerator(req.ip ?? 'anonymous');
 
 /**
  * Per-IP key generator — for endpoints that are hit before auth
  * (login, register, forgot-password, contact form).
+ * Uses the library helper so IPv6 addresses are normalised correctly.
  */
 export const ipKeyGenerator = (req: Request): string =>
-  req.ip ?? 'anonymous';
+  rlIpKeyGenerator(req.ip ?? 'anonymous');
 
 // ── Factory ────────────────────────────────────────────────────────────────────
 

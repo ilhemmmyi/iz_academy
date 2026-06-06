@@ -163,7 +163,7 @@ export function LandingPage() {
               <div className="hero-anim-content flex items-center gap-0">
 
                 {/* Metric 1 — Étudiants */}
-                <div className="flex items-center gap-2 pr-4">
+                <div className="flex items-center gap-1 pr-4">
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ background: 'rgba(245,243,255,0.95)', border: '1px solid rgba(167,139,250,0.22)' }}
@@ -178,7 +178,7 @@ export function LandingPage() {
                 <div className="h-5 w-px mx-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.1)' }} />
 
                 {/* Metric 2 — Cours */}
-                <div className="flex items-center gap-2 pr-4">
+                <div className="flex items-center gap-1 pr-4">
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ background: 'rgba(238,242,255,0.95)', border: '1px solid rgba(99,102,241,0.2)' }}
@@ -195,7 +195,7 @@ export function LandingPage() {
                 <div className="h-5 w-px mx-4 flex-shrink-0" style={{ background: 'rgba(0,0,0,0.1)' }} />
 
                 {/* Metric 3 — Satisfaction */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <div
                     className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                     style={{ background: 'rgba(236,253,245,0.95)', border: '1px solid rgba(16,185,129,0.2)' }}
