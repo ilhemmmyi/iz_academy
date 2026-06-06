@@ -11,7 +11,8 @@
     "test:watch": "jest --watch",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "admin:create": "ts-node -r dotenv/config prisma/create-admin.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

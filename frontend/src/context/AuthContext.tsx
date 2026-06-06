@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { authApi } from '../api/auth.api';
-import { setAccessToken, apiClient, initCsrf } from '../api/client';
+import { setAccessToken, apiClient } from '../api/client';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -41,12 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const init = async () => {
       try {
-        // 1. Fetch CSRF token first — required before any state-changing request.
-        //    /auth/csrf-token is a GET, exempt from CSRF validation.
-        await initCsrf();
-
-        // 2. Call refresh directly via fetch (not apiClient) to avoid auto-refresh loop.
-        //    /auth/refresh is exempt from CSRF (sameSite=strict on the cookie handles it).
         const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
           method: 'POST',
           credentials: 'include',

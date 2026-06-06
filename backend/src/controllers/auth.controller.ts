@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { issueCsrfToken } from '../middlewares/csrf.middleware';
 import { AuditService, AuditAction, extractRequestContext } from '../services/audit.service';
 
 const REFRESH_COOKIE_OPTIONS = {
@@ -11,11 +10,6 @@ const REFRESH_COOKIE_OPTIONS = {
 };
 
 export const AuthController = {
-
-  getCsrfToken(req: Request, res: Response) {
-    const token = issueCsrfToken(req, res);
-    res.json({ csrfToken: token });
-  },
 
   async register(req: Request, res: Response) {
     try {

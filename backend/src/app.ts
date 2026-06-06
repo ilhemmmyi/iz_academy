@@ -25,7 +25,6 @@ import { aiRouter } from './routes/ai.routes';
 import { activityRouter } from './routes/activity.routes';
 import { settingsRouter } from './routes/settings.routes';
 import { errorHandler } from './middlewares/error.middleware';
-import { csrfProtection } from './middlewares/csrf.middleware';
 import { correlationIdMiddleware } from './middlewares/correlationId.middleware';
 import { auditLogRouter } from './routes/auditLog.routes';
 import { AuditService, extractRequestContext } from './services/audit.service';
@@ -55,10 +54,6 @@ if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
-
-// CSRF protection — must come after cookieParser, before routes.
-// See middlewares/csrf.middleware.ts for full threat-model documentation.
-app.use(csrfProtection);
 
 // Global rate limit — 200 req/min per IP (excludes auth routes which have stricter limits)
 const globalLimiter = rateLimit({
