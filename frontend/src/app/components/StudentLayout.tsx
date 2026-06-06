@@ -184,7 +184,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                   className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed"
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  <span className="flex-1 text-[15px]">{item.name}</span>
                   {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
                 </span>
               ) : (
@@ -199,7 +199,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                   }`}
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  <span className="flex-1 text-[15px]">{item.name}</span>
                   {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
                 </Link>
               );
@@ -209,7 +209,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
             {!user?.hasCompletedCoach ? (
               <span className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed">
                 <BookOpen className="w-5 h-5 shrink-0" />
-                <span className="flex-1 text-[15px] font-medium">Mes cours</span>
+                <span className="flex-1 text-[15px]">Mes cours</span>
               </span>
             ) : (
               <div>
@@ -222,7 +222,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                   }`}
                 >
                   <BookOpen className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-left text-[15px] font-medium">Mes cours</span>
+                  <span className="flex-1 text-left text-[15px]">Mes cours</span>
                   <ChevronDown
                     className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
                       isCoursesOpen ? 'rotate-180' : ''
@@ -333,7 +333,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                   className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-40 cursor-not-allowed"
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  <span className="flex-1 text-[15px]">{item.name}</span>
                   {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
                 </span>
               ) : (
@@ -348,7 +348,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                   }`}
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  <span className="flex-1 text-[15px]">{item.name}</span>
                   {isCoachRoute && <Sparkles className="w-3.5 h-3.5" />}
                 </Link>
               );

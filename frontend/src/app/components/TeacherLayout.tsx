@@ -200,7 +200,7 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
                   }`}
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  <span className="flex-1 text-[15px]">{item.name}</span>
                 </Link>
               );
             })}
@@ -216,7 +216,7 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
                 }`}
               >
                 <BookOpen className="w-5 h-5 shrink-0" />
-                <span className="flex-1 text-left text-[15px] font-medium">Mes cours</span>
+                <span className="flex-1 text-left text-[15px]">Mes cours</span>
                 <ChevronDown
                   className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
                     isCoursesOpen ? 'rotate-180' : ''
@@ -291,7 +291,7 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
                   }`}
                 >
                   <item.icon className="w-5 h-5 shrink-0" />
-                  <span className="flex-1 text-[15px] font-medium">{item.name}</span>
+                  <span className="flex-1 text-[15px]">{item.name}</span>
                 </Link>
               );
             })}

@@ -25,7 +25,7 @@ export const UserController = {
 
   async updateMe(req: AuthRequest, res: Response) {
     try {
-      const { name, avatarUrl } = req.body;
+      const { name, avatarUrl, phone, address, educationLevel, studentStatus } = req.body;
       if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
         try {
           const url = new URL(avatarUrl);
@@ -39,7 +39,19 @@ export const UserController = {
       if (name !== undefined && (typeof name !== 'string' || name.trim().length < 2 || name.length > 100)) {
         return res.status(400).json({ message: 'Name must be between 2 and 100 characters' });
       }
-      res.json(await UserService.updateMe(req.user!.userId, { name, avatarUrl }));
+      if (phone !== undefined && phone !== null && (typeof phone !== 'string' || phone.length > 30)) {
+        return res.status(400).json({ message: 'Numéro de téléphone invalide' });
+      }
+      if (address !== undefined && address !== null && (typeof address !== 'string' || address.length > 200)) {
+        return res.status(400).json({ message: 'Adresse invalide' });
+      }
+      if (educationLevel !== undefined && educationLevel !== null && (typeof educationLevel !== 'string' || educationLevel.length > 50)) {
+        return res.status(400).json({ message: 'Niveau scolaire invalide' });
+      }
+      if (studentStatus !== undefined && studentStatus !== null && (typeof studentStatus !== 'string' || studentStatus.length > 50)) {
+        return res.status(400).json({ message: 'Statut invalide' });
+      }
+      res.json(await UserService.updateMe(req.user!.userId, { name, avatarUrl, phone, address, educationLevel, studentStatus }));
     } catch {
       res.status(500).json({ message: 'Failed to update profile' });
     }

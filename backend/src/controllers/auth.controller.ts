@@ -33,7 +33,7 @@ export const AuthController = {
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
         accessToken,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword, hasPassword: !!user.password },
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword, hasPassword: !!user.password, phone: user.phone, address: user.address, educationLevel: user.educationLevel, studentStatus: user.studentStatus },
       });
     } catch (err: any) {
       if (err.message === 'INVALID_CREDENTIALS') return res.status(401).json({ message: 'Invalid credentials' });
@@ -124,7 +124,7 @@ export const AuthController = {
       res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({
         accessToken,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword, hasPassword: !!user.password },
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword, hasPassword: !!user.password, phone: user.phone, address: user.address, educationLevel: user.educationLevel, studentStatus: user.studentStatus },
       });
     } catch (err: any) {
       if (err.message === 'INVALID_FIREBASE_TOKEN') return res.status(401).json({ message: 'Invalid Firebase token' });

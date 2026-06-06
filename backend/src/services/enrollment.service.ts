@@ -22,12 +22,36 @@ export const EnrollmentService = {
     const existing = await EnrollmentModel.findByUserAndCourse(userId, courseId);
     if (existing) throw new Error('ALREADY_ENROLLED');
 
-    // Record the current content version so we can update it at approval time.
     const course = await prisma.course.findUnique({
       where: { id: courseId },
       select: { contentVersion: true },
     });
-    return EnrollmentModel.create(userId, courseId, message, extraInfo, course?.contentVersion ?? 1);
+
+    // Load existing profile data — used as fallback when student re-enrolls without re-filling the form
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { phone: true, address: true, educationLevel: true, studentStatus: true },
+    });
+
+    // Form data takes precedence; fall back to saved profile
+    const merged = {
+      phone:          extraInfo?.phone          || userProfile?.phone          || undefined,
+      address:        extraInfo?.address        || userProfile?.address        || undefined,
+      educationLevel: extraInfo?.educationLevel || userProfile?.educationLevel || undefined,
+      studentStatus:  extraInfo?.studentStatus  || userProfile?.studentStatus  || undefined,
+    };
+
+    // Persist any new personal info to the student's profile immediately
+    const profileUpdate: Record<string, string> = {};
+    if (extraInfo?.phone)          profileUpdate.phone          = extraInfo.phone;
+    if (extraInfo?.address)        profileUpdate.address        = extraInfo.address;
+    if (extraInfo?.educationLevel) profileUpdate.educationLevel = extraInfo.educationLevel;
+    if (extraInfo?.studentStatus)  profileUpdate.studentStatus  = extraInfo.studentStatus;
+    if (Object.keys(profileUpdate).length > 0) {
+      await prisma.user.update({ where: { id: userId }, data: profileUpdate });
+    }
+
+    return EnrollmentModel.create(userId, courseId, message, merged, course?.contentVersion ?? 1);
   },
 
   async updateStatus(id: string, status: 'APPROVED' | 'REJECTED') {

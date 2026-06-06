@@ -23,7 +23,7 @@ export const UserService = {
     return toSafeUser(user);
   },
 
-  async updateMe(userId: string, data: { name?: string; avatarUrl?: string }) {
+  async updateMe(userId: string, data: { name?: string; avatarUrl?: string; phone?: string; address?: string; educationLevel?: string; studentStatus?: string }) {
     const user = await UserModel.update(userId, data);
     return toSafeUser(user);
   },

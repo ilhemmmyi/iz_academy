@@ -15,6 +15,10 @@ import {
   EyeOff,
   CheckCircle,
   XCircle,
+  Phone,
+  MapPin,
+  GraduationCap,
+  Briefcase,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi } from '../../api/users.api';
@@ -46,6 +50,13 @@ export function UserProfile() {
 
   const [name, setName] = useState(user?.name || '');
   const [saving, setSaving] = useState(false);
+
+  // personal info (students only)
+  const [phone,          setPhone]          = useState(user?.phone          || '');
+  const [address,        setAddress]        = useState(user?.address        || '');
+  const [educationLevel, setEducationLevel] = useState(user?.educationLevel || '');
+  const [studentStatus,  setStudentStatus]  = useState(user?.studentStatus  || '');
+  const [savingInfo,     setSavingInfo]     = useState(false);
 
   // avatar states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +96,23 @@ export function UserProfile() {
       toast.error('Erreur lors de la mise à jour du profil');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /* =========================
+     SAVE PERSONAL INFO
+  ========================= */
+  const handleSaveInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingInfo(true);
+    try {
+      const updated = await usersApi.updateMe({ phone: phone.trim(), address: address.trim(), educationLevel, studentStatus });
+      setUser({ ...user, phone: updated.phone, address: updated.address, educationLevel: updated.educationLevel, studentStatus: updated.studentStatus });
+      toast.success('Informations personnelles mises à jour');
+    } catch {
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setSavingInfo(false);
     }
   };
 
@@ -342,6 +370,96 @@ export function UserProfile() {
               </button>
             </form>
           </div>
+
+          {/* =========================
+              PERSONAL INFO (students)
+          ========================= */}
+          {user.role === 'STUDENT' && (
+            <div className="bg-white border border-indigo-100 border-l-4 border-l-indigo-300 rounded-xl p-6 shadow-sm">
+              <h2 className="font-semibold mb-1">Informations personnelles</h2>
+              <p className="text-xs text-muted-foreground mb-5">
+                Ces données sont utilisées pour vos demandes d'inscription aux formations.
+              </p>
+
+              <form onSubmit={handleSaveInfo} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Numéro de téléphone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      placeholder="Ex : 55 123 456"
+                      maxLength={30}
+                      className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Adresse</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={e => setAddress(e.target.value)}
+                      placeholder="Ex : 12 Rue des Fleurs, Tunis"
+                      maxLength={200}
+                      className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Niveau scolaire</label>
+                  <div className="relative">
+                    <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <select
+                      value={educationLevel}
+                      onChange={e => setEducationLevel(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm appearance-none"
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="Bac">Bac</option>
+                      <option value="Bac+2">Bac+2</option>
+                      <option value="Bac+3">Bac+3</option>
+                      <option value="Bac+4">Bac+4</option>
+                      <option value="Bac+5 et plus">Bac+5 et plus</option>
+                      <option value="Autre">Autre</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Statut</label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <select
+                      value={studentStatus}
+                      onChange={e => setStudentStatus(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary text-sm appearance-none"
+                    >
+                      <option value="">Sélectionner...</option>
+                      <option value="Étudiant">Étudiant</option>
+                      <option value="Employé">Employé</option>
+                      <option value="Autre">Autre</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingInfo}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition disabled:opacity-50 font-medium"
+                >
+                  <Save className="w-4 h-4" />
+                  {savingInfo ? 'Enregistrement…' : 'Enregistrer les informations'}
+                </button>
+              </form>
+            </div>
+          )}
 
           {/* =========================
               CHANGE / SET PASSWORD

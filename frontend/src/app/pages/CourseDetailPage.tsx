@@ -94,9 +94,16 @@ export function CourseDetailPage() {
     );
   }
 
+  const hasProfileInfo = !!(user?.phone && user?.address && user?.educationLevel && user?.studentStatus);
+
   const handleEnrollment = () => {
     if (!user) {
       setShowLoginDialog(true);
+      return;
+    }
+    // Profile already has personal info — submit directly without showing the form
+    if (hasProfileInfo) {
+      handleEnrollDirect();
       return;
     }
     setEnrollForm({ phone: '', address: '', educationLevel: '', studentStatus: '' });
@@ -104,8 +111,23 @@ export function CourseDetailPage() {
     setShowEnrollPopup(true);
   };
 
+  const handleEnrollDirect = async () => {
+    setEnrolling(true);
+    try {
+      await enrollmentsApi.request(id!);
+      setEnrollmentStatus('PENDING');
+      toast.success(
+        'Demande envoyée ! Veuillez contacter notre équipe pour compléter le processus de paiement.',
+        { duration: 6000 },
+      );
+    } catch {
+      toast.error("Erreur lors de la demande d'inscription.");
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
   const handleEnrollSubmit = async () => {
-    // Validate
     const errors: Partial<EnrollmentExtraInfo> = {};
     if (!enrollForm.phone.trim()) errors.phone = 'Champ obligatoire';
     if (!enrollForm.address.trim()) errors.address = 'Champ obligatoire';
@@ -274,13 +296,13 @@ export function CourseDetailPage() {
                         <XCircle className="w-4 h-4" />
                         Demande refusée
                       </div>
-                      <Button className="w-full" onClick={handleEnrollment}>
-                        Renvoyer une demande
+                      <Button className="w-full" onClick={handleEnrollment} disabled={enrolling}>
+                        {enrolling ? 'Envoi...' : 'Renvoyer une demande'}
                       </Button>
                     </div>
                   ) : (
-                    <Button className="w-full" onClick={handleEnrollment}>
-                      Demander à s'inscrire à la formation
+                    <Button className="w-full" onClick={handleEnrollment} disabled={enrolling}>
+                      {enrolling ? 'Envoi...' : "Demander à s'inscrire à la formation"}
                     </Button>
                   )}
 

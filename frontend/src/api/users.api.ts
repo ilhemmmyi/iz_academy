@@ -3,7 +3,7 @@ import { apiClient } from './client';
 export const usersApi = {
   getMe: () => apiClient('/users/me'),
 
-  updateMe: (data: { name?: string; avatarUrl?: string }) =>
+  updateMe: (data: { name?: string; avatarUrl?: string; phone?: string; address?: string; educationLevel?: string; studentStatus?: string }) =>
     apiClient('/users/me', {
       method: 'PUT',
       body: JSON.stringify(data),
