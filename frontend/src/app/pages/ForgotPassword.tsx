@@ -28,8 +28,8 @@ export function ForgotPassword() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
-              <span className="font-semibold text-2xl">Iz Solution</span>
+            <img src="/iz-logo.png" alt="IZ Academy" className="h-10 w-auto" />
+              <span className="font-semibold text-2xl">IZ Academy</span>
           </Link>
         </div>
 

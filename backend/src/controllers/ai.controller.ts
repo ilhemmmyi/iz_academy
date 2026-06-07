@@ -10,10 +10,10 @@ const HF_MODEL = process.env.HUGGINGFACE_MODEL || 'microsoft/Phi-3.5-mini-instru
 
 export interface Questionnaire {
   goal: string;
-  field: string;
+  domain: string;
   level: string;
   skills: string[];
-  hoursPerWeek: string;
+  availability: string;
   learningStyle: string;
   shortTermGoal: string;
   customAnswers?: Record<string, string>;
@@ -33,10 +33,10 @@ interface ScoredCourse extends DbCourse {
 
 const QUESTIONNAIRE_KEYS = [
   'goal',
-  'field',
+  'domain',
   'level',
   'skills',
-  'hoursPerWeek',
+  'availability',
   'learningStyle',
   'shortTermGoal',
 ] as const;
@@ -56,19 +56,23 @@ function sanitizeQuestionnaire(input: unknown): Questionnaire {
     return acc;
   }, {});
 
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+
   return {
-    goal: typeof source.goal === 'string' ? source.goal.trim() : '',
-    field: typeof source.field === 'string' ? source.field.trim() : '',
-    level: typeof source.level === 'string' ? source.level.trim() : '',
+    goal:         str(source.goal),
+    // accept both new key (domain) and legacy key (field)
+    domain:       str(source.domain) || str(source.field),
+    level:        str(source.level),
     skills: Array.isArray(source.skills)
       ? source.skills
-          .filter((skill): skill is string => typeof skill === 'string')
-          .map((skill) => skill.trim())
+          .filter((s): s is string => typeof s === 'string')
+          .map((s) => s.trim())
           .filter(Boolean)
       : [],
-    hoursPerWeek: typeof source.hoursPerWeek === 'string' ? source.hoursPerWeek.trim() : '',
-    learningStyle: typeof source.learningStyle === 'string' ? source.learningStyle.trim() : '',
-    shortTermGoal: typeof source.shortTermGoal === 'string' ? source.shortTermGoal.trim() : '',
+    // accept both new key (availability) and legacy key (hoursPerWeek)
+    availability: str(source.availability) || str(source.hoursPerWeek),
+    learningStyle: str(source.learningStyle),
+    shortTermGoal: str(source.shortTermGoal),
     customAnswers,
   };
 }
@@ -81,6 +85,70 @@ const STOPWORDS = new Set([
   'une', 'pour', 'dans', 'avec', 'sur', 'cours', 'course', 'learn', 'learning',
   'introduction', 'complete', 'guide', 'basics',
 ]);
+
+const domainKeywords: Record<string, string[]> = {
+  'Développement Web': [
+    'web', 'html', 'css', 'javascript', 'react', 'next', 'node', 'express',
+    'typescript', 'frontend', 'backend', 'fullstack', 'api', 'rest', 'prisma',
+  ],
+  'Science des données & Intelligence artificielle': [
+    'python', 'data', 'machine learning', 'ml', 'tensorflow', 'keras',
+    'scikit', 'pandas', 'numpy', 'matplotlib', 'deep learning', 'neural',
+    'mlflow', 'fastapi', 'airflow', 'feature',
+  ],
+  'Développement Mobile': [
+    'mobile', 'ios', 'swift', 'swiftui', 'flutter', 'dart', 'android',
+    'riverpod', 'firebase', 'app store', 'google play',
+  ],
+  'DevOps & Cloud': [
+    'docker', 'kubernetes', 'devops', 'aws', 'cloud', 'ci/cd', 'github actions',
+    'helm', 'prometheus', 'grafana', 'terraform', 'lambda', 'ec2', 's3',
+  ],
+  'Cybersécurité & Hacking Éthique': [
+    'cybersécurité', 'hacking', 'sécurité', 'pentest', 'kali', 'metasploit',
+    'nmap', 'burp', 'owasp', 'sql injection', 'xss', 'exploitation',
+  ],
+  'Design': [
+    'design', 'ui', 'ux', 'figma', 'illustrator', 'photoshop', 'indesign',
+    'wireframe', 'prototype', 'couleur', 'typographie', 'adobe', 'branding',
+  ],
+  'Bases de données & SQL': [
+    'sql', 'postgresql', 'base de données', 'requête', 'jointure', 'index',
+    'optimisation', 'nosql', 'mongodb', 'prisma', 'orm',
+  ],
+  'Blockchain & Web3': [
+    'blockchain', 'web3', 'solidity', 'ethereum', 'smart contract', 'nft',
+    'hardhat', 'ethers', 'ipfs', 'defi', 'crypto',
+  ],
+  'Marketing Digital & SEO': [
+    'marketing', 'seo', 'google ads', 'meta ads', 'email', 'campagne',
+    'analytics', 'conversion', 'social media', 'contenu', 'ahrefs',
+  ],
+};
+
+const levelKeywords: Record<string, string[]> = {
+  'Débutant': ['débutant', 'beginner', 'introduction', 'fondamentaux', 'bases'],
+  'Intermédiaire': ['intermédiaire', 'intermediate', 'approfondissement', 'avancé', 'masterclass'],
+  'Avancé': ['avancé', 'advanced', 'expert', 'production', 'architecture', 'système'],
+};
+
+function normalizeLevelForScoring(level: string): string {
+  const l = level.toLowerCase();
+  if (l.includes('débutant') || l.includes('beginner')) return 'beginner';
+  if (l.includes('intermédiaire') || l.includes('intermediate')) return 'intermediate';
+  if (l.includes('avancé') || l.includes('advanced')) return 'advanced';
+  if (l.includes('basic') || l.includes('basique')) return 'basic';
+  return l;
+}
+
+function getDomainKeywords(domain: string): string[] {
+  for (const [key, keywords] of Object.entries(domainKeywords)) {
+    if (domain.toLowerCase().includes(key.toLowerCase().split(' ')[0].toLowerCase())) {
+      return keywords;
+    }
+  }
+  return [];
+}
 
 function extractKeywords(text: string): string[] {
   return [
@@ -124,10 +192,10 @@ function scoreCourses(
   const matched = scored.filter((c) => c.score > 0).sort((a, b) => b.score - a.score);
 
   if (matched.length === 0) {
-    return scored.sort((a, b) => b.score - a.score).slice(0, 5);
+    return scored.sort((a, b) => b.score - a.score).slice(0, 3);
   }
 
-  return matched.slice(0, 6);
+  return matched.slice(0, 3);
 }
 
 // --- Fallback qualitative analysis from questionnaire (no AI needed) ----------
@@ -144,7 +212,7 @@ function buildFallbackAnalysis(q: Questionnaire, topCourses: ScoredCourse[]): {
     intermediate: 'niveau intermédiaire',
     advanced: 'niveau avancé',
   };
-  const levelLabel = levelLabels[q.level?.toLowerCase()] ?? q.level;
+  const levelLabel = levelLabels[normalizeLevelForScoring(q.level ?? '')] ?? q.level;
 
   // Strengths — based on declared skills and learning style
   const strengths: string[] = [];
@@ -154,31 +222,32 @@ function buildFallbackAnalysis(q: Questionnaire, topCourses: ScoredCourse[]): {
   if (q.learningStyle) {
     strengths.push(`Ton style d'apprentissage (${q.learningStyle}) te permet d'assimiler efficacement de nouveaux concepts`);
   }
-  if (q.hoursPerWeek) {
-    strengths.push(`Tu disposes de ${q.hoursPerWeek} par semaine, ce qui est suffisant pour progresser régulièrement`);
+  if (q.availability) {
+    strengths.push(`Tu disposes de ${q.availability} par semaine, ce qui est suffisant pour progresser régulièrement`);
   }
-  if (strengths.length === 0) strengths.push('Motivation et volonté de progresser dans ' + q.field);
+  if (strengths.length === 0) strengths.push('Motivation et volonté de progresser dans ' + q.domain);
 
   // Weaknesses — based on level vs goal
   const weaknesses: string[] = [];
-  const isEarlyLevel = ['beginner', 'basic'].includes(q.level?.toLowerCase());
+  const normalizedLvl = normalizeLevelForScoring(q.level ?? '');
+  const isEarlyLevel = ['beginner', 'basic'].includes(normalizedLvl);
   if (isEarlyLevel) {
-    weaknesses.push(`En tant que ${levelLabel} en ${q.field}, certaines compétences fondamentales restent à consolider`);
+    weaknesses.push(`En tant que ${levelLabel} en ${q.domain}, certaines compétences fondamentales restent à consolider`);
   }
   weaknesses.push(`Pour atteindre ton objectif "${q.shortTermGoal}", il te manque encore de l'expérience pratique`);
-  if (q.skills.length === 0 || (q.skills.length === 1 && q.skills[0] === 'None')) {
-    weaknesses.push(`Aucune compétence technique déclarée — il faudra partir des bases de ${q.field}`);
+  if (q.skills.length === 0 || (q.skills.length === 1 && q.skills[0] === 'Aucune de ces technologies')) {
+    weaknesses.push(`Aucune compétence technique déclarée — il faudra partir des bases de ${q.domain}`);
   }
 
-  // Focus areas — based on field and goal
-  const focusAreas: string[] = [`Fondamentaux de ${q.field}`];
+  // Focus areas — based on domain and goal
+  const focusAreas: string[] = [`Fondamentaux de ${q.domain}`];
   if (q.shortTermGoal) focusAreas.push(q.shortTermGoal);
   if (topCourses.length > 0) focusAreas.push(`Mise en pratique via les cours recommandés`);
   focusAreas.push('Projets concrets pour renforcer ton portfolio');
 
   // Learning plan — personalized to hours/week and courses
   const courseNames = topCourses.slice(0, 3).map((c) => `"${c.title}"`).join(', ');
-  const learningPlan = `En investissant ${q.hoursPerWeek} par semaine, commence par les cours ${courseNames || 'recommandés ci-dessus'} pour construire une base solide en ${q.field}. Concentre-toi sur la pratique régulière et applique chaque concept appris dans un mini-projet personnel. En quelques semaines tu seras en mesure d'atteindre ton objectif : ${q.shortTermGoal}.`;
+  const learningPlan = `En investissant ${q.availability} par semaine, commence par les cours ${courseNames || 'recommandés ci-dessus'} pour construire une base solide en ${q.domain}. Concentre-toi sur la pratique régulière et applique chaque concept appris dans un mini-projet personnel. En quelques semaines tu seras en mesure d'atteindre ton objectif : ${q.shortTermGoal}.`;
 
   return { strengths, weaknesses, focusAreas: focusAreas.slice(0, 4), learningPlan };
 }
@@ -203,10 +272,10 @@ function buildAnalysisMessages(
 
 ### Profil de l'apprenant :
 - Objectif : ${q.goal} → ${q.shortTermGoal}
-- Domaine d'intérêt : ${q.field}
+- Domaine d'intérêt : ${q.domain}
 - Niveau actuel : ${q.level}
 - Compétences connues : ${q.skills.length > 0 ? q.skills.join(', ') : 'Aucune listée'}
-- Temps disponible/semaine : ${q.hoursPerWeek}
+- Temps disponible/semaine : ${q.availability}
 - Style d'apprentissage préféré : ${q.learningStyle}${customSection}
 
 ### Cours pré-sélectionnés correspondant à ce profil :
@@ -249,10 +318,10 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
 
     const questionnaire = sanitizeQuestionnaire(rawQuestionnaire);
 
-    if (!questionnaire?.goal || !questionnaire?.field || !questionnaire?.level) {
+    if (!questionnaire?.goal || !questionnaire?.domain || !questionnaire?.level) {
       return res
         .status(400)
-        .json({ message: 'Missing required questionnaire fields: goal, field, level.' });
+        .json({ message: 'Missing required questionnaire fields: goal, domain, level.' });
     }
 
     // -- 2. Fetch published courses from DB --------------------------------
@@ -265,15 +334,17 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
     // -- 3. Score & rank courses using keyword matching --------------------
     const profileText = [
       questionnaire.goal,
-      questionnaire.field,
+      questionnaire.domain,
       questionnaire.shortTermGoal,
       questionnaire.skills.join(' '),
       questionnaire.learningStyle,
+      ...getDomainKeywords(questionnaire.domain),
       ...Object.values(questionnaire.customAnswers ?? {}),
     ].join(' ');
 
     const userKeywords = extractKeywords(profileText);
-    const topCourses = scoreCourses(dbCourses, userKeywords, questionnaire.level);
+    const normalizedLevel = normalizeLevelForScoring(questionnaire.level);
+    const topCourses = scoreCourses(dbCourses, userKeywords, normalizedLevel);
 
     // -- 4. Call AI for qualitative analysis only --------------------------
     const apiKey = process.env.HUGGINGFACE_API_KEY;

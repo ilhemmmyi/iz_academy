@@ -195,7 +195,7 @@ export function StudentCertificateDetail() {
           <div className="absolute inset-0 flex flex-col items-center justify-center px-12 md:px-20 py-8 text-center">
             {/* Academy */}
             <p className="text-amber-400 font-bold tracking-[0.3em] text-[11px] md:text-sm mb-2 uppercase">
-              IZ Solution
+              IZ Academy
             </p>
 
             {/* Title */}
@@ -240,7 +240,7 @@ export function StudentCertificateDetail() {
                   {cert.course.teacher.name}
                 </p>
                 <div className="w-16 h-px bg-amber-400 mt-2 mb-0.5" />
-                <p className="text-amber-400 font-bold text-[9px] md:text-[10px]">IZ Solution</p>
+                <p className="text-amber-400 font-bold text-[9px] md:text-[10px]">IZ Academy</p>
               </div>
 
               {/* Cert ID */}

@@ -45,7 +45,7 @@ const certWorker = new Worker('certificates', async (job) => {
   // ── Create DB record first so we have a stable cert.id to embed in the PDF ───
   const certRecord = existing ?? (await CertificateModel.create(userId, courseId));
 
-  const tutorName = (course as any).teacher?.name ?? 'IZ Solution';
+  const tutorName = (course as any).teacher?.name ?? 'IZ Academy';
 
   // ── Generate PDF ──────────────────────────────────────────────────────────────
   const pdfBuffer = await buildCertificatePdf(

@@ -83,8 +83,8 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
               </button>
 
               <Link to="/" className="flex items-center gap-2">
-                <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto" />
-            <span className="font-semibold text-xl">Iz Solution</span>
+                <img src="/iz-logo.png" alt="IZ Academy" className="h-8 w-auto" />
+            <span className="font-semibold text-xl">IZ Academy</span>
               </Link>
 
               <span className="hidden sm:inline px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">

@@ -103,12 +103,12 @@ export function AdminEnrollmentRequests() {
 
   const RequestCard = ({ request }: { request: EnrollmentRequest }) => (
     <Card>
-      <CardContent className="pt-6">
-        <div className="space-y-4">
+      <CardContent className="pt-4 pb-4">
+        <div className="space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h3>{request.studentName}</h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-base font-semibold">{request.studentName}</h3>
                 <Badge
                   variant={
                     request.status === 'approved'
@@ -126,73 +126,73 @@ export function AdminEnrollmentRequests() {
                    'En attente'}
                 </Badge>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Mail className="w-4 h-4" />
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Mail className="w-3.5 h-3.5" />
                 {request.studentEmail}
               </div>
             </div>
           </div>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-muted-foreground" />
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="font-medium">{request.courseName}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Demandé le {request.requestDate}</span>
             </div>
           </div>
 
           {request.message && (
-            <div className="p-3 bg-accent rounded-lg">
-              <p className="text-sm italic">"{request.message}"</p>
+            <div className="px-3 py-2 bg-accent rounded-lg">
+              <p className="text-xs italic">"{request.message}"</p>
             </div>
           )}
 
           {/* Profil étudiant */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center gap-2">
-              <User className="w-3.5 h-3.5 text-muted-foreground" />
+            <div className="bg-muted/50 px-3 py-1.5 border-b border-border flex items-center gap-1.5">
+              <User className="w-3 h-3 text-muted-foreground" />
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Profil de l'étudiant
               </span>
             </div>
-            <div className="px-4 py-3 space-y-2">
-              <div className="flex items-center gap-3 text-sm">
-                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-32 shrink-0">Nom</span>
+            <div className="px-3 py-2 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs">
+                <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-24 shrink-0">Nom</span>
                 <span className="font-medium">{request.studentName}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-32 shrink-0">Email</span>
+              <div className="flex items-center gap-2 text-xs">
+                <Mail className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-24 shrink-0">Email</span>
                 <span className="font-medium">{request.studentEmail}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-32 shrink-0">Téléphone</span>
+              <div className="flex items-center gap-2 text-xs">
+                <Phone className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-24 shrink-0">Téléphone</span>
                 <span className={request.phone ? 'font-medium' : 'text-muted-foreground'}>
                   {request.phone || '—'}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-32 shrink-0">Adresse</span>
+              <div className="flex items-center gap-2 text-xs">
+                <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-24 shrink-0">Adresse</span>
                 <span className={request.address ? 'font-medium' : 'text-muted-foreground'}>
                   {request.address || '—'}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <GraduationCap className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-32 shrink-0">Niveau scolaire</span>
+              <div className="flex items-center gap-2 text-xs">
+                <GraduationCap className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-24 shrink-0">Niveau scolaire</span>
                 <span className={request.educationLevel ? 'font-medium' : 'text-muted-foreground'}>
                   {request.educationLevel || '—'}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Briefcase className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-muted-foreground w-32 shrink-0">Statut</span>
+              <div className="flex items-center gap-2 text-xs">
+                <Briefcase className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="text-muted-foreground w-24 shrink-0">Statut</span>
                 <span className={request.studentStatus ? 'font-medium' : 'text-muted-foreground'}>
                   {request.studentStatus || '—'}
                 </span>
@@ -203,18 +203,20 @@ export function AdminEnrollmentRequests() {
           {request.status === 'pending' && (
             <div className="flex gap-2">
               <Button
+                size="sm"
                 className="flex-1"
                 onClick={() => handleApprove(request.id)}
               >
-                <CheckCircle className="w-4 h-4 mr-2" />
+                <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                 Approuver
               </Button>
               <Button
+                size="sm"
                 variant="destructive"
                 className="flex-1"
                 onClick={() => handleDelete(request.id)}
               >
-                <XCircle className="w-4 h-4 mr-2" />
+                <XCircle className="w-3.5 h-3.5 mr-1.5" />
                 Supprimer
               </Button>
             </div>
@@ -272,7 +274,7 @@ export function AdminEnrollmentRequests() {
 
           <TabsContent value="pending" className="space-y-4 mt-6">
             {filteredPending.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4">
                 {filteredPending.map(request => (
                   <RequestCard key={request.id} request={request} />
                 ))}
@@ -294,7 +296,7 @@ export function AdminEnrollmentRequests() {
 
           <TabsContent value="approved" className="space-y-4 mt-6">
             {filteredApproved.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 gap-4">
                 {filteredApproved.map(request => (
                   <RequestCard key={request.id} request={request} />
                 ))}

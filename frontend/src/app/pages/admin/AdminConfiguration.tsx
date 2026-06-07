@@ -722,7 +722,7 @@ function PaymentsSection() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SettingsSection() {
-  const [siteEmail, setSiteEmail] = useState('imenzarai@iz-solution.com');
+  const [siteEmail, setSiteEmail] = useState('imenzarai@iz-academy.com');
   const [emailSaving, setEmailSaving] = useState(false);
 
   const [maintenanceMode, setMaintenanceMode] = useState(false);

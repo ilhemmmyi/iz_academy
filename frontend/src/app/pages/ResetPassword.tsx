@@ -51,8 +51,8 @@ export function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-accent/30 p-8">
         <div className="w-full max-w-md text-center">
           <Link to="/" className="inline-flex items-center gap-2 mb-8">
-            <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
-              <span className="font-semibold text-2xl">Iz Solution</span>
+            <img src="/iz-logo.png" alt="IZ Academy" className="h-10 w-auto" />
+              <span className="font-semibold text-2xl">IZ Academy</span>
           </Link>
           <div className="bg-white border border-border rounded-2xl p-10">
             <XCircle className="w-14 h-14 text-destructive mx-auto mb-4" />
@@ -72,8 +72,8 @@ export function ResetPassword() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
-              <span className="font-semibold text-2xl">Iz Solution</span>
+            <img src="/iz-logo.png" alt="IZ Academy" className="h-10 w-auto" />
+              <span className="font-semibold text-2xl">IZ Academy</span>
           </Link>
         </div>
 

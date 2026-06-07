@@ -1,7 +1,7 @@
 {
   "name": "iz-academy-backend",
   "version": "1.0.0",
-  "description": "IZ Solution Backend API",
+  "description": "IZ Academy Backend API",
   "main": "dist/server.js",
   "scripts": {
     "dev": "npx nodemon --watch src --watch .env --ext ts,json,env --exec \"npx kill-port 5000 && npx ts-node src/server.ts\"",

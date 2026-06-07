@@ -9,8 +9,8 @@ export function CheckEmail() {
     <div className="min-h-screen flex items-center justify-center bg-accent/30 p-8">
       <div className="w-full max-w-md text-center">
         <Link to="/" className="inline-flex items-center gap-2 mb-8">
-          <img src="/iz-logo.png" alt="Iz Solution" className="h-10 w-auto" />
-              <span className="font-semibold text-2xl">Iz Solution</span>
+          <img src="/iz-logo.png" alt="IZ Academy" className="h-10 w-auto" />
+              <span className="font-semibold text-2xl">IZ Academy</span>
         </Link>
 
         <div className="bg-white border border-border rounded-xl p-10">

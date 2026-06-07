@@ -37,8 +37,8 @@ export function Footer() {
           {/* Brand + Social */}
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-2.5">
-              <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto brightness-0 invert" />
-              <span className="font-semibold text-xl">Iz Solution</span>
+              <img src="/iz-logo.png" alt="IZ Academy" className="h-8 w-auto brightness-0 invert" />
+              <span className="font-semibold text-xl">IZ Academy</span>
             </div>
 
             <p className="text-primary-foreground/75 text-sm leading-relaxed max-w-sm">
@@ -91,7 +91,7 @@ export function Footer() {
         {/* ── Bottom bar ──────────────────────────────────────────────────── */}
         <div className="border-t border-primary-foreground/15 mt-12 pt-6 text-center">
           <p className="text-primary-foreground/60 text-xs">
-            &copy; 2026 Iz Solution. Tous droits réservés.
+            &copy; 2026 IZ Academy. Tous droits réservés.
           </p>
         </div>
 

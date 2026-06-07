@@ -20,11 +20,12 @@ import { settingsApi } from '../../api/settings.api';
 
 export function LandingPage() {
   const [courses, setCourses] = useState<any[]>([]);
+  const [totalCourses, setTotalCourses] = useState(0);
   const [videoUrl, setVideoUrl] = useState('');
 
   useEffect(() => {
     coursesApi.getAll()
-      .then(data => setCourses(data.slice(0, 4)))
+      .then(data => { setTotalCourses(data.length); setCourses(data.slice(0, 4)); })
       .catch(() => {});
     settingsApi.getAll()
       .then(s => { if (s.homepageVideoUrl) setVideoUrl(s.homepageVideoUrl); })
@@ -186,7 +187,7 @@ export function LandingPage() {
                     <BookOpen style={{ width: '13px', height: '13px', color: '#4f46e5' }} />
                   </div>
                   <span className="text-[12.5px] font-bold" style={{ color: '#0c0c1d' }}>
-                    {courses.length > 0 ? `${courses.length}+` : '10+'}&nbsp;
+                    {totalCourses > 0 ? `${Math.ceil(totalCourses / 10) * 10}+` : '20+'}&nbsp;
                   </span>
                   <span className="text-[11.5px]" style={{ color: '#a1a1aa' }}>Cours</span>
                 </div>
@@ -346,7 +347,7 @@ export function LandingPage() {
       </div>
       <div>
         <p className="text-sm font-bold leading-none" style={{ color: '#0c0c1d' }}>
-          {courses.length > 0 ? `${courses.length}+` : '10+'} cours
+          {totalCourses > 0 ? `${Math.ceil(totalCourses / 10) * 10}+` : '20+'} cours
         </p>
         <p className="text-[10.5px] mt-1 leading-none" style={{ color: '#a1a1aa' }}>
           Disponibles
@@ -423,7 +424,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl mb-4">
-              Pourquoi choisir Iz Solution ?
+              Pourquoi choisir IZ Academy ?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Une plateforme complète pour votre apprentissage en ligne
@@ -581,7 +582,7 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl mb-4">
-              Découvrez Iz Solution en action
+              Découvrez IZ Academy en action
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Explorez notre plateforme et voyez comment elle facilite
@@ -603,7 +604,7 @@ export function LandingPage() {
                 <>
                   <img
                     src="https://images.unsplash.com/photo-1771054244019-96f9db9720b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbmxpbmUlMjBsZWFybmluZyUyMHZpZGVvJTIwY29uZmVyZW5jZSUyMGVkdWNhdGlvbnxlbnwxfHx8fDE3NzM1MTI2Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                    alt="Démo de la plateforme Iz Solution"
+                    alt="Démo de la plateforme IZ Academy"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/30 transition">

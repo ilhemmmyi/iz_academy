@@ -1,4 +1,4 @@
-# Iz Academy - Fonctionnalités Implémentées
+# IZ Academy - Fonctionnalités Implémentées
 
 ## ✅ Modifications Complétées
 
@@ -187,4 +187,4 @@
 
 ---
 
-**Développé pour Iz Academy - Plateforme E-Learning** 🎓
+**Développé pour IZ Academy - Plateforme E-Learning** 🎓

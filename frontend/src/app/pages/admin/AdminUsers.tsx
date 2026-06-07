@@ -511,7 +511,7 @@ export function AdminUsers() {
             </div>
             <button
               onClick={() => setShowAddTeacher(true)}
-              className="px-4 py-2.5 bg-indigo-50 text-indigo-600 font-semibold rounded-xl border border-indigo-100 hover:bg-indigo-100 transition flex items-center gap-2"
+              className="px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition flex items-center gap-2"
             >
               <UserPlus className="w-4 h-4" />
               Ajouter formateur
@@ -520,20 +520,20 @@ export function AdminUsers() {
 
           {/* Stat chips */}
           <div className="flex flex-wrap gap-3 mt-5">
-            <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2">
-              <GraduationCap className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm font-medium text-indigo-600">{studentCount}</span>
-              <span className="text-xs text-indigo-400">Étudiants</span>
+            <div className="flex items-center gap-2 bg-indigo-100 border border-indigo-300 rounded-xl px-4 py-2">
+              <GraduationCap className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-medium text-gray-900">{studentCount}</span>
+              <span className="text-xs text-gray-900">Étudiants</span>
             </div>
-            <div className="flex items-center gap-2 bg-teal-50 border border-teal-100 rounded-xl px-4 py-2">
-              <Briefcase className="w-4 h-4 text-teal-400" />
-              <span className="text-sm font-medium text-teal-600">{teacherCount}</span>
-              <span className="text-xs text-teal-400">Formateurs</span>
+            <div className="flex items-center gap-2 bg-teal-100 border border-teal-300 rounded-xl px-4 py-2">
+              <Briefcase className="w-4 h-4 text-teal-600" />
+              <span className="text-sm font-medium text-gray-900">{teacherCount}</span>
+              <span className="text-xs text-gray-900">Formateurs</span>
             </div>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-              <Users className="w-4 h-4 text-slate-400" />
-              <span className="text-sm font-medium text-slate-600">{studentCount + teacherCount}</span>
-              <span className="text-xs text-slate-400">Total</span>
+            <div className="flex items-center gap-2 bg-slate-100 border border-slate-300 rounded-xl px-4 py-2">
+              <Users className="w-4 h-4 text-slate-600" />
+              <span className="text-sm font-medium text-gray-900">{studentCount + teacherCount}</span>
+              <span className="text-xs text-gray-900">Total</span>
             </div>
           </div>
         </div>
@@ -549,19 +549,19 @@ export function AdminUsers() {
         <div className="bg-white border border-indigo-100 rounded-xl p-4 shadow-sm">
           <div className="flex gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => handleSearchChange(e.target.value)}
                 placeholder="Rechercher un utilisateur..."
-                className="w-full pl-10 pr-4 py-2 border border-indigo-200 rounded-lg bg-indigo-50/30 focus:outline-none focus:ring-2 focus:ring-indigo-400 placeholder:text-indigo-300"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400"
               />
             </div>
             <select
               value={filterRole}
               onChange={e => handleRoleChange(e.target.value)}
-              className="px-4 py-2 border border-indigo-200 rounded-lg bg-indigo-50/30 text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="all">Tous les utilisateurs</option>
               <option value="student">Étudiants</option>

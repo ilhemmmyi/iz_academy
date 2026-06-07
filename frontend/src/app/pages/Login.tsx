@@ -114,8 +114,8 @@ export function Login() {
         {/* Logo */}
         <div className="relative z-10 px-12 pt-10 self-start w-full">
           <Link to="/" className="inline-flex items-center gap-3">
-            <img src="/iz-logo.png" alt="Iz Solution" className="h-9 w-auto brightness-0 invert" />
-            <span className="font-bold text-xl text-white tracking-tight">Iz Solution</span>
+            <img src="/iz-logo.png" alt="IZ Academy" className="h-9 w-auto brightness-0 invert" />
+            <span className="font-bold text-xl text-white tracking-tight">IZ Academy</span>
           </Link>
         </div>
       </div>
@@ -126,8 +126,8 @@ export function Login() {
         {/* Mobile logo */}
         <div className="lg:hidden mb-8">
           <Link to="/" className="inline-flex items-center gap-2">
-            <img src="/iz-logo.png" alt="Iz Solution" className="h-8 w-auto" />
-            <span className="font-bold text-lg tracking-tight">Iz Solution</span>
+            <img src="/iz-logo.png" alt="IZ Academy" className="h-8 w-auto" />
+            <span className="font-bold text-lg tracking-tight">IZ Academy</span>
           </Link>
         </div>
 
@@ -172,14 +172,14 @@ export function Login() {
 
           {/* ── Login form ── */}
           {mode === 'login' && (
-            <form key="login" onSubmit={handleLogin} className="space-y-4 auth-form-in" autoComplete="off">
+            <form key="login" onSubmit={handleLogin} className="space-y-4 auth-form-in" autoComplete="on">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input id="email" type="email" value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="votre@email.com" autoComplete="off"
+                    placeholder="votre@email.com" autoComplete="email"
                     className={inputCls} required />
                 </div>
               </div>
@@ -219,7 +219,7 @@ export function Login() {
 
           {/* ── Register form ── */}
           {mode === 'register' && (
-            <form key="register" onSubmit={handleRegister} className="space-y-4 auth-form-in" autoComplete="off">
+            <form key="register" onSubmit={handleRegister} className="space-y-4 auth-form-in" autoComplete="on">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">Nom complet</label>
                 <div className="relative">
@@ -237,7 +237,7 @@ export function Login() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input id="reg-email" type="email" value={reg.email}
                     onChange={(e) => setReg({ ...reg, email: e.target.value })}
-                    placeholder="votre@email.com" autoComplete="off"
+                    placeholder="votre@email.com" autoComplete="email"
                     className={inputCls} required />
                 </div>
               </div>

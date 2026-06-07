@@ -202,9 +202,6 @@ export function TeacherCourseView() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <Link to="/teacher/courses" className="text-primary hover:underline mb-2 inline-block">
-            ← Retour à mes cours
-          </Link>
           <h1 className="mb-1">{course.title}</h1>
           <p className="text-muted-foreground text-sm">{allLessons.length} leçon{allLessons.length !== 1 ? 's' : ''}</p>
         </div>

@@ -50,7 +50,7 @@ export const EmailService = {
   async sendWelcome(email: string, name: string) {
     await send({
       to: email,
-      subject: 'Bienvenue sur IzSolution !',
+      subject: 'Bienvenue sur IzAcademy !',
       html: `<h1>Bienvenue ${esc(name)} !</h1><p>Votre compte a été créé avec succès.</p>`,
     });
   },
@@ -98,11 +98,11 @@ export const EmailService = {
     const link = `${data.frontendUrl}/reset-password?token=${data.token}`;
     await send({
       to: data.to,
-      subject: 'Réinitialisation de votre mot de passe — Iz Solution',
+      subject: 'Réinitialisation de votre mot de passe — IZ Academy',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff">
           <div style="background:#4f46e5;padding:32px;text-align:center;border-radius:8px 8px 0 0">
-            <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700">Iz Solution</h1>
+            <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700">IZ Academy</h1>
           </div>
           <div style="padding:40px 32px">
             <h2 style="color:#111827;margin:0 0 16px">Réinitialisation du mot de passe</h2>
@@ -128,7 +128,7 @@ export const EmailService = {
             </p>
           </div>
           <div style="background:#f9fafb;padding:16px;text-align:center;border-radius:0 0 8px 8px">
-            <p style="color:#9ca3af;font-size:12px;margin:0">© 2026 Iz Solution. Tous droits réservés.</p>
+            <p style="color:#9ca3af;font-size:12px;margin:0">© 2026 IZ Academy. Tous droits réservés.</p>
           </div>
         </div>
       `,
@@ -139,10 +139,10 @@ export const EmailService = {
     const link = `${data.frontendUrl}/verify-email?token=${data.token}`;
     await send({
       to: data.to,
-      subject: 'Vérifiez votre adresse email — Iz Solution',
+      subject: 'Vérifiez votre adresse email — IZ Academy',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
-          <h2 style="color:#4f46e5">Bienvenue sur Iz Solution, ${esc(data.name)} !</h2>
+          <h2 style="color:#4f46e5">Bienvenue sur IZ Academy, ${esc(data.name)} !</h2>
           <p>Merci de vous être inscrit. Cliquez sur le bouton ci-dessous pour vérifier votre adresse email et activer votre compte :</p>
           <div style="text-align:center;margin:32px 0">
             <a href="${link}" style="background:#4f46e5;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
@@ -173,13 +173,13 @@ export const EmailService = {
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff">
           <div style="background:#4f46e5;padding:32px;text-align:center;border-radius:8px 8px 0 0">
-            <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700">Iz Solution</h1>
+            <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700">IZ Academy</h1>
           </div>
           <div style="padding:40px 32px">
             <h2 style="color:#111827;margin:0 0 16px">Nouveau cours disponible !</h2>
             <p style="color:#374151;margin:0 0 8px">Bonjour <strong>${esc(data.name)}</strong>,</p>
             <p style="color:#374151;margin:0 0 24px">
-              Un nouveau cours vient d'être mis en ligne sur <strong>Iz Solution</strong> :
+              Un nouveau cours vient d'être mis en ligne sur <strong>IZ Academy</strong> :
             </p>
             <div style="background:#f3f4f6;border-left:4px solid #4f46e5;border-radius:0 8px 8px 0;padding:20px;margin:0 0 32px">
               <h3 style="color:#4f46e5;margin:0 0 8px;font-size:18px">${esc(data.courseTitle)}</h3>
@@ -197,7 +197,7 @@ export const EmailService = {
             </p>
           </div>
           <div style="background:#f9fafb;padding:16px;text-align:center;border-radius:0 0 8px 8px">
-            <p style="color:#9ca3af;font-size:12px;margin:0">© 2026 Iz Solution. Tous droits réservés.</p>
+            <p style="color:#9ca3af;font-size:12px;margin:0">© 2026 IZ Academy. Tous droits réservés.</p>
           </div>
         </div>
       `,
@@ -207,11 +207,11 @@ export const EmailService = {
   async sendTeacherCreated(data: { email: string; name: string; frontendUrl: string }) {
     await send({
       to: data.email,
-      subject: 'Votre compte formateur IZ Solution a été créé',
+      subject: 'Votre compte formateur IZ Academy a été créé',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
           <h2 style="color:#4f46e5">Bonjour ${esc(data.name)},</h2>
-          <p>Un administrateur vient de créer votre compte formateur sur <strong>IZ Solution</strong>.</p>
+          <p>Un administrateur vient de créer votre compte formateur sur <strong>IZ Academy</strong>.</p>
           <p>Vous pouvez vous connecter dès maintenant avec votre adresse email et le mot de passe temporaire qui vous a été communiqué.</p>
           <div style="text-align:center;margin:32px 0">
             <a href="${esc(data.frontendUrl)}/login" style="background:#4f46e5;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">
@@ -250,7 +250,7 @@ export const EmailService = {
           <em>Message&nbsp;:</em> ${nl2br(esc(data.originalMessage ?? ''))}
         </p>
         <br />
-        <p>Cordialement,<br />L'équipe Iz Solution</p>
+        <p>Cordialement,<br />L'équipe IZ Academy</p>
       `,
     });
   },

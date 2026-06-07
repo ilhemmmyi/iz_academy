@@ -53,7 +53,7 @@ export const config = {
     serviceKey: process.env.SUPABASE_SERVICE_KEY!,
     storageBucket: process.env.SUPABASE_STORAGE_BUCKET || 'iz-solution',
   },
-  emailFrom: process.env.EMAIL_FROM || 'Iz Solution <noreply@izsolution.com>',
+  emailFrom: process.env.EMAIL_FROM || 'IZ Academy <noreply@izacademy.com>',
   smtp: {
     host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
     port: Number(process.env.SMTP_PORT) || 587,

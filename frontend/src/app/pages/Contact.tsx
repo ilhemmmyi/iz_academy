@@ -23,10 +23,10 @@ export function Contact() {
               </div>
               <h3 className="mb-2">Email</h3>
               <a
-                href="mailto:imenzarai@iz-solution.com"
+                href="mailto:imenzarai@iz-academy.com"
                 className="text-muted-foreground hover:text-primary transition"
               >
-                imenzarai@iz-solution.com
+                imenzarai@iz-academy.com
               </a>
             </div>
 

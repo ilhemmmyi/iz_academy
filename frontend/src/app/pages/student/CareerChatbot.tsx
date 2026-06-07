@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { careerApi, CareerQuestionnaire, RecommendationResult } from '../../../api/career.api';
-import { getAccessToken } from '../../../api/client';
 import { useAuth } from '../../../context/AuthContext';
 
 // ─── Questionnaire definition ────────────────────────────────────────────────
@@ -33,55 +32,99 @@ const STEPS: {
 }[] = [
   {
     key: 'goal',
-    question: 'Quel est ton objectif principal ?',
+    question: 'Quel est votre objectif principal ?',
     options: [
-      'Get a job in tech',
-      'Improve skills',
-      'Switch careers',
-      'Build projects',
-      'Freelancing',
-      'Certification',
+      'Trouver un emploi de développeur web ou mobile',
+      'Devenir data scientist ou ingénieur ML',
+      'Maîtriser la cybersécurité et le hacking éthique',
+      'Me lancer dans le design UI/UX ou graphique',
+      'Évoluer vers le DevOps, le cloud ou l\'infrastructure',
+      'Comprendre la blockchain et le Web3',
+      'Améliorer mes compétences en marketing digital',
     ],
   },
   {
-    key: 'field',
-    question: "Quel domaine t'intéresse ?",
-    options: ['Web Dev', 'AI/ML', 'Data Science', 'UI/UX', 'Mobile', 'Cybersecurity'],
+    key: 'domain',
+    question: 'Quel domaine vous intéresse le plus ?',
+    options: [
+      'Développement Web (HTML, CSS, JavaScript, React, Node.js)',
+      'Science des données & Intelligence artificielle (Python, ML, TensorFlow)',
+      'Développement Mobile (iOS Swift, Flutter, Dart)',
+      'DevOps & Cloud (Docker, Kubernetes, AWS)',
+      'Cybersécurité & Hacking Éthique (Kali Linux, Metasploit, Burp Suite)',
+      'Design (UI/UX Figma, Adobe Illustrator, Photoshop)',
+      'Bases de données & SQL (PostgreSQL, requêtes avancées)',
+      'Blockchain & Web3 (Solidity, Hardhat, Ethers.js)',
+      'Marketing Digital & SEO',
+    ],
   },
   {
     key: 'level',
-    question: 'Quel est ton niveau actuel ?',
-    options: ['Beginner', 'Basic', 'Intermediate', 'Advanced'],
+    question: 'Comment évaluez-vous votre niveau actuel ?',
+    options: [
+      'Débutant — je n\'ai aucune expérience dans ce domaine',
+      'Intermédiaire — je connais les bases mais je veux approfondir',
+      'Avancé — je maîtrise les fondamentaux et je cherche à me spécialiser',
+    ],
   },
   {
     key: 'skills',
-    question: 'Quelles compétences tu possèdes déjà ?',
-    options: ['HTML/CSS', 'JavaScript', 'Python', 'React', 'Node.js', 'Git', 'Databases', 'None'],
+    question: 'Quelles technologies ou outils maîtrisez-vous déjà ?',
+    options: [
+      'HTML / CSS / JavaScript',
+      'React / Next.js',
+      'Node.js / Express',
+      'Python / Pandas / NumPy',
+      'SQL / PostgreSQL',
+      'Docker / Kubernetes',
+      'AWS / Cloud',
+      'Figma / Adobe Suite',
+      'Swift / Flutter / Dart',
+      'Solidity / Web3',
+      'Aucune de ces technologies',
+    ],
     multi: true,
   },
   {
-    key: 'hoursPerWeek',
-    question: "Combien d'heures par semaine peux-tu consacrer ?",
-    options: ['Less than 5h', '5–10h', '10–20h', '20h+'],
+    key: 'availability',
+    question: 'Combien d\'heures par semaine pouvez-vous consacrer à la formation ?',
+    options: [
+      'Moins de 5 heures',
+      'Entre 5 et 10 heures',
+      'Entre 10 et 20 heures',
+      'Plus de 20 heures',
+    ],
   },
   {
     key: 'learningStyle',
-    question: 'Comment préfères-tu apprendre ?',
-    options: ['Videos', 'Projects', 'Reading', 'Mentorship'],
+    question: 'Quel est votre style d\'apprentissage préféré ?',
+    options: [
+      'Je préfère apprendre par la pratique avec des projets concrets',
+      'Je préfère comprendre la théorie avant de pratiquer',
+      'J\'apprends mieux en suivant des tutoriels vidéo pas à pas',
+      'Je préfère les défis et les exercices pour tester mes connaissances',
+    ],
   },
   {
     key: 'shortTermGoal',
-    question: 'Ton objectif pour les 3–6 prochains mois ?',
-    options: ['Portfolio', 'First job', 'Master tech', 'Startup'],
+    question: 'Quel est votre objectif dans les 3 à 6 prochains mois ?',
+    options: [
+      'Décrocher mon premier emploi ou stage en tech',
+      'Lancer mon propre projet ou startup',
+      'Obtenir une certification reconnue (AWS, etc.)',
+      'Changer de carrière vers un domaine tech',
+      'Monter en compétences dans mon poste actuel',
+      'Construire un portfolio solide de projets',
+    ],
   },
 ];
 
 const EMPTY: CareerQuestionnaire = {
   goal: '',
-  field: '',
+  domain: '',
   level: '',
   skills: [],
-  hoursPerWeek: '',
+  availability: '',
   learningStyle: '',
   shortTermGoal: '',
   customAnswers: {},
@@ -121,6 +164,21 @@ export function CareerChatbot() {
   const [autreInput, setAutreInput] = useState('');
   const [autreKey, setAutreKey] = useState<keyof CareerQuestionnaire | null>(null);
   const [autreIsMulti, setAutreIsMulti] = useState(false);
+
+  // ── Restore session on mount (sessionStorage only — never the DB) ──────
+  useEffect(() => {
+    try {
+      const savedResult  = sessionStorage.getItem('career_coach_result');
+      const savedAnswers = sessionStorage.getItem('career_coach_answers');
+      if (savedResult && savedAnswers) {
+        setAiResult(JSON.parse(savedResult));
+        setAnswers(JSON.parse(savedAnswers));
+        setStep(STEPS.length + 1);
+      }
+    } catch {
+      // corrupted data — ignore and start fresh
+    }
+  }, []);
 
   useEffect(() => {
     if (!import.meta.env.DEV || !aiResult?.recommendedCourses?.length) return;
@@ -223,13 +281,32 @@ export function CareerChatbot() {
 
   // ── Submit ──────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    // Hard validation: all fields must be filled before calling the API
+    const missing: string[] = [];
+    if (!answers.goal)              missing.push('Objectif principal');
+    if (!answers.domain)            missing.push('Domaine d\'intérêt');
+    if (!answers.level)             missing.push('Niveau actuel');
+    if (answers.skills.length === 0) missing.push('Technologies connues');
+    if (!answers.availability)      missing.push('Disponibilité hebdomadaire');
+    if (!answers.learningStyle)     missing.push('Style d\'apprentissage');
+    if (!answers.shortTermGoal)     missing.push('Objectif à court terme');
+
+    if (missing.length > 0) {
+      setError(`Veuillez répondre à toutes les questions avant de soumettre. Manquant : ${missing.join(', ')}.`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
-      const token = getAccessToken();
-      const res = await careerApi.getRecommendation(answers, token);
+      const res = await careerApi.getRecommendation(answers);
       setAiResult(res);
       setStep(totalSteps + 1);
+      // Persist in sessionStorage so results survive navigation (never stored in DB)
+      try {
+        sessionStorage.setItem('career_coach_result',  JSON.stringify(res));
+        sessionStorage.setItem('career_coach_answers', JSON.stringify(answers));
+      } catch { /* storage full — ignore */ }
       // Mark coach as completed (fire-and-forget — don't block UI)
       markCoachCompleted().catch(() => { /* ignore errors silently */ });
     } catch (err: any) {
@@ -250,6 +327,8 @@ export function CareerChatbot() {
   };
 
   const handleReset = () => {
+    sessionStorage.removeItem('career_coach_result');
+    sessionStorage.removeItem('career_coach_answers');
     setStep(0);
     setAnswers(EMPTY);
     setAiResult(null);
@@ -285,7 +364,7 @@ export function CareerChatbot() {
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
             <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-3">Ton profil</p>
             <div className="flex flex-wrap gap-2">
-              {[answers.goal, answers.field, answers.level, ...(answers.skills.length > 0 ? answers.skills : ['No skills yet']), answers.hoursPerWeek, answers.learningStyle, answers.shortTermGoal].map((tag, i) => (
+              {[answers.goal, answers.domain, answers.level, ...(answers.skills.length > 0 ? answers.skills : ['Aucune compétence']), answers.availability, answers.learningStyle, answers.shortTermGoal].map((tag, i) => (
                 <span key={i} className="px-2 py-1 bg-white border border-indigo-200 rounded-full text-xs text-indigo-700">{tag}</span>
               ))}
             </div>
@@ -299,11 +378,11 @@ export function CareerChatbot() {
                   <Sparkles className="w-4 h-4 text-indigo-600" />
                 </div>
                 <p className="text-sm font-bold text-indigo-800">
-                  Cours recommandés pour toi ({recommendedCourses.length})
+                  Cours recommandés pour toi ({Math.min(recommendedCourses.length, 3)})
                 </p>
               </div>
               <div className="flex flex-col gap-3">
-                {recommendedCourses.map((course) => {
+                {recommendedCourses.slice(0, 3).map((course) => {
                   const thumbnailUrl = getCourseThumbnailUrl(course);
 
                   return (
@@ -446,6 +525,12 @@ export function CareerChatbot() {
 
   // ── Render: Final confirmation step ──────────────────────────────────────
   if (step === totalSteps) {
+    const unanswered = STEPS.filter((s) => {
+      const val = answers[s.key];
+      return Array.isArray(val) ? val.length === 0 : !val;
+    });
+    const isReady = unanswered.length === 0;
+
     return (
       <CoachOnboardingLayout>
         <div className="max-w-xl mx-auto space-y-6">
@@ -465,12 +550,35 @@ export function CareerChatbot() {
             <div className="w-3 h-3 rounded-full border-2 border-indigo-500 bg-indigo-100" />
           </div>
 
-          <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-3">
-            <p className="text-sm font-medium text-foreground">Tout est prêt.</p>
-            <p className="text-sm text-muted-foreground">
-              Le coach utilisera uniquement tes réponses au questionnaire pour générer tes recommandations.
-            </p>
-          </div>
+          {/* Unanswered warning */}
+          {!isReady && (
+            <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-amber-800">Questions sans réponse :</p>
+              <ul className="space-y-1">
+                {unanswered.map((s, i) => (
+                  <li key={i} className="flex items-center justify-between text-sm text-amber-900">
+                    <span>• {s.question}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setError(null); setStep(STEPS.indexOf(s)); }}
+                      className="text-xs text-indigo-600 hover:underline font-medium ml-3 shrink-0"
+                    >
+                      Répondre →
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {isReady && (
+            <div className="bg-white border border-border rounded-xl p-6 shadow-sm space-y-3">
+              <p className="text-sm font-medium text-foreground">Tout est prêt.</p>
+              <p className="text-sm text-muted-foreground">
+                Le coach utilisera uniquement tes réponses au questionnaire pour générer tes recommandations.
+              </p>
+            </div>
+          )}
 
           {/* Error */}
           {error && (
@@ -489,7 +597,7 @@ export function CareerChatbot() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={loading || retryCountdown > 0}
+              disabled={loading || retryCountdown > 0 || !isReady}
               className="flex items-center gap-2"
             >
               {loading ? (

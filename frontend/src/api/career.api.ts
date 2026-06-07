@@ -1,11 +1,11 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { apiClient } from './client';
 
 export interface CareerQuestionnaire {
   goal: string;
-  field: string;
+  domain: string;
   level: string;
   skills: string[];
-  hoursPerWeek: string;
+  availability: string;
   learningStyle: string;
   shortTermGoal: string;
   customAnswers?: Record<string, string>;
@@ -31,26 +31,17 @@ export interface RecommendationResult {
 export const careerApi = {
   async getRecommendation(
     questionnaire: CareerQuestionnaire,
-    accessToken?: string | null,
   ): Promise<RecommendationResult> {
-    const headers: Record<string, string> = {};
-    headers['Content-Type'] = 'application/json';
-    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    // Send both new and legacy field names so old and new backend versions both work
+    const payload = {
+      ...questionnaire,
+      field: questionnaire.domain,
+      hoursPerWeek: questionnaire.availability,
+    };
 
-    const res = await fetch(`${BASE_URL}/ai/recommendation`, {
+    return apiClient('/ai/recommendation', {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ questionnaire }),
-      credentials: 'include',
+      body: JSON.stringify({ questionnaire: payload }),
     });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error(err.message || 'AI request failed'), {
-        loading: err.loading ?? false,
-        status: res.status,
-      });
-    }
-    return res.json();
   },
 };

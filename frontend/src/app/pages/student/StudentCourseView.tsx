@@ -396,13 +396,13 @@ export function StudentCourseView() {
     100,
   );
 
-  // Format seconds → "X min Y sec"
   const fmtDuration = (sec: number) => {
-    const totalSec = Math.floor(sec);
-    const m = Math.floor(totalSec / 60);
-    const s = totalSec % 60;
-    if (m === 0) return `${s} sec`;
-    return s > 0 ? `${m} min ${s} sec` : `${m} min`;
+    const m = Math.floor(sec / 60);
+    const h = Math.floor(m / 60);
+    const remMin = m % 60;
+    if (h > 0) return remMin > 0 ? `${h} h ${remMin} min` : `${h} h`;
+    if (m > 0) return `${m} min`;
+    return '< 1 min';
   };
 
   const isUnlockedHelper = (lessonId: string): boolean => {
@@ -478,9 +478,6 @@ export function StudentCourseView() {
     <StudentLayout liveProgress={{ courseId: courseId!, pct: progressPct }}>
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <Link to="/student" className="text-primary hover:underline mb-2 inline-block">
-            ← Retour à mes cours
-          </Link>
           <h1 className="mb-2">{course.title}</h1>
           <p className="text-muted-foreground">Par {course.teacher?.name || 'Formateur'}</p>
 

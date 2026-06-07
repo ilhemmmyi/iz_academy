@@ -73,7 +73,7 @@ export function FloatingChatWidget() {
             <div className="flex items-center gap-2">
               <Headphones className="w-5 h-5 text-white" />
               <div>
-                <p className="text-white font-semibold text-sm leading-none">Support Iz Solution</p>
+                <p className="text-white font-semibold text-sm leading-none">Support IZ Academy</p>
                 <p className="text-indigo-200 text-xs mt-0.5">Nous répondons par email</p>
               </div>
             </div>
