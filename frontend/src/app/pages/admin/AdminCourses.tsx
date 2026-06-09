@@ -10,6 +10,8 @@ export function AdminCourses() {
   const [searchQuery, setSearchQuery] = useState('');
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     coursesApi.getAdmin()
@@ -18,13 +20,19 @@ export function AdminCourses() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Supprimer ce cours ?')) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await coursesApi.delete(id);
-      setCourses(prev => prev.filter(c => c.id !== id));
+      await coursesApi.delete(deleteTarget.id);
+      setCourses(prev => prev.filter(c => c.id !== deleteTarget.id));
       toast.success('Cours supprimé');
-    } catch { toast.error('Erreur lors de la suppression'); }
+      setDeleteTarget(null);
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleTogglePublish = async (id: string) => {
@@ -113,7 +121,7 @@ export function AdminCourses() {
                     <button
                       className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition"
                       title="Supprimer"
-                      onClick={() => handleDelete(course.id)}
+                      onClick={() => setDeleteTarget(course)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -132,6 +140,33 @@ export function AdminCourses() {
           ))}
         </div>
       </div>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Supprimer le cours</h2>
+            <p className="text-sm text-muted-foreground">
+              Voulez-vous vraiment supprimer <strong>{deleteTarget.title}</strong> ?
+              Cette action est irréversible.
+            </p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg border border-border hover:bg-accent transition text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition text-sm disabled:opacity-60"
+              >
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

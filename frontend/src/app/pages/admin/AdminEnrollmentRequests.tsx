@@ -75,13 +75,21 @@ export function AdminEnrollmentRequests() {
     }
   };
 
-  const handleDelete = async (requestId: string) => {
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
     try {
-      await enrollmentsApi.delete(requestId);
-      setRequests(requests.filter(r => r.id !== requestId));
+      await enrollmentsApi.delete(deleteTargetId);
+      setRequests(requests.filter(r => r.id !== deleteTargetId));
       toast.success('Demande supprimée');
+      setDeleteTargetId(null);
     } catch {
       toast.error('Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -214,7 +222,7 @@ export function AdminEnrollmentRequests() {
                 size="sm"
                 variant="destructive"
                 className="flex-1"
-                onClick={() => handleDelete(request.id)}
+                onClick={() => setDeleteTargetId(request.id)}
               >
                 <XCircle className="w-3.5 h-3.5 mr-1.5" />
                 Supprimer
@@ -317,6 +325,33 @@ export function AdminEnrollmentRequests() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 space-y-4">
+            <h2 className="text-lg font-semibold">Supprimer la demande</h2>
+            <p className="text-sm text-muted-foreground">
+              Voulez-vous vraiment supprimer cette demande d'inscription ?
+              Cette action est irréversible.
+            </p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => setDeleteTargetId(null)}
+                className="px-4 py-2 rounded-lg border border-border hover:bg-accent transition text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition text-sm disabled:opacity-60"
+              >
+                {deleting ? 'Suppression…' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

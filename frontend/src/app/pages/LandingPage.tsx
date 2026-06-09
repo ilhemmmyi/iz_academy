@@ -303,31 +303,6 @@ export function LandingPage() {
 
     
 
-    {/* Wave decoration */}
-    <div
-      className="absolute z-30"
-      style={{
-        bottom: '10px',
-        left: '0px',
-      }}
-    >
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          style={{
-            width: 40 - i * 8,
-            height: 4,
-            borderRadius: 999,
-            background: '#7c3aed',
-            transform: 'rotate(-25deg)',
-            opacity: 0.75,
-            marginTop: i ? 8 : 0,
-            marginLeft: i * 14,
-          }}
-        />
-      ))}
-    </div>
-
     {/* Floating Card 1 */}
     <div className="hero-float-card-1 absolute z-30 flex items-center gap-3 px-3.5 py-2.5 rounded-2xl pointer-events-none select-none"
       style={{

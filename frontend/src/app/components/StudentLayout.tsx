@@ -46,7 +46,7 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
   useEffect(() => {
     if (!user?.hasCompletedCoach) return;
     enrollmentsApi.getMine()
-      .then(data => setEnrollments(data.filter((e: any) => e.status === 'APPROVED')))
+      .then(data => setEnrollments(data.filter((e: any) => e.status === 'APPROVED' || e.status === 'PENDING')))
       .catch(() => {});
   }, [user?.hasCompletedCoach]);
 
@@ -244,6 +244,25 @@ export function StudentLayout({ children, liveProgress }: StudentLayoutProps) {
                     ) : (
                       enrollments.map((enrollment: any) => {
                         const courseId = enrollment.course.id;
+                        const isPending = enrollment.status === 'PENDING';
+
+                        if (isPending) {
+                          return (
+                            <span
+                              key={courseId}
+                              className="flex items-center gap-3 pl-9 pr-3 py-2.5 rounded-lg cursor-not-allowed opacity-70"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium leading-snug truncate text-muted-foreground">
+                                  {enrollment.course.title}
+                                </p>
+                                <p className="text-[10px] text-amber-500 mt-0.5">En attente</p>
+                              </div>
+                              <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            </span>
+                          );
+                        }
+
                         const storedPct: number = enrollment.progress?.percentage ?? 0;
                         const pct: number = liveProgress?.courseId === courseId ? liveProgress.pct : storedPct;
                         const isActive = activeCourseId === courseId;

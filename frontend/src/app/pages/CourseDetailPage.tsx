@@ -157,10 +157,10 @@ export function CourseDetailPage() {
 
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-primary via-primary to-[#1a1a2e] text-primary-foreground">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-9">
+          <div className="grid md:grid-cols-2 gap-6 items-center">
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-2">
                 <Badge variant="secondary" className="bg-white/20 text-white border-0">
                   {course.category?.name}
                 </Badge>
@@ -168,25 +168,25 @@ export function CourseDetailPage() {
                   {course.level}
                 </Badge>
               </div>
-              <h1 className="text-3xl md:text-4xl mb-4">{course.title}</h1>
-              <p className="text-xl text-primary-foreground/90 mb-6">
+              <h1 className="text-2xl md:text-3xl mb-2">{course.title}</h1>
+              <p className="text-base text-primary-foreground/90 mb-3">
                 {course.shortDescription}
               </p>
-              <div className="flex flex-wrap items-center gap-6 mb-6">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  <span>{course.duration}</span>
+              <div className="flex flex-wrap items-center gap-4 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">{course.duration}</span>
                 </div>
               </div>
-              <div className="text-sm text-primary-foreground/80">
+              <div className="text-xs text-primary-foreground/80">
                 Formateur: {course.teacher?.name}
               </div>
             </div>
-            <div className="aspect-video bg-muted rounded-xl overflow-hidden">
+            <div className="flex justify-center items-center">
               <img
                 src={course.thumbnailUrl}
                 alt={course.title}
-                className="w-full h-full object-cover"
+                className="rounded-xl max-h-64 w-auto object-contain"
               />
             </div>
           </div>
