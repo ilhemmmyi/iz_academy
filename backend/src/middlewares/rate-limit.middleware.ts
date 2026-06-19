@@ -56,12 +56,14 @@ export interface LimiterOptions {
 
 /**
  * Create a rate limiter middleware.
- * In development NODE_ENV the effective max is multiplied by 20 so normal
+ * In development NODE_ENV the effective max is multiplied by 3 so normal
  * coding / testing is never impeded; exact production limits apply in production.
  */
 export function createLimiter({ windowMs, max, keyBy = 'ip' }: LimiterOptions) {
   const isProd   = process.env.NODE_ENV === 'production';
-  const effectiveMax = isProd ? max : max * 20;
+  // In dev, apply a small multiplier so normal testing isn't blocked,
+  // but the limiter is still reachable without sending hundreds of requests.
+  const effectiveMax = isProd ? max : max * 3;
 
   return rateLimit({
     windowMs,
@@ -115,6 +117,55 @@ export const authResetPasswordLimiter = createLimiter({
   max:      5,
   keyBy:    'ip',
 });
+  max:      5,
+  keyBy:    'ip',
+});
+
+// ── Enrollment limiter (user-keyed) ───────────────────────────────────────────
+
+/** 10 enrollment requests / hour per user */
+export const enrollmentRequestLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max:      10,
+  keyBy:    'user',
+});
+
+// ── Quiz limiter (user-keyed) ──────────────────────────────────────────────────
+
+/** 30 quiz attempts / hour per user */
+export const quizAttemptLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max:      30,
+  keyBy:    'user',
+});
+
+// ── Report limiter (user-keyed) ────────────────────────────────────────────────
+
+/** 10 reports / hour per user */
+export const reportLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max:      10,
+  keyBy:    'user',
+});
+
+// ── Message limiter (user-keyed) ───────────────────────────────────────────────
+
+/** 30 messages / minute per user */
+export const messageLimiter = createLimiter({
+  windowMs: 60 * 1000,
+  max:      30,
+  keyBy:    'user',
+});
+
+// ── Admin action limiter (user-keyed) ─────────────────────────────────────────
+
+/** 30 sensitive admin writes / 10 min per user */
+export const adminActionLimiter = createLimiter({
+  windowMs: 10 * 60 * 1000,
+  max:      30,
+  keyBy:    'user',
+});
+
 
 /** 20 token-refresh calls / 15 min per IP — anti-flooding */
 export const authRefreshLimiter = createLimiter({
@@ -164,51 +215,4 @@ export const aiLimiter = createLimiter({
 /** 5 contact form submissions / hour per IP — prevents email spam */
 export const contactLimiter = createLimiter({
   windowMs: 60 * 60 * 1000,
-  max:      5,
-  keyBy:    'ip',
-});
-
-// ── Enrollment limiter (user-keyed) ───────────────────────────────────────────
-
-/** 10 enrollment requests / hour per user */
-export const enrollmentRequestLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000,
-  max:      10,
-  keyBy:    'user',
-});
-
-// ── Quiz limiter (user-keyed) ──────────────────────────────────────────────────
-
-/** 30 quiz attempts / hour per user */
-export const quizAttemptLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000,
-  max:      30,
-  keyBy:    'user',
-});
-
-// ── Report limiter (user-keyed) ────────────────────────────────────────────────
-
-/** 10 reports / hour per user */
-export const reportLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000,
-  max:      10,
-  keyBy:    'user',
-});
-
-// ── Message limiter (user-keyed) ───────────────────────────────────────────────
-
-/** 30 messages / minute per user */
-export const messageLimiter = createLimiter({
-  windowMs: 60 * 1000,
-  max:      30,
-  keyBy:    'user',
-});
-
-// ── Admin action limiter (user-keyed) ─────────────────────────────────────────
-
-/** 30 sensitive admin writes / 10 min per user */
-export const adminActionLimiter = createLimiter({
-  windowMs: 10 * 60 * 1000,
-  max:      30,
-  keyBy:    'user',
 });

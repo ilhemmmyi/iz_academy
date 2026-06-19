@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
+import { createLimiter } from './middlewares/rate-limit.middleware';
 import * as Sentry from '@sentry/node';
 import { config } from './config';
 import { authRouter } from './routes/auth.routes';
@@ -27,7 +27,6 @@ import { settingsRouter } from './routes/settings.routes';
 import { errorHandler } from './middlewares/error.middleware';
 import { correlationIdMiddleware } from './middlewares/correlationId.middleware';
 import { auditLogRouter } from './routes/auditLog.routes';
-import { AuditService, extractRequestContext } from './services/audit.service';
 
 // M-2 — N'initialiser Sentry que si le DSN est configuré
 if (config.sentryDsn && !config.sentryDsn.includes('xxx')) {
@@ -36,12 +35,8 @@ if (config.sentryDsn && !config.sentryDsn.includes('xxx')) {
 
 const app = express();
 
-// Trust the first upstream proxy hop so req.ip reflects the real client IP
-// from X-Forwarded-For. Safe only when deployed behind a single reverse proxy
-// (Nginx, AWS ALB, etc.). In development this is a no-op (direct connections).
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+// Trust the first upstream proxy hop so req.ip reflects the real client IP.
+app.set('trust proxy', 1);
 
 app.use(helmet());
 
@@ -55,24 +50,8 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
 
-// Global rate limit — 200 req/min per IP (excludes auth routes which have stricter limits)
-const globalLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 200 : 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler(req, res) {
-    AuditService.security({
-      actorId: null,
-      action: 'SECURITY.RATE_LIMIT',
-      targetType: 'Route',
-      targetId: req.path,
-      payload: { method: req.method },
-      ...extractRequestContext(req),
-    });
-    res.status(429).json({ success: false, error: 'Too many requests' });
-  },
-});
+// Global rate limit — 200 req/min per IP in production, 600 in dev (×3 multiplier)
+const globalLimiter = createLimiter({ windowMs: 60 * 1000, max: 200, keyBy: 'ip' });
 app.use(globalLimiter);
 
 // Health check
