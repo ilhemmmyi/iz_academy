@@ -16,32 +16,32 @@ export const CourseController = {
       const categories = await CategoryService.getAll();
       res.json(categories);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch categories' });
+      res.status(500).json({ message: 'Échec de la récupération des catégories' });
     }
   },
 
   async createCategory(req: AuthRequest, res: Response) {
     try {
       const { name } = req.body;
-      if (!name || !name.trim()) return res.status(400).json({ message: 'Name is required' });
+      if (!name || !name.trim()) return res.status(400).json({ message: 'Le nom est requis' });
       const category = await CategoryService.create(name);
       res.status(201).json(category);
     } catch (err: any) {
-      if (err.code === 'P2002') return res.status(409).json({ message: 'Category already exists' });
-      res.status(500).json({ message: 'Failed to create category' });
+      if (err.code === 'P2002') return res.status(409).json({ message: 'Cette catégorie existe déjà' });
+      res.status(500).json({ message: 'Échec de la création de la catégorie' });
     }
   },
 
   async updateCategory(req: AuthRequest, res: Response) {
     try {
       const { name } = req.body;
-      if (!name || !name.trim()) return res.status(400).json({ message: 'Name is required' });
+      if (!name || !name.trim()) return res.status(400).json({ message: 'Le nom est requis' });
       const category = await CategoryService.update(String(req.params.id), name);
       res.json(category);
     } catch (err: any) {
-      if (err.code === 'P2025') return res.status(404).json({ message: 'Category not found' });
-      if (err.code === 'P2002') return res.status(409).json({ message: 'Category already exists' });
-      res.status(500).json({ message: 'Failed to update category' });
+      if (err.code === 'P2025') return res.status(404).json({ message: 'Catégorie introuvable' });
+      if (err.code === 'P2002') return res.status(409).json({ message: 'Cette catégorie existe déjà' });
+      res.status(500).json({ message: 'Échec de la mise à jour de la catégorie' });
     }
   },
 
@@ -50,9 +50,9 @@ export const CourseController = {
       await CategoryService.delete(String(req.params.id));
       res.json({ message: 'Category deleted' });
     } catch (err: any) {
-      if (err.code === 'P2025') return res.status(404).json({ message: 'Category not found' });
-      if (err.code === 'P2003') return res.status(409).json({ message: 'Cannot delete: category is used by courses' });
-      res.status(500).json({ message: 'Failed to delete category' });
+      if (err.code === 'P2025') return res.status(404).json({ message: 'Catégorie introuvable' });
+      if (err.code === 'P2003') return res.status(409).json({ message: 'Impossible de supprimer : cette catégorie est utilisée par des cours' });
+      res.status(500).json({ message: 'Échec de la suppression de la catégorie' });
     }
   },
 
@@ -61,7 +61,7 @@ export const CourseController = {
       const courses = await CourseService.getAllAdmin();
       res.json(courses);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch courses' });
+      res.status(500).json({ message: 'Échec de la récupération des cours' });
     }
   },
 
@@ -70,7 +70,7 @@ export const CourseController = {
       const courses = await CourseService.getMine(req.user!.userId);
       res.json(courses);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch courses' });
+      res.status(500).json({ message: 'Échec de la récupération des cours' });
     }
   },
 
@@ -84,7 +84,7 @@ export const CourseController = {
       const courses = await CourseService.getAll(filters);
       res.json(courses);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch courses' });
+      res.status(500).json({ message: 'Échec de la récupération des cours' });
     }
   },
 
@@ -134,8 +134,8 @@ export const CourseController = {
       const course = await CourseService.getById(courseId);
       res.json(course);
     } catch (err: any) {
-      if (err.message === 'COURSE_NOT_FOUND') return res.status(404).json({ message: 'Course not found' });
-      res.status(500).json({ message: 'Failed to fetch course' });
+      if (err.message === 'COURSE_NOT_FOUND') return res.status(404).json({ message: 'Cours introuvable' });
+      res.status(500).json({ message: 'Échec de la récupération du cours' });
     }
   },
 
@@ -178,7 +178,7 @@ export const CourseController = {
       const projects = await ProjectModel.findByCourse(courseId);
       res.json(projects);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch projects' });
+      res.status(500).json({ message: 'Échec de la récupération des projets' });
     }
   },
 
@@ -187,7 +187,7 @@ export const CourseController = {
       const submissions = await ProjectModel.findSubmissionsByCourse(String(req.params.id));
       res.json(submissions);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch submissions' });
+      res.status(500).json({ message: 'Échec de la récupération des soumissions' });
     }
   },
 
@@ -199,7 +199,7 @@ export const CourseController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.COURSE_CREATE, targetType: 'Course', targetId: course.id, payload: { title: course.title, teacherId: course.teacherId }, ...extractRequestContext(req) });
       res.status(201).json(course);
     } catch {
-      res.status(500).json({ message: 'Failed to create course' });
+      res.status(500).json({ message: 'Échec de la création du cours' });
     }
   },
 
@@ -213,9 +213,9 @@ export const CourseController = {
       );
       res.json(course);
     } catch (err: any) {
-      if (err.message === 'NOT_FOUND') return res.status(404).json({ message: 'Course not found' });
-      if (err.message === 'FORBIDDEN') return res.status(403).json({ message: 'Not your course' });
-      res.status(500).json({ message: 'Failed to update course' });
+      if (err.message === 'NOT_FOUND') return res.status(404).json({ message: 'Cours introuvable' });
+      if (err.message === 'FORBIDDEN') return res.status(403).json({ message: 'Ce cours ne vous appartient pas' });
+      res.status(500).json({ message: 'Échec de la mise à jour du cours' });
     }
   },
 
@@ -225,14 +225,14 @@ export const CourseController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.COURSE_DELETE, targetType: 'Course', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.json({ message: 'Course deleted' });
     } catch {
-      res.status(500).json({ message: 'Failed to delete course' });
+      res.status(500).json({ message: 'Échec de la suppression du cours' });
     }
   },
 
   async togglePublish(req: AuthRequest, res: Response) {
     try {
       const course = await prisma.course.findUnique({ where: { id: String(req.params.id) } });
-      if (!course) return res.status(404).json({ message: 'Course not found' });
+      if (!course) return res.status(404).json({ message: 'Cours introuvable' });
 
       const isBeingPublished = !course.isPublished;
 
@@ -260,7 +260,7 @@ export const CourseController = {
 
       res.json({ isPublished: updated.isPublished });
     } catch {
-      res.status(500).json({ message: 'Failed to toggle publish status' });
+      res.status(500).json({ message: 'Échec du changement de statut de publication' });
     }
   },
 
@@ -305,7 +305,7 @@ export const CourseController = {
       const isExpired = accessExpiresAt ? new Date() > accessExpiresAt : false;
       res.json({ ...progress, accessExpiresAt: accessExpiresAt?.toISOString() ?? null, isExpired });
     } catch {
-      res.status(500).json({ message: 'Failed to fetch progress' });
+      res.status(500).json({ message: 'Échec de la récupération de la progression' });
     }
   },
 

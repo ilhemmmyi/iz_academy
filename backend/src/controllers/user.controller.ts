@@ -11,7 +11,7 @@ export const UserController = {
       res.json(await UserService.getMe(req.user!.userId));
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      res.status(500).json({ message: 'Failed to fetch profile' });
+      res.status(500).json({ message: 'Échec de la récupération du profil' });
     }
   },
 
@@ -19,7 +19,7 @@ export const UserController = {
     try {
       res.json(await UserService.completeCoach(req.user!.userId));
     } catch {
-      res.status(500).json({ message: 'Failed to complete coach' });
+      res.status(500).json({ message: 'Échec de la finalisation du parcours coach' });
     }
   },
 
@@ -30,14 +30,14 @@ export const UserController = {
         try {
           const url = new URL(avatarUrl);
           if (!['http:', 'https:'].includes(url.protocol)) {
-            return res.status(400).json({ message: 'Invalid avatar URL' });
+            return res.status(400).json({ message: 'URL d\'avatar invalide' });
           }
         } catch {
-          return res.status(400).json({ message: 'Invalid avatar URL' });
+          return res.status(400).json({ message: 'URL d\'avatar invalide' });
         }
       }
       if (name !== undefined && (typeof name !== 'string' || name.trim().length < 2 || name.length > 100)) {
-        return res.status(400).json({ message: 'Name must be between 2 and 100 characters' });
+        return res.status(400).json({ message: 'Le nom doit contenir entre 2 et 100 caractères' });
       }
       if (phone !== undefined && phone !== null && (typeof phone !== 'string' || phone.length > 30)) {
         return res.status(400).json({ message: 'Numéro de téléphone invalide' });
@@ -53,7 +53,7 @@ export const UserController = {
       }
       res.json(await UserService.updateMe(req.user!.userId, { name, avatarUrl, phone, address, educationLevel, studentStatus }));
     } catch {
-      res.status(500).json({ message: 'Failed to update profile' });
+      res.status(500).json({ message: 'Échec de la mise à jour du profil' });
     }
   },
 
@@ -65,19 +65,19 @@ export const UserController = {
       const limit = Math.min(Math.max(1, Number(req.query.limit) || 25), 100);
       res.json(await UserService.getAll({ search, role, page, limit }));
     } catch {
-      res.status(500).json({ message: 'Failed to fetch users' });
+      res.status(500).json({ message: 'Échec de la récupération des utilisateurs' });
     }
   },
 
   async updateAvatar(req: AuthRequest, res: Response) {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
+        return res.status(400).json({ message: 'Aucun fichier téléchargé' });
       }
       const user = await UserService.updateAvatar(req.user!.userId, req.file);
       res.json(user);
     } catch {
-      res.status(500).json({ message: 'Avatar upload failed' });
+      res.status(500).json({ message: 'Échec du téléchargement de l\'avatar' });
     }
   },
 
@@ -86,20 +86,20 @@ export const UserController = {
       const user = await UserService.deleteAvatar(req.user!.userId);
       res.json(user);
     } catch {
-      res.status(500).json({ message: 'Avatar delete failed' });
+      res.status(500).json({ message: 'Échec de la suppression de l\'avatar' });
     }
   },
 
   async deleteUser(req: AuthRequest, res: Response) {
     try {
       if (req.params.id === req.user!.userId) {
-        return res.status(400).json({ message: 'Cannot delete your own account' });
+        return res.status(400).json({ message: 'Vous ne pouvez pas supprimer votre propre compte' });
       }
       await UserService.deleteUser(String(req.params.id), req.user!.userId);
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_DELETE, targetType: 'User', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.json({ message: 'User deleted' });
     } catch (err: any) {
-      res.status(500).json({ message: 'Failed to delete user' });
+      res.status(500).json({ message: 'Échec de la suppression de l\'utilisateur' });
     }
   },
 
@@ -107,11 +107,11 @@ export const UserController = {
     try {
       const { name, email, role, formation, duree, dateDebut, password } = req.body;
       if (!name || !email || !role || !password) {
-        return res.status(400).json({ message: 'name, email, role and password are required' });
+        return res.status(400).json({ message: 'Le nom, l\'email, le rôle et le mot de passe sont requis' });
       }
       const normalizedRole = (role as string).toUpperCase() as 'STUDENT' | 'TEACHER';
       if (!['STUDENT', 'TEACHER'].includes(normalizedRole)) {
-        return res.status(400).json({ message: 'Invalid role' });
+        return res.status(400).json({ message: 'Rôle invalide' });
       }
       if (typeof password !== 'string' || password.length < 8) {
         return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
@@ -120,8 +120,8 @@ export const UserController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_CREATE, targetType: 'User', targetId: user.id, payload: { email: user.email, role: user.role }, ...extractRequestContext(req) });
       res.status(201).json(user);
     } catch (err: any) {
-      if (err.code === 'CONFLICT') return res.status(409).json({ message: 'Email already in use' });
-      res.status(500).json({ message: 'Failed to create user' });
+      if (err.code === 'CONFLICT') return res.status(409).json({ message: 'Cet email est déjà utilisé' });
+      res.status(500).json({ message: 'Échec de la création de l\'utilisateur' });
     }
   },
 
@@ -129,7 +129,7 @@ export const UserController = {
     try {
       const { currentPassword, newPassword } = req.body;
       if (typeof newPassword !== 'string' || !newPassword) {
-        return res.status(400).json({ message: 'newPassword is required' });
+        return res.status(400).json({ message: 'Le nouveau mot de passe est requis' });
       }
       const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]).{8,}$/;
       if (!strongPassword.test(newPassword)) {
@@ -163,7 +163,7 @@ export const UserController = {
         where: { id: String(req.params.id) },
         select: { role: true },
       });
-      if (!targetUser) return res.status(404).json({ message: 'User not found' });
+      if (!targetUser) return res.status(404).json({ message: 'Utilisateur introuvable' });
 
       const data: Record<string, unknown> = {};
 
@@ -174,7 +174,7 @@ export const UserController = {
         if (role !== undefined) {
           const validRoles = ['STUDENT', 'TEACHER', 'ADMIN'];
           if (!validRoles.includes(role)) {
-            return res.status(400).json({ message: 'Invalid role' });
+            return res.status(400).json({ message: 'Rôle invalide' });
           }
           data.role = role;
         }
@@ -192,7 +192,7 @@ export const UserController = {
       res.json(updated);
     } catch (err: any) {
       console.error('[updateUser] error:', err?.message, err?.meta);
-      res.status(500).json({ message: 'Failed to update user' });
+      res.status(500).json({ message: 'Échec de la mise à jour de l\'utilisateur' });
     }
   },
 
@@ -202,7 +202,7 @@ export const UserController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_PASSWORD_RESET_ADMIN, targetType: 'User', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.json(result);
     } catch {
-      res.status(500).json({ message: 'Failed to reset password' });
+      res.status(500).json({ message: 'Échec de la réinitialisation du mot de passe' });
     }
   },
 
@@ -210,7 +210,7 @@ export const UserController = {
     try {
       res.json(await UserService.getMyCertificates(req.user!.userId));
     } catch {
-      res.status(500).json({ message: 'Failed to fetch certificates' });
+      res.status(500).json({ message: 'Échec de la récupération des certificats' });
     }
   },
 
@@ -219,8 +219,8 @@ export const UserController = {
       const cert = await UserService.getCertificateById(String(req.params.id), req.user!.userId);
       res.json(cert);
     } catch (err: any) {
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Certificate not found' });
-      res.status(500).json({ message: 'Failed to fetch certificate' });
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Certificat introuvable' });
+      res.status(500).json({ message: 'Échec de la récupération du certificat' });
     }
   },
 
@@ -237,9 +237,9 @@ export const UserController = {
       res.setHeader('Cache-Control', 'private, no-cache');
       res.send(pdfBuffer);
     } catch (err: any) {
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Certificate not found' });
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Certificat introuvable' });
       console.error('[streamCertificatePdf]', err);
-      res.status(500).json({ message: 'Failed to generate PDF' });
+      res.status(500).json({ message: 'Échec de la génération du PDF' });
     }
   },
 
@@ -248,8 +248,8 @@ export const UserController = {
       await UserService.retryCertificate(req.user!.userId, String(req.params.courseId));
       res.json({ message: 'Certificate generation queued' });
     } catch (err: any) {
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'No validated project for this course' });
-      res.status(500).json({ message: 'Failed to queue certificate' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Aucun projet validé pour ce cours' });
+      res.status(500).json({ message: 'Échec de la mise en file d\'attente du certificat' });
     }
   },
 
@@ -258,7 +258,7 @@ export const UserController = {
       const courses = await UserService.getEligibleCourses(req.user!.userId, String(req.params.id));
       res.json(courses);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch eligible courses' });
+      res.status(500).json({ message: 'Échec de la récupération des cours éligibles' });
     }
   },
 
@@ -266,7 +266,7 @@ export const UserController = {
     try {
       const { courseIds } = req.body as { courseIds: string[] };
       if (!Array.isArray(courseIds)) {
-        return res.status(400).json({ message: 'courseIds must be an array' });
+        return res.status(400).json({ message: 'courseIds doit être un tableau' });
       }
       await UserService.assignCourses(req.user!.userId, String(req.params.id), courseIds);
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_ASSIGN_COURSES, targetType: 'User', targetId: String(req.params.id), payload: { courseIds }, ...extractRequestContext(req) });
@@ -274,7 +274,7 @@ export const UserController = {
     } catch (err: any) {
       console.error('[assignCourses] error:', err?.message, err?.meta);
       if (err.code === 'CONFLICT') return res.status(409).json({ message: err.message });
-      res.status(500).json({ message: 'Failed to assign courses' });
+      res.status(500).json({ message: 'Échec de l\'attribution des cours' });
     }
   },
 
@@ -284,7 +284,7 @@ export const UserController = {
       res.json(data);
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      res.status(500).json({ message: 'Failed to fetch student overview' });
+      res.status(500).json({ message: 'Échec de la récupération de l\'aperçu de l\'étudiant' });
     }
   },
 
@@ -296,7 +296,7 @@ export const UserController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.CERTIFICATE_REVOKE, targetType: 'Certificate', payload: { userId, courseId }, ...extractRequestContext(req) });
       res.json({ message: 'Certificate revoked' });
     } catch {
-      res.status(500).json({ message: 'Failed to revoke certificate' });
+      res.status(500).json({ message: 'Échec de la révocation du certificat' });
     }
   },
 
@@ -308,7 +308,7 @@ export const UserController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_REMOVE_COURSE_ACCESS, targetType: 'User', targetId: studentId, payload: { courseId }, ...extractRequestContext(req) });
       res.json({ message: 'Course access removed' });
     } catch {
-      res.status(500).json({ message: 'Failed to remove course access' });
+      res.status(500).json({ message: 'Échec de la suppression de l\'accès au cours' });
     }
   },
 };

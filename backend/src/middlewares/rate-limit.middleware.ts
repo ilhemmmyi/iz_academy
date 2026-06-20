@@ -83,7 +83,7 @@ export function createLimiter({ windowMs, max, keyBy = 'ip' }: LimiterOptions) {
         payload:   { method: req.method, limit: effectiveMax },
         ...extractRequestContext(req),
       });
-      res.status(429).json({ success: false, error: 'Too many requests' });
+      res.status(429).json({ success: false, error: 'Trop de requêtes' });
     },
   });
 }
@@ -114,9 +114,6 @@ export const authForgotPasswordLimiter = createLimiter({
 /** 5 password-reset completions / 15 min per IP */
 export const authResetPasswordLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
-  max:      5,
-  keyBy:    'ip',
-});
   max:      5,
   keyBy:    'ip',
 });
@@ -215,4 +212,6 @@ export const aiLimiter = createLimiter({
 /** 5 contact form submissions / hour per IP — prevents email spam */
 export const contactLimiter = createLimiter({
   windowMs: 60 * 60 * 1000,
+  max:      5,
+  keyBy:    'ip',
 });

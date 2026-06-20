@@ -9,7 +9,7 @@ export const ProjectController = {
     const projectId = String(req.params.projectId);
     try {
       const { githubUrl, comment } = req.body;
-      if (!githubUrl?.trim()) return res.status(400).json({ message: 'githubUrl is required' });
+      if (!githubUrl?.trim()) return res.status(400).json({ message: 'L\'URL GitHub est requise' });
       const submission = await ProjectService.submit(req.user!.userId, projectId, githubUrl, comment);
       AuditService.log({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.PROJECT_SUBMIT, targetType: 'Project', targetId: projectId, ...extractRequestContext(req) });
       res.status(201).json(submission);
@@ -18,9 +18,9 @@ export const ProjectController = {
       if (err.code === 'ALREADY_SUBMITTED') return res.status(409).json({ message: err.message });
       if (err.code === 'FORBIDDEN') {
         AuditService.security({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.PROJECT_SUBMIT_FORBIDDEN, targetType: 'Project', targetId: projectId, payload: { reason: err.message }, ...extractRequestContext(req) });
-        return res.status(403).json({ message: 'Forbidden' });
+        return res.status(403).json({ message: 'Accès refusé' });
       }
-      res.status(500).json({ message: 'Failed to submit project' });
+      res.status(500).json({ message: 'Échec de la soumission du projet' });
     }
   },
 
@@ -29,7 +29,7 @@ export const ProjectController = {
       const submissions = await ProjectService.mySubmissions(req.user!.userId);
       res.json(submissions);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch submissions' });
+      res.status(500).json({ message: 'Échec de la récupération des soumissions' });
     }
   },
 
@@ -38,7 +38,7 @@ export const ProjectController = {
       const submissions = await ProjectService.teacherSubmissions(req.user!.userId);
       res.json(submissions);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch teacher submissions' });
+      res.status(500).json({ message: 'Échec de la récupération des soumissions des enseignants' });
     }
   },
 
@@ -46,7 +46,7 @@ export const ProjectController = {
     try {
       const { status, feedback } = req.body;
       if (!['VALIDATED', 'NEEDS_IMPROVEMENT'].includes(status)) {
-        return res.status(400).json({ message: 'status must be VALIDATED or NEEDS_IMPROVEMENT' });
+        return res.status(400).json({ message: 'Le statut doit être VALIDATED ou NEEDS_IMPROVEMENT' });
       }
       const submission = await ProjectService.review(
         String(req.params.submissionId),
@@ -58,9 +58,9 @@ export const ProjectController = {
       AuditService.log({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.PROJECT_REVIEW, targetType: 'ProjectSubmission', targetId: String(req.params.submissionId), payload: { status, feedback: typeof feedback === 'string' ? feedback.slice(0, 200) : undefined }, ...extractRequestContext(req) });
       res.json(submission);
     } catch (err: any) {
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Submission not found' });
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden: not your course' });
-      res.status(500).json({ message: 'Failed to review submission' });
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Soumission introuvable' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Accès refusé : ce cours ne vous appartient pas' });
+      res.status(500).json({ message: 'Échec de l\'évaluation de la soumission' });
     }
   },
 
@@ -69,9 +69,9 @@ export const ProjectController = {
       await ProjectService.deleteSubmission(req.user!.userId, String(req.params.submissionId));
       res.status(204).send();
     } catch (err: any) {
-      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Submission not found' });
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to delete submission' });
+      if (err.code === 'NOT_FOUND') return res.status(404).json({ message: 'Soumission introuvable' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Accès refusé' });
+      res.status(500).json({ message: 'Échec de la suppression de la soumission' });
     }
   },
 
@@ -81,7 +81,7 @@ export const ProjectController = {
       const submissions = await ProjectService.listValidatedPendingApproval();
       res.json(submissions);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch pending submissions' });
+      res.status(500).json({ message: 'Échec de la récupération des soumissions en attente' });
     }
   },
 

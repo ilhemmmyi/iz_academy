@@ -313,7 +313,7 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
           ? JSON.parse(req.body.questionnaire)
           : req.body.questionnaire ?? req.body;
     } catch {
-      return res.status(400).json({ message: 'Invalid questionnaire format (not valid JSON).' });
+      return res.status(400).json({ message: 'Format de questionnaire invalide (JSON non valide).' });
     }
 
     const questionnaire = sanitizeQuestionnaire(rawQuestionnaire);
@@ -321,7 +321,7 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
     if (!questionnaire?.goal || !questionnaire?.domain || !questionnaire?.level) {
       return res
         .status(400)
-        .json({ message: 'Missing required questionnaire fields: goal, domain, level.' });
+        .json({ message: 'Champs requis manquants dans le questionnaire : goal, domain, level.' });
     }
 
     // -- 2. Fetch published courses from DB --------------------------------
@@ -426,26 +426,26 @@ export const getRecommendation = async (req: AuthRequest, res: Response) => {
       if (status === 401 || status === 403) {
         return res
           .status(500)
-          .json({ message: 'Invalid HuggingFace API key. Check HUGGINGFACE_API_KEY in .env.' });
+          .json({ message: 'Clé API HuggingFace invalide. Vérifiez HUGGINGFACE_API_KEY dans .env.' });
       }
       if (status === 429) {
-        return res.status(429).json({ message: 'AI rate limit reached. Please wait and retry.' });
+        return res.status(429).json({ message: 'Limite de requêtes IA atteinte. Veuillez patienter et réessayer.' });
       }
       if (status === 503) {
         return res
           .status(503)
-          .json({ message: 'AI model is loading, please try again in 20�30 seconds.', loading: true });
+          .json({ message: 'Le modèle IA est en cours de chargement, veuillez réessayer dans 20 à 30 secondes.', loading: true });
       }
       if (err.code === 'ECONNABORTED' || status === 504) {
-        return res.status(504).json({ message: 'AI request timed out. Please try again.' });
+        return res.status(504).json({ message: 'La requête IA a expiré. Veuillez réessayer.' });
       }
       return res
         .status(502)
-        .json({ message: `AI service error (${status ?? 'unknown'}): ${detail}` });
+        .json({ message: `Erreur du service IA (${status ?? 'inconnu'}) : ${detail}` });
     }
 
     console.error('[AI] Unexpected error:', err?.message);
-    return res.status(500).json({ message: 'Failed to get AI recommendation.' });
+    return res.status(500).json({ message: 'Échec de la récupération de la recommandation IA.' });
   }
 };
 

@@ -22,7 +22,7 @@ const SOCIAL_LINKS = [
 const NAV_LINKS = [
   { to: '/',        label: 'Accueil'  },
   { to: '/courses', label: 'Cours'    },
-  { to: '/about',   label: 'À propos' },
+  { to: '/about',   label: 'Aide' },
   { to: '/contact', label: 'Contact'  },
 ];
 

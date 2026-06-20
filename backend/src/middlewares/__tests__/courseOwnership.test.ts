@@ -66,7 +66,7 @@ describe('requireCourseOwnership middleware', () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Forbidden: not your course' });
+    expect(res.json).toHaveBeenCalledWith({ message: 'Accès refusé : ce cours ne vous appartient pas' });
   });
 
   it('passes when ADMIN even if not the course teacher', async () => {
@@ -94,7 +94,7 @@ describe('requireCourseOwnership middleware', () => {
 
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Course not found' });
+    expect(res.json).toHaveBeenCalledWith({ message: 'Cours introuvable' });
   });
 
   it('returns 400 when no course id in params', async () => {

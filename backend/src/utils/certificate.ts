@@ -1,14 +1,12 @@
 import PDFDocument from 'pdfkit';
+import path from 'path';
+import fs from 'fs';
 
-/**
- * Generate a certificate PDF buffer.
- * All text is handled with built-in Helvetica fonts so no font loading is required.
- */
 export async function buildCertificatePdf(
   userName: string,
   courseName: string,
   tutorName: string,
-  certId: string,
+  _certId: string,
   issuedAt: Date,
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -18,113 +16,110 @@ export async function buildCertificatePdf(
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const W = doc.page.width;
-    const H = doc.page.height;
+    const W = doc.page.width;   // 841.89
+    const H = doc.page.height;  // 595.28
+    const cx = W / 2;
 
-    // Background
-    doc.rect(0, 0, W, H).fill('#0f172a');
+    const purple     = '#7c3aed';
+    const darkIndigo = '#1e1b4b';
+    const gray       = '#6b7280';
+    const lightGray  = '#9ca3af';
+    const dark       = '#374151';
 
-    // Outer gold border
-    doc.rect(22, 22, W - 44, H - 44).lineWidth(3).stroke('#f59e0b');
-    doc.rect(30, 30, W - 60, H - 60).lineWidth(1).stroke('#fbbf24');
+    // ── White background ──────────────────────────────────────────────────
+    doc.rect(0, 0, W, H).fill('#ffffff');
 
-    // Corner ornament circles
-    const corners: [number, number][] = [
-      [34, 34], [W - 34, 34], [34, H - 34], [W - 34, H - 34],
-    ];
-    for (const [cx, cy] of corners) {
-      doc.circle(cx, cy, 10).fillAndStroke('#0f172a', '#f59e0b');
+    // ── Corner triangle fills ─────────────────────────────────────────────
+    const cs = 100;
+    doc.path(`M 0 0 L ${cs} 0 L 0 ${cs} Z`).fill('rgba(124,58,237,0.06)');
+    doc.path(`M 0 0 L ${cs * 0.6} 0 L 0 ${cs * 0.6} Z`).fill('rgba(124,58,237,0.09)');
+    doc.path(`M ${W} 0 L ${W - cs} 0 L ${W} ${cs} Z`).fill('rgba(124,58,237,0.06)');
+    doc.path(`M ${W} 0 L ${W - cs * 0.6} 0 L ${W} ${cs * 0.6} Z`).fill('rgba(124,58,237,0.09)');
+    doc.path(`M 0 ${H} L ${cs} ${H} L 0 ${H - cs} Z`).fill('rgba(124,58,237,0.06)');
+    doc.path(`M 0 ${H} L ${cs * 0.6} ${H} L 0 ${H - cs * 0.6} Z`).fill('rgba(124,58,237,0.09)');
+    doc.path(`M ${W} ${H} L ${W - cs} ${H} L ${W} ${H - cs} Z`).fill('rgba(124,58,237,0.06)');
+    doc.path(`M ${W} ${H} L ${W - cs * 0.6} ${H} L ${W} ${H - cs * 0.6} Z`).fill('rgba(124,58,237,0.09)');
+
+    // ── Outer border ──────────────────────────────────────────────────────
+    doc.rect(18, 18, W - 36, H - 36).lineWidth(2.5).stroke(purple);
+    doc.rect(26, 26, W - 52, H - 52).lineWidth(0.7).stroke('rgba(124,58,237,0.28)');
+
+    // ── Logo + "IZ Academy" — top left ───────────────────────────────────
+    const logoPath = path.resolve(__dirname, '../../../frontend/public/iz-logo.png');
+    const logoY = 38;
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 46, logoY, { height: 32 });
+      doc.fillColor(purple).fontSize(14).font('Helvetica-Bold')
+         .text('IZ Academy', 84, logoY + 8, { characterSpacing: 0.5 });
+    } else {
+      doc.fillColor(purple).fontSize(14).font('Helvetica-Bold')
+         .text('IZ Academy', 46, logoY + 8, { characterSpacing: 0.5 });
     }
 
-    // Academy name
-    doc
-      .fillColor('#f59e0b')
-      .fontSize(12)
-      .font('Helvetica-Bold')
-      .text('IZ Academy', 0, 60, { align: 'center', width: W, characterSpacing: 5 });
+    // ── Platform label ────────────────────────────────────────────────────
+    doc.fillColor(purple).fontSize(10).font('Helvetica-Bold')
+       .text('PLATEFORME IZ ACADEMY', 0, 96, {
+         align: 'center', width: W, characterSpacing: 4,
+       });
 
-    // Title
-    doc
-      .fillColor('#ffffff')
-      .fontSize(34)
-      .font('Helvetica-Bold')
-      .text('CERTIFICAT DE REUSSITE', 0, 88, { align: 'center', width: W });
+    // ── Main title ────────────────────────────────────────────────────────
+    doc.fillColor(darkIndigo).fontSize(32).font('Helvetica-Bold')
+       .text('CERTIFICAT DE RÉUSSITE', 0, 120, {
+         align: 'center', width: W, characterSpacing: 2,
+       });
 
-    // Title underline
-    doc
-      .moveTo(W / 2 - 190, 138)
-      .lineTo(W / 2 + 190, 138)
-      .lineWidth(1)
-      .stroke('#f59e0b');
+    // ── Divider with diamond ──────────────────────────────────────────────
+    const divY = 168;
+    const divHalf = 170;
+    doc.moveTo(cx - divHalf, divY).lineTo(cx - 10, divY).lineWidth(1.2).stroke(purple);
+    doc.moveTo(cx + 10, divY).lineTo(cx + divHalf, divY).lineWidth(1.2).stroke(purple);
+    doc.save().translate(cx, divY).rotate(45).rect(-4.5, -4.5, 9, 9).fill(purple).restore();
 
-    // Awarded to label
-    doc
-      .fillColor('#94a3b8')
-      .fontSize(13)
-      .font('Helvetica')
-      .text('Ce certificat est decerne a', 0, 154, { align: 'center', width: W });
+    // ── "Ce certificat est décerné à" ─────────────────────────────────────
+    doc.fillColor(gray).fontSize(13).font('Helvetica')
+       .text('Ce certificat est décerné à', 0, 186, { align: 'center', width: W });
 
-    // Student name
-    doc
-      .fillColor('#f59e0b')
-      .fontSize(30)
-      .font('Helvetica-Bold')
-      .text(userName, 60, 180, { align: 'center', width: W - 120 });
+    // ── Recipient name ────────────────────────────────────────────────────
+    doc.fillColor(purple).fontSize(36).font('Helvetica-Bold')
+       .text(userName, 80, 212, { align: 'center', width: W - 160 });
 
-    // Has completed label
-    doc
-      .fillColor('#94a3b8')
-      .fontSize(13)
-      .font('Helvetica')
-      .text('pour avoir complete avec succes la formation', 0, 226, { align: 'center', width: W });
+    // ── "pour avoir complété..." ──────────────────────────────────────────
+    doc.fillColor(gray).fontSize(13).font('Helvetica')
+       .text('pour avoir complété avec succès la formation', 0, 264, { align: 'center', width: W });
 
-    // Course name
-    doc
-      .fillColor('#ffffff')
-      .fontSize(20)
-      .font('Helvetica-Bold')
-      .text(courseName, 80, 252, { align: 'center', width: W - 160 });
+    // ── Course name ───────────────────────────────────────────────────────
+    doc.fillColor(darkIndigo).fontSize(19).font('Helvetica-Bold')
+       .text(courseName, 120, 288, { align: 'center', width: W - 240 });
 
-    // Section divider
-    doc
-      .moveTo(W / 2 - 190, 306)
-      .lineTo(W / 2 + 190, 306)
-      .lineWidth(1)
-      .stroke('#1e293b');
+    // ── Footer separator ──────────────────────────────────────────────────
+    const sepY = H - 118;
+    doc.moveTo(56, sepY).lineTo(W - 56, sepY).lineWidth(0.8).stroke('rgba(124,58,237,0.22)');
 
-    // Three-column info row
-    const rowY = 322;
-    const colW = 200;
+    // ── Footer ────────────────────────────────────────────────────────────
+    const footerY = sepY + 18;
+    const colW = 220;
 
-    // Left: date
-    doc.fillColor('#475569').fontSize(9).font('Helvetica')
-       .text('DATE DE DELIVRANCE', 60, rowY, { width: colW, characterSpacing: 1 });
     const dateStr = issuedAt.toLocaleDateString('fr-FR', {
       day: 'numeric', month: 'long', year: 'numeric',
     });
-    doc.fillColor('#e2e8f0').fontSize(12).font('Helvetica-Bold')
-       .text(dateStr, 60, rowY + 14, { width: colW });
 
-    // Center: tutor + signature line
-    const centerX = W / 2 - 75;
-    doc.fillColor('#475569').fontSize(9).font('Helvetica')
-       .text('FORMATEUR', centerX, rowY, { width: 150, align: 'center', characterSpacing: 1 });
-    doc.fillColor('#e2e8f0').fontSize(12).font('Helvetica-Bold')
-       .text(tutorName, centerX, rowY + 14, { width: 150, align: 'center' });
-    doc.moveTo(W / 2 - 55, rowY + 50)
-       .lineTo(W / 2 + 55, rowY + 50)
-       .lineWidth(1)
-       .stroke('#f59e0b');
-    doc.fillColor('#f59e0b').fontSize(9).font('Helvetica-Bold')
-       .text('IZ Academy', W / 2 - 55, rowY + 55, { width: 110, align: 'center' });
+    // Left — Date
+    doc.fillColor(lightGray).fontSize(8).font('Helvetica')
+       .text('DATE DE DÉLIVRANCE', 56, footerY, { width: colW, characterSpacing: 1.5 });
+    doc.fillColor(dark).fontSize(13).font('Helvetica-Bold')
+       .text(dateStr, 56, footerY + 16, { width: colW });
 
-    // Right: cert ID
-    const rightX = W - 60 - colW;
-    const shortId = certId.slice(-14).toUpperCase();
-    doc.fillColor('#475569').fontSize(9).font('Helvetica')
-       .text('ID DU CERTIFICAT', rightX, rowY, { width: colW, align: 'right', characterSpacing: 1 });
-    doc.fillColor('#e2e8f0').fontSize(11).font('Helvetica-Bold')
-       .text('#' + shortId, rightX, rowY + 14, { width: colW, align: 'right' });
+    // Right — Instructor signature
+    const rightX = W - 56 - colW;
+    doc.fillColor('#4c1d95').fontSize(16).font('Helvetica-Oblique')
+       .text(tutorName, rightX, footerY, { width: colW, align: 'right' });
+    doc.moveTo(rightX, footerY + 26)
+       .lineTo(rightX + colW, footerY + 26)
+       .lineWidth(1).stroke(purple);
+    doc.fillColor(lightGray).fontSize(8).font('Helvetica')
+       .text('FORMATEUR CERTIFIÉ', rightX, footerY + 32, {
+         width: colW, align: 'right', characterSpacing: 1.5,
+       });
 
     doc.end();
   });

@@ -28,7 +28,7 @@ export const requireCourseOwnership = async (
     const rawId = req.params.id ?? req.params.courseId;
     const courseId = Array.isArray(rawId) ? rawId[0] : rawId;
     if (!courseId) {
-      res.status(400).json({ message: 'Course ID required' });
+      res.status(400).json({ message: 'Identifiant du cours requis' });
       return;
     }
 
@@ -38,18 +38,18 @@ export const requireCourseOwnership = async (
     });
 
     if (!course) {
-      res.status(404).json({ message: 'Course not found' });
+      res.status(404).json({ message: 'Cours introuvable' });
       return;
     }
 
     if (req.user!.role !== 'ADMIN' && course.teacherId !== req.user!.userId) {
-      res.status(403).json({ message: 'Forbidden: not your course' });
+      res.status(403).json({ message: 'Accès refusé : ce cours ne vous appartient pas' });
       return;
     }
 
     req.course = course;
     next();
   } catch {
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 };

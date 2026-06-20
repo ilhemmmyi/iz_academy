@@ -6,27 +6,27 @@ import { prisma } from '../config/prisma';
 export const UploadController = {
   async uploadVideo(req: AuthRequest, res: Response) {
     try {
-      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ message: 'Aucun fichier téléchargé' });
       const url = await UploadService.uploadVideo(req.file.buffer, req.file.mimetype);
       res.json({ url });
     } catch {
-      res.status(500).json({ message: 'Upload failed' });
+      res.status(500).json({ message: 'Échec du téléchargement' });
     }
   },
 
   async uploadThumbnail(req: AuthRequest, res: Response) {
     try {
-      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ message: 'Aucun fichier téléchargé' });
       const url = await UploadService.uploadThumbnail(req.file.buffer, req.file.mimetype);
       res.json({ url });
     } catch {
-      res.status(500).json({ message: 'Upload failed' });
+      res.status(500).json({ message: 'Échec du téléchargement' });
     }
   },
 
   async uploadHomepageVideo(req: AuthRequest, res: Response) {
     try {
-      if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ message: 'Aucun fichier téléchargé' });
       const url = await UploadService.uploadVideo(req.file.buffer, req.file.mimetype);
       await prisma.siteSetting.upsert({
         where: { key: 'homepageVideoUrl' },
@@ -35,7 +35,7 @@ export const UploadController = {
       });
       res.json({ url });
     } catch {
-      res.status(500).json({ message: 'Upload failed' });
+      res.status(500).json({ message: 'Échec du téléchargement' });
     }
   },
 };

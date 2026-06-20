@@ -14,7 +14,7 @@ export const uploadVideo = multer({
   limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
   fileFilter: (_, file, cb) => {
     if (file.mimetype.startsWith('video/')) cb(null, true);
-    else cb(new Error('Only video files allowed'));
+    else cb(new Error('Seuls les fichiers vidéo sont autorisés'));
   },
 }).single('video');
 
@@ -23,7 +23,7 @@ export const uploadImage = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (_, file, cb) => {
     if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Only image files allowed'));
+    else cb(new Error('Seuls les fichiers image sont autorisés'));
   },
 }).single('image');
 
@@ -47,6 +47,6 @@ export const uploadFile = multer({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (_, file, cb) => {
     if (ALLOWED_FILE_MIMES.has(file.mimetype)) cb(null, true);
-    else cb(new Error('File type not allowed'));
+    else cb(new Error('Type de fichier non autorisé'));
   },
 }).single('file');

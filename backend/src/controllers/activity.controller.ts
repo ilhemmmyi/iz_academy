@@ -8,7 +8,7 @@ export const ActivityController = {
       const activities = await ActivityService.getForUser(req.user!.userId);
       res.json(activities);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch activities' });
+      res.status(500).json({ message: 'Échec de la récupération des activités' });
     }
   },
 };

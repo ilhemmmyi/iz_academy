@@ -8,7 +8,7 @@ export const getSettings = async (_req: Request, res: Response) => {
     const settings = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     res.json(settings);
   } catch {
-    res.status(500).json({ message: 'Failed to fetch settings.' });
+    res.status(500).json({ message: 'Échec de la récupération des paramètres.' });
   }
 };
 
@@ -16,7 +16,7 @@ export const updateSetting = async (req: AuthRequest, res: Response) => {
   try {
     const { key, value } = req.body;
     if (!key || typeof value !== 'string') {
-      return res.status(400).json({ message: 'key and value are required.' });
+      return res.status(400).json({ message: 'key et value sont requis.' });
     }
     const row = await prisma.siteSetting.upsert({
       where: { key },
@@ -25,6 +25,6 @@ export const updateSetting = async (req: AuthRequest, res: Response) => {
     });
     res.json(row);
   } catch {
-    res.status(500).json({ message: 'Failed to update setting.' });
+    res.status(500).json({ message: 'Échec de la mise à jour du paramètre.' });
   }
 };

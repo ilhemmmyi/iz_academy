@@ -9,7 +9,7 @@ export interface AuthRequest extends Request {
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'No token provided' });
+    return res.status(401).json({ message: 'Aucun token fourni' });
   }
   const token = authHeader.split(' ')[1];
   try {
@@ -17,7 +17,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     req.user = payload;
     next();
   } catch {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    return res.status(401).json({ message: 'Token invalide ou expiré' });
   }
 };
 

@@ -9,13 +9,13 @@ export const ReportController = {
       const { reason, messageId, commentId } = req.body;
 
       if (!reason?.trim()) {
-        return res.status(400).json({ message: 'Reason is required' });
+        return res.status(400).json({ message: 'Le motif est requis' });
       }
       if (!messageId && !commentId) {
-        return res.status(400).json({ message: 'messageId or commentId is required' });
+        return res.status(400).json({ message: 'messageId ou commentId est requis' });
       }
       if (messageId && commentId) {
-        return res.status(400).json({ message: 'Provide only messageId or commentId, not both' });
+        return res.status(400).json({ message: 'Fournissez uniquement messageId ou commentId, pas les deux' });
       }
 
       const report = await ReportService.create(
@@ -27,9 +27,9 @@ export const ReportController = {
       res.status(201).json(report);
     } catch (err: any) {
       if (err.message === 'ALREADY_REPORTED') {
-        return res.status(409).json({ message: 'You have already reported this content' });
+        return res.status(409).json({ message: 'Vous avez déjà signalé ce contenu' });
       }
-      res.status(500).json({ message: 'Failed to create report' });
+      res.status(500).json({ message: 'Échec de la création du signalement' });
     }
   },
 
@@ -38,7 +38,7 @@ export const ReportController = {
       const reports = await ReportService.getAll();
       res.json(reports);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch reports' });
+      res.status(500).json({ message: 'Échec de la récupération des signalements' });
     }
   },
 
@@ -47,7 +47,7 @@ export const ReportController = {
       const report = await ReportService.markReviewed(String(req.params.id));
       res.json(report);
     } catch {
-      res.status(500).json({ message: 'Failed to update report' });
+      res.status(500).json({ message: 'Échec de la mise à jour du signalement' });
     }
   },
 };

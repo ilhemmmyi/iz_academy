@@ -152,7 +152,7 @@ describe('createLimiter() — rate enforcement', () => {
 
       expect(passed).toBe(false);
       expect(res2.status).toHaveBeenCalledWith(429);
-      expect(res2.json).toHaveBeenCalledWith({ success: false, error: 'Too many requests' });
+      expect(res2.json).toHaveBeenCalledWith({ success: false, error: 'Trop de requêtes' });
     } finally {
       process.env.NODE_ENV = origEnv;
     }

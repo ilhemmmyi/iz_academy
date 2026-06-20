@@ -10,24 +10,24 @@ const passwordSchema = z.string()
   .regex(/[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/, 'Le mot de passe doit contenir au moins un caractère spécial');
 
 export const registerSchema = z.object({
-  name: z.string().min(2).max(100),
-  email: z.string().email(),
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').max(100, 'Le nom ne doit pas dépasser 100 caractères'),
+  email: z.string().email('Adresse email invalide'),
   password: passwordSchema,
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1),
+  token: z.string().min(1, 'Le token est requis'),
   password: passwordSchema,
 });
 
 export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().email('Adresse email invalide'),
+  password: z.string().min(1, 'Le mot de passe est requis'),
 });
 
 export const googleLoginSchema = z.object({
-  uid: z.string().min(1),
-  email: z.string().email(),
-  displayName: z.string().min(1),
-  firebaseToken: z.string().min(1),
+  uid: z.string().min(1, 'uid est requis'),
+  email: z.string().email('Adresse email invalide'),
+  displayName: z.string().min(1, 'displayName est requis'),
+  firebaseToken: z.string().min(1, 'firebaseToken est requis'),
 });

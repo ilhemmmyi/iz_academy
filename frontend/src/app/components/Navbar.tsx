@@ -58,7 +58,7 @@ export function Navbar() {
             {([
               { label: 'Accueil', to: '/', exact: true },
               { label: 'Cours', to: '/courses', exact: false },
-              { label: 'À propos', to: '/about', exact: true },
+              { label: 'Aide', to: '/about', exact: true },
               { label: 'Contact', to: '/contact', exact: true },
             ] as { label: string; to: string; exact: boolean }[]).map(({ label, to, exact }) => {
               const active = to.startsWith('/#')
@@ -162,7 +162,7 @@ export function Navbar() {
             {([
               { label: 'Accueil', to: '/', exact: true },
               { label: 'Cours', to: '/courses', exact: false },
-              { label: 'À propos', to: '/about', exact: true },
+              { label: 'Aide', to: '/about', exact: true },
               { label: 'Contact', to: '/contact', exact: true },
             ] as { label: string; to: string; exact: boolean }[]).map(({ label, to, exact }) => {
               const active = to.startsWith('/#')

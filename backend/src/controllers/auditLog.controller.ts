@@ -15,13 +15,13 @@ export const AuditLogController = {
       const from = req.query.from ? new Date(req.query.from as string) : undefined;
       const to   = req.query.to   ? new Date(req.query.to   as string) : undefined;
 
-      if (from && isNaN(from.getTime())) return res.status(400).json({ message: 'Invalid "from" date' });
-      if (to   && isNaN(to.getTime()))   return res.status(400).json({ message: 'Invalid "to" date' });
+      if (from && isNaN(from.getTime())) return res.status(400).json({ message: 'Date "from" invalide' });
+      if (to   && isNaN(to.getTime()))   return res.status(400).json({ message: 'Date "to" invalide' });
 
       const result = await AuditService.query({ actorId, action, targetType, targetId, from, to, page, limit });
       res.json(result);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch audit logs' });
+      res.status(500).json({ message: 'Échec de la récupération des journaux d\'audit' });
     }
   },
 };

@@ -18,9 +18,9 @@ export const AuthController = {
       AuditService.log({ actorId: user.id, actorRole: user.role, action: AuditAction.AUTH_REGISTER, targetType: 'User', targetId: user.id, payload: { email: user.email, name: user.name }, ...extractRequestContext(req) });
       res.status(201).json({ message: 'Account created', user });
     } catch (err: any) {
-      if (err.message === 'EMAIL_EXISTS') return res.status(409).json({ message: 'Email already in use' });
+      if (err.message === 'EMAIL_EXISTS') return res.status(409).json({ message: 'Cet email est déjà utilisé' });
       console.error('[register]', err);
-      res.status(500).json({ message: 'Registration failed' });
+      res.status(500).json({ message: 'Échec de l\'inscription' });
     }
   },
 
@@ -36,22 +36,22 @@ export const AuthController = {
         user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword, hasPassword: !!user.password, phone: user.phone, address: user.address, educationLevel: user.educationLevel, studentStatus: user.studentStatus },
       });
     } catch (err: any) {
-      if (err.message === 'INVALID_CREDENTIALS') return res.status(401).json({ message: 'Invalid credentials' });
+      if (err.message === 'INVALID_CREDENTIALS') return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
       if (err.message === 'EMAIL_NOT_VERIFIED') return res.status(403).json({ message: 'Veuillez vérifier votre email avant de vous connecter', code: 'EMAIL_NOT_VERIFIED' });
       console.error('[login]', err);
-      res.status(500).json({ message: 'Login failed' });
+      res.status(500).json({ message: 'Échec de la connexion' });
     }
   },
 
   async refresh(req: Request, res: Response) {
     try {
       const token = req.cookies.refreshToken;
-      if (!token) return res.status(401).json({ message: 'No refresh token' });
+      if (!token) return res.status(401).json({ message: 'Token de rafraîchissement manquant' });
       const tokens = await AuthService.refresh(token);
       res.cookie('refreshToken', tokens.refreshToken, REFRESH_COOKIE_OPTIONS);
       res.json({ accessToken: tokens.accessToken });
     } catch {
-      res.status(401).json({ message: 'Invalid refresh token' });
+      res.status(401).json({ message: 'Token de rafraîchissement invalide' });
     }
   },
 
@@ -116,7 +116,7 @@ export const AuthController = {
     try {
       const { uid, email, displayName, firebaseToken } = req.body;
       if (!uid || !email || !displayName || !firebaseToken) {
-        return res.status(400).json({ message: 'Missing required fields' });
+        return res.status(400).json({ message: 'Champs requis manquants' });
       }
       const user = await AuthService.googleLogin(uid, email, displayName, firebaseToken);
       const { accessToken, refreshToken } = await AuthService.issueTokens(user.id, user.role, user.email);
@@ -127,9 +127,9 @@ export const AuthController = {
         user: { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, hasCompletedCoach: user.hasCompletedCoach, mustChangePassword: user.mustChangePassword, hasPassword: !!user.password, phone: user.phone, address: user.address, educationLevel: user.educationLevel, studentStatus: user.studentStatus },
       });
     } catch (err: any) {
-      if (err.message === 'INVALID_FIREBASE_TOKEN') return res.status(401).json({ message: 'Invalid Firebase token' });
+      if (err.message === 'INVALID_FIREBASE_TOKEN') return res.status(401).json({ message: 'Token Firebase invalide' });
       console.error('[googleLogin]', err);
-      res.status(500).json({ message: 'Google login failed' });
+      res.status(500).json({ message: 'Échec de la connexion avec Google' });
     }
   },
 };

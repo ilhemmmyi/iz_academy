@@ -8,8 +8,8 @@ export const errorHandler = (err: any, req: Request, res: Response, _next: NextF
     ? err.status
     : 500;
   const message = status >= 500 && process.env.NODE_ENV === 'production'
-    ? 'Internal server error'
-    : err.message || 'Internal server error';
+    ? 'Erreur interne du serveur'
+    : err.message || 'Erreur interne du serveur';
   res.status(status).json({
     message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),

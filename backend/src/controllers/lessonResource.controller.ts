@@ -10,16 +10,16 @@ export const LessonResourceController = {
       res.json(resources);
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to fetch lesson resources' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Accès refusé' });
+      res.status(500).json({ message: 'Échec de la récupération des ressources de la leçon' });
     }
   },
 
   async createFileResource(req: AuthRequest, res: Response) {
     try {
       const { title } = req.body;
-      if (!title?.trim()) return res.status(400).json({ message: 'Title is required' });
-      if (!req.file) return res.status(400).json({ message: 'File is required' });
+      if (!title?.trim()) return res.status(400).json({ message: 'Le titre est requis' });
+      if (!req.file) return res.status(400).json({ message: 'Le fichier est requis' });
       const resource = await LessonResourceService.createFile(
         String(req.params.lessonId),
         req.user!.userId,
@@ -30,16 +30,16 @@ export const LessonResourceController = {
       res.status(201).json(resource);
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to create lesson resource' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Accès refusé' });
+      res.status(500).json({ message: 'Échec de la création de la ressource' });
     }
   },
 
   async createLinkResource(req: AuthRequest, res: Response) {
     try {
       const { title, url } = req.body;
-      if (!title?.trim()) return res.status(400).json({ message: 'Title is required' });
-      if (!url?.trim()) return res.status(400).json({ message: 'URL is required' });
+      if (!title?.trim()) return res.status(400).json({ message: 'Le titre est requis' });
+      if (!url?.trim()) return res.status(400).json({ message: 'L\'URL est requise' });
       const resource = await LessonResourceService.createLink(
         String(req.params.lessonId),
         req.user!.userId,
@@ -51,8 +51,8 @@ export const LessonResourceController = {
     } catch (err: any) {
       if (err.code === 'VALIDATION') return res.status(400).json({ message: err.message });
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to create lesson resource' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Accès refusé' });
+      res.status(500).json({ message: 'Échec de la création de la ressource' });
     }
   },
 
@@ -66,8 +66,8 @@ export const LessonResourceController = {
       res.json({ message: 'Resource deleted' });
     } catch (err: any) {
       if (err.code === 'NOT_FOUND') return res.status(404).json({ message: err.message });
-      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden' });
-      res.status(500).json({ message: 'Failed to delete lesson resource' });
+      if (err.code === 'FORBIDDEN') return res.status(403).json({ message: 'Accès refusé' });
+      res.status(500).json({ message: 'Échec de la suppression de la ressource' });
     }
   },
 };

@@ -276,7 +276,7 @@ export function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [showAddTeacher, setShowAddTeacher] = useState(false);
   const [editUser, setEditUser] = useState<ApiUser | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '', formation: '', duree: '', dateDebut: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', formation: '', dateDebut: '' });
   const [editTeacherCourseIds, setEditTeacherCourseIds] = useState<string[]>([]);
   const [eligibleCourses, setEligibleCourses] = useState<{ id: string; title: string; teacherId: string | null }[]>([]);
   const [eligibleCoursesLoading, setEligibleCoursesLoading] = useState(false);
@@ -422,7 +422,7 @@ export function AdminUsers() {
 
   const openEditModal = (u: ApiUser) => {
     setEditUser(u);
-    setEditForm({ name: u.name, email: u.email, formation: u.formation || '', duree: u.duree || '', dateDebut: u.dateDebut || '' });
+    setEditForm({ name: u.name, email: u.email, formation: u.formation || '', dateDebut: u.dateDebut || '' });
     if (u.role.toLowerCase() === 'teacher') {
       setEditTeacherCourseIds([]);
       setEligibleCourses([]);
@@ -471,7 +471,6 @@ export function AdminUsers() {
           name: editForm.name,
           email: editForm.email,
           formation: formationValue,
-          duree: editForm.duree,
           ...(isTeacher ? {} : { dateDebut: editForm.dateDebut || undefined }),
         };
       }
@@ -873,7 +872,7 @@ export function AdminUsers() {
                 </div>
               )}
 
-              {/* ── Teacher / Admin: formation, duree, dateDebut, course assignments ── */}
+              {/* ── Teacher / Admin: formation, dateDebut, course assignments ── */}
               {editUser?.role.toLowerCase() !== 'student' && (
                 <>
                   <div>
@@ -913,14 +912,7 @@ export function AdminUsers() {
                         className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
                     )}
                   </div>
-                  {editUser?.role.toLowerCase() === 'teacher' ? (
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Durée</label>
-                      <input type="text" value={editForm.duree}
-                        onChange={e => setEditForm(p => ({ ...p, duree: e.target.value }))}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-input-background focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                  ) : (
+                  {editUser?.role.toLowerCase() !== 'teacher' && (
                     <div>
                       <label className="block text-sm font-medium mb-1">Date de commencement</label>
                       <input type="date" value={editForm.dateDebut}
@@ -1030,12 +1022,6 @@ export function AdminUsers() {
                       {selectedUserObj.role.toLowerCase() === 'teacher' ? 'Formation assignée' : 'Formation actuelle'}
                     </div>
                     <div className="font-medium">{selectedUserObj.formation}</div>
-                  </div>
-                )}
-                {selectedUserObj.duree && (
-                  <div>
-                    <div className="text-sm text-muted-foreground mb-1">Durée</div>
-                    <div className="font-medium">{selectedUserObj.duree}</div>
                   </div>
                 )}
                 {selectedUserObj.dateDebut && (

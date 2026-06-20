@@ -21,17 +21,17 @@ export const ContactMessageController = {
   async submit(req: Request, res: Response) {
     try {
       if (hasAuthenticatedSession(req)) {
-        return res.status(403).json({ message: 'Authenticated users cannot use the contact chat' });
+        return res.status(403).json({ message: 'Les utilisateurs connectés ne peuvent pas utiliser le chat de contact' });
       }
 
       const { name, email, subject, message } = req.body;
 
       if (!name || !email || !subject || !message) {
-        return res.status(400).json({ message: 'All fields are required' });
+        return res.status(400).json({ message: 'Tous les champs sont requis' });
       }
 
       if (!EMAIL_REGEX.test(String(email).trim())) {
-        return res.status(400).json({ message: 'Invalid email address' });
+        return res.status(400).json({ message: 'Adresse email invalide' });
       }
 
       const created = await ContactMessageService.submit({
@@ -47,7 +47,7 @@ export const ContactMessageController = {
       });
     } catch (err) {
       console.error('[contact.submit]', err);
-      res.status(500).json({ message: 'Failed to send message' });
+      res.status(500).json({ message: 'Échec de l\'envoi du message' });
     }
   },
 
@@ -57,7 +57,7 @@ export const ContactMessageController = {
       res.json(messages);
     } catch (err) {
       console.error('[contact.getAll]', err);
-      res.status(500).json({ message: 'Failed to fetch contact messages' });
+      res.status(500).json({ message: 'Échec de la récupération des messages de contact' });
     }
   },
 
@@ -67,7 +67,7 @@ export const ContactMessageController = {
       res.json({ message: 'Marked as read' });
     } catch (err) {
       console.error('[contact.markRead]', err);
-      res.status(500).json({ message: 'Failed to update contact message' });
+      res.status(500).json({ message: 'Échec de la mise à jour du message de contact' });
     }
   },
 
@@ -77,8 +77,8 @@ export const ContactMessageController = {
       const updated = await ContactMessageService.reply(String(req.params.id), req.user!.userId, String(replyMessage || ''));
       res.json(updated);
     } catch (err: any) {
-      if (err.message === 'NOT_FOUND') return res.status(404).json({ message: 'Contact message not found' });
-      if (err.message === 'EMPTY_REPLY') return res.status(400).json({ message: 'Reply message is required' });
+      if (err.message === 'NOT_FOUND') return res.status(404).json({ message: 'Message de contact introuvable' });
+      if (err.message === 'EMPTY_REPLY') return res.status(400).json({ message: 'Le message de réponse est requis' });
       console.error('[contact.reply] SMTP error:', err.message);
       res.status(500).json({ message: `Réponse sauvegardée mais email non envoyé : ${err.message}` });
     }

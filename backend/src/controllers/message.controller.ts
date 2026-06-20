@@ -9,7 +9,7 @@ export const MessageController = {
       const contacts = await MessageService.getContacts(req.user!.userId, req.user!.role);
       res.json(contacts);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch contacts' });
+      res.status(500).json({ message: 'Échec de la récupération des contacts' });
     }
   },
 
@@ -20,7 +20,7 @@ export const MessageController = {
       const result = await MessageService.getConversations(req.user!.userId, cursor, limit);
       res.json(result);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch messages' });
+      res.status(500).json({ message: 'Échec de la récupération des messages' });
     }
   },
 
@@ -30,7 +30,7 @@ export const MessageController = {
       const message = await MessageService.send(req.user!.userId, receiverId, content);
       res.status(201).json(message);
     } catch {
-      res.status(500).json({ message: 'Failed to send message' });
+      res.status(500).json({ message: 'Échec de l\'envoi du message' });
     }
   },
 
@@ -39,18 +39,18 @@ export const MessageController = {
       await MessageService.markRead(String(req.params.id));
       res.json({ message: 'Marked as read' });
     } catch {
-      res.status(500).json({ message: 'Failed to mark message as read' });
+      res.status(500).json({ message: 'Échec du marquage du message comme lu' });
     }
   },
 
   async markAllRead(req: AuthRequest, res: Response) {
     try {
       const { senderId } = req.body;
-      if (!senderId) return res.status(400).json({ message: 'senderId is required' });
+      if (!senderId) return res.status(400).json({ message: 'senderId est requis' });
       await MessageService.markAllRead(req.user!.userId, String(senderId));
       res.json({ message: 'All messages marked as read' });
     } catch {
-      res.status(500).json({ message: 'Failed to mark messages as read' });
+      res.status(500).json({ message: 'Échec du marquage des messages comme lus' });
     }
   },
 };

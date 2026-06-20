@@ -4,21 +4,21 @@ export const createCategorySchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, 'Category name is required')
-    .max(100, 'Category name cannot exceed 100 characters'),
+    .min(1, 'Le nom de la catégorie est requis')
+    .max(100, 'Le nom de la catégorie ne doit pas dépasser 100 caractères'),
 });
 
 export const createCourseSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(1, 'Title is required')
-    .max(200, 'Title cannot exceed 200 characters'),
+    .min(1, 'Le titre est requis')
+    .max(200, 'Le titre ne doit pas dépasser 200 caractères'),
 
   shortDescription: z
     .string()
     .trim()
-    .min(1, 'Short description is required'),
+    .min(1, 'La description courte est requise'),
 
   longDescription: z
     .string()
@@ -28,14 +28,14 @@ export const createCourseSchema = z.object({
 
   price: z
     .number({
-      invalid_type_error: 'Price must be a number',
+      invalid_type_error: 'Le prix doit être un nombre',
     })
-    .nonnegative('Price cannot be negative')
+    .nonnegative('Le prix ne peut pas être négatif')
     .optional(),
 
   thumbnailUrl: z
     .string()
-    .url('Thumbnail URL must be valid')
+    .url('L\'URL de la miniature doit être valide')
     .nullable()
     .optional(),
 
@@ -57,7 +57,7 @@ export const createCourseSchema = z.object({
 
   objectives: z
     .array(
-      z.string().trim().min(1, 'Objective cannot be empty')
+      z.string().trim().min(1, 'L\'objectif ne peut pas être vide')
     )
     .optional(),
 

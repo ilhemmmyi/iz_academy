@@ -4,7 +4,7 @@ import { AuditService, extractRequestContext } from '../services/audit.service';
 
 export const requireRole = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+    if (!req.user) return res.status(401).json({ message: 'Non authentifié' });
     if (!roles.includes(req.user.role)) {
       AuditService.security({
         actorId: req.user.userId,
@@ -15,7 +15,7 @@ export const requireRole = (...roles: string[]) => {
         payload: { requiredRoles: roles, method: req.method },
         ...extractRequestContext(req),
       });
-      return res.status(403).json({ message: 'Forbidden: insufficient role' });
+      return res.status(403).json({ message: 'Accès refusé : rôle insuffisant' });
     }
     next();
   };

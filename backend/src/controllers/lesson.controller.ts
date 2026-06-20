@@ -12,10 +12,10 @@ export const LessonController = {
       res.json({ message: 'Lesson completed' });
     } catch (err: any) {
       console.error(`[Controller Complete] Error:`, err);
-      if (err.code === 'NOT_FOUND')      return res.status(404).json({ message: 'Lesson not found' });
-      if (err.code === 'NOT_ENROLLED')   return res.status(403).json({ message: 'Not enrolled in this course' });
+      if (err.code === 'NOT_FOUND')      return res.status(404).json({ message: 'Leçon introuvable' });
+      if (err.code === 'NOT_ENROLLED')   return res.status(403).json({ message: 'Vous n\'êtes pas inscrit à ce cours' });
       if (err.code === 'ACCESS_EXPIRED') return res.status(403).json({ message: 'ACCESS_EXPIRED' });
-      res.status(500).json({ message: 'Failed to complete lesson' });
+      res.status(500).json({ message: 'Échec de la validation de la leçon' });
     }
   },
 
@@ -24,7 +24,7 @@ export const LessonController = {
       const result = await LessonService.getProgress(String(req.params.id), req.user!.userId);
       res.json(result);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch progress' });
+      res.status(500).json({ message: 'Échec de la récupération de la progression' });
     }
   },
 
@@ -32,39 +32,39 @@ export const LessonController = {
     try {
       const { watchedSeconds, durationSeconds } = req.body;
       if (typeof watchedSeconds !== 'number' || typeof durationSeconds !== 'number') {
-        return res.status(400).json({ message: 'watchedSeconds and durationSeconds are required numbers' });
+        return res.status(400).json({ message: 'watchedSeconds et durationSeconds doivent être des nombres' });
       }
       await LessonService.saveVideoProgress(String(req.params.id), req.user!.userId, watchedSeconds, durationSeconds);
       res.json({ message: 'Video progress saved' });
     } catch (err: any) {
       console.error(`[Controller SaveVideoProgress] Error for lesson ${req.params.id}:`, err?.message || err);
       if (err.status === 404 || err.message === 'Lesson not found') {
-        return res.status(404).json({ message: 'Lesson not found' });
+        return res.status(404).json({ message: 'Leçon introuvable' });
       }
       if (err.code === 'ACCESS_EXPIRED') return res.status(403).json({ message: 'ACCESS_EXPIRED' });
-      if (err.code === 'NOT_ENROLLED')   return res.status(403).json({ message: 'Not enrolled in this course' });
-      res.status(500).json({ message: 'Failed to save video progress' });
+      if (err.code === 'NOT_ENROLLED')   return res.status(403).json({ message: 'Vous n\'êtes pas inscrit à ce cours' });
+      res.status(500).json({ message: 'Échec de l\'enregistrement de la progression vidéo' });
     }
   },
 
   async canUnlock(req: AuthRequest, res: Response) {
     try {
       const result = await LessonService.canUnlock(String(req.params.id), req.user!.userId);
-      if (result === null) return res.status(404).json({ message: 'Lesson not found' });
+      if (result === null) return res.status(404).json({ message: 'Leçon introuvable' });
       res.json({ canUnlock: result });
     } catch {
-      res.status(500).json({ message: 'Failed to check lesson access' });
+      res.status(500).json({ message: 'Échec de la vérification de l\'accès à la leçon' });
     }
   },
 
   async getVideoUrl(req: AuthRequest, res: Response) {
     try {
       const url = await LessonService.getVideoUrl(String(req.params.id), req.user!.userId, req.user!.role);
-      if (url === null) return res.status(404).json({ message: 'No video for this lesson' });
+      if (url === null) return res.status(404).json({ message: 'Aucune vidéo pour cette leçon' });
       res.json({ url });
     } catch (err: any) {
       if (err.message === 'NOT_YOUR_COURSE' || err.message === 'NOT_ENROLLED') {
-        return res.status(403).json({ message: err.message === 'NOT_YOUR_COURSE' ? 'Not your course' : 'Not enrolled' });
+        return res.status(403).json({ message: err.message === 'NOT_YOUR_COURSE' ? 'Ce cours ne vous appartient pas' : 'Vous n\'êtes pas inscrit à ce cours' });
       }
       if (err.code === 'ACCESS_EXPIRED' || err.message === 'ACCESS_EXPIRED') {
         return res.status(403).json({ message: 'ACCESS_EXPIRED' });
@@ -72,7 +72,7 @@ export const LessonController = {
       if (err.message === 'QUIZ_REQUIRED') {
         return res.status(403).json({ message: 'QUIZ_REQUIRED' });
       }
-      res.status(500).json({ message: 'Failed to get video URL' });
+      res.status(500).json({ message: 'Échec de la récupération de l\'URL de la vidéo' });
     }
   },
 };

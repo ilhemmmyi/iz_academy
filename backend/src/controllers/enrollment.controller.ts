@@ -16,8 +16,8 @@ export const EnrollmentController = {
       AuditService.log({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.ENROLLMENT_REQUEST, targetType: 'Enrollment', targetId: enrollment.id, payload: { courseId: enrollment.courseId }, ...extractRequestContext(req) });
       res.status(201).json(enrollment);
     } catch (err: any) {
-      if (err.message === 'ALREADY_ENROLLED') return res.status(409).json({ message: 'Already enrolled' });
-      res.status(500).json({ message: 'Enrollment request failed' });
+      if (err.message === 'ALREADY_ENROLLED') return res.status(409).json({ message: 'Déjà inscrit' });
+      res.status(500).json({ message: 'Échec de la demande d\'inscription' });
     }
   },
 
@@ -26,7 +26,7 @@ export const EnrollmentController = {
       const enrollments = await EnrollmentService.getAll();
       res.json(enrollments);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch enrollments' });
+      res.status(500).json({ message: 'Échec de la récupération des inscriptions' });
     }
   },
 
@@ -35,7 +35,7 @@ export const EnrollmentController = {
       const enrollments = await EnrollmentService.getByUser(req.user!.userId);
       res.json(enrollments);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch enrollments' });
+      res.status(500).json({ message: 'Échec de la récupération des inscriptions' });
     }
   },
 
@@ -47,7 +47,7 @@ export const EnrollmentController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action, targetType: 'Enrollment', targetId: enrollment.id, payload: { studentId: enrollment.userId, courseId: enrollment.courseId }, ...extractRequestContext(req) });
       res.json(enrollment);
     } catch {
-      res.status(500).json({ message: 'Failed to update enrollment status' });
+      res.status(500).json({ message: 'Échec de la mise à jour du statut d\'inscription' });
     }
   },
 
@@ -56,7 +56,7 @@ export const EnrollmentController = {
       const data = await EnrollmentService.getTeacherStudents(req.user!.userId);
       res.json(data);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch teacher students' });
+      res.status(500).json({ message: 'Échec de la récupération des étudiants' });
     }
   },
 
@@ -66,7 +66,7 @@ export const EnrollmentController = {
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.ENROLLMENT_DELETE, targetType: 'Enrollment', targetId: String(req.params.id), ...extractRequestContext(req) });
       res.status(204).send();
     } catch {
-      res.status(500).json({ message: 'Failed to delete enrollment' });
+      res.status(500).json({ message: 'Échec de la suppression de l\'inscription' });
     }
   },
 
@@ -75,7 +75,7 @@ export const EnrollmentController = {
       const data = await EnrollmentService.getWatchStats(req.user!.userId);
       res.json(data);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch watch stats' });
+      res.status(500).json({ message: 'Échec de la récupération des statistiques de visionnage' });
     }
   },
 };
