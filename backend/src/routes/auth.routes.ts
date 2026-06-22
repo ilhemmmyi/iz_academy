@@ -8,12 +8,14 @@ import {
   authRegisterLimiter,
   authForgotPasswordLimiter,
   authResetPasswordLimiter,
+  authResendVerificationLimiter,
   authRefreshLimiter,
 } from '../middlewares/rate-limit.middleware';
 
 export const authRouter = Router();
 
 authRouter.get('/verify-email', AuthController.verifyEmail);
+authRouter.post('/resend-verification', authResendVerificationLimiter, AuthController.resendVerification);
 authRouter.post('/forgot-password', authForgotPasswordLimiter, AuthController.forgotPassword);
 authRouter.post('/reset-password', authResetPasswordLimiter, validate(resetPasswordSchema), AuthController.resetPassword);
 authRouter.post('/register', authRegisterLimiter, validate(registerSchema), AuthController.register);

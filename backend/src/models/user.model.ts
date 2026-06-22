@@ -21,5 +21,5 @@ export const toSafeUser = (user: any) => {
     resetPasswordExpires,
     ...safe
   } = user;
-  return safe;
+  return { ...safe, hasPassword: !!password };
 };

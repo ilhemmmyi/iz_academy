@@ -48,6 +48,18 @@ model User {
   reports                    Report[]
 }
 
+model PendingRegistration {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 model RefreshToken {
   id        String   @id @default(cuid())
   tokenHash String   @unique

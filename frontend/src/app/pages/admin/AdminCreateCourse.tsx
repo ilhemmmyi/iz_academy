@@ -264,8 +264,12 @@ export function AdminCreateCourse() {
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!title || !shortDesc || !categoryId || !level) {
-      toast.error('Veuillez remplir tous les champs obligatoires (titre, description courte, catégorie, niveau)');
+    if (!title || !shortDesc || !categoryId || !level || !duration || !price) {
+      toast.error('Veuillez remplir tous les champs obligatoires (titre, description courte, catégorie, niveau, durée, prix)');
+      return;
+    }
+    if (!projects.every(p => p.title.trim() && p.description.trim() && p.instructions.trim())) {
+      toast.error('Veuillez remplir tous les champs des projets (titre, description, instructions)');
       return;
     }
     setSubmitting(true);
@@ -328,8 +332,9 @@ export function AdminCreateCourse() {
 
   // ─── UI helpers ───────────────────────────────────────────────────────────
   const canGoNext = () => {
-    if (step === 1) return !!(title && shortDesc && categoryId && level);
+    if (step === 1) return !!(title && shortDesc && categoryId && level && duration && price);
     if (step === 2) return sections.every(s => s.title.trim() && s.lessons.every(l => l.title.trim()));
+    if (step === 3) return projects.every(p => p.title.trim() && p.description.trim() && p.instructions.trim());
     return true;
   };
 
@@ -432,11 +437,11 @@ export function AdminCreateCourse() {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Durée estimée</Label>
+                    <Label>Durée estimée *</Label>
                     <Input value={duration} onChange={e => setDuration(e.target.value)} placeholder="Ex: 12 semaines" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Prix (DT)</Label>
+                    <Label>Prix (DT) *</Label>
                     <Input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0 = Gratuit" min="0" />
                   </div>
                 </div>
@@ -746,30 +751,39 @@ export function AdminCreateCourse() {
                     <div className="w-8 h-8 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">
                       {pi + 1}
                     </div>
-                    <Input
-                      value={p.title}
-                      onChange={e => updateProject(p.id, { title: e.target.value })}
-                      placeholder="Titre du projet"
-                      className="flex-1 font-medium"
-                    />
+                    <div className="flex-1 space-y-2">
+                      <Label>Titre du projet *</Label>
+                      <Input
+                        value={p.title}
+                        onChange={e => updateProject(p.id, { title: e.target.value })}
+                        placeholder="Titre du projet"
+                        className="font-medium"
+                      />
+                    </div>
                     {projects.length > 1 && (
-                      <Button type="button" variant="outline" size="icon" onClick={() => removeProject(p.id)}>
+                      <Button type="button" variant="outline" size="icon" onClick={() => removeProject(p.id)} className="self-end">
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     )}
                   </div>
-                  <Textarea
-                    value={p.description}
-                    onChange={e => updateProject(p.id, { description: e.target.value })}
-                    placeholder="Description du projet (objectifs, compétences visées)"
-                    rows={2}
-                  />
-                  <Textarea
-                    value={p.instructions}
-                    onChange={e => updateProject(p.id, { instructions: e.target.value })}
-                    placeholder="Instructions détaillées (étapes à suivre, livrables attendus)"
-                    rows={4}
-                  />
+                  <div className="space-y-2">
+                    <Label>Description du projet *</Label>
+                    <Textarea
+                      value={p.description}
+                      onChange={e => updateProject(p.id, { description: e.target.value })}
+                      placeholder="Description du projet (objectifs, compétences visées)"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Instructions détaillées *</Label>
+                    <Textarea
+                      value={p.instructions}
+                      onChange={e => updateProject(p.id, { instructions: e.target.value })}
+                      placeholder="Instructions détaillées (étapes à suivre, livrables attendus)"
+                      rows={4}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             ))}

@@ -83,17 +83,22 @@ export function UserProfile() {
   ========================= */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error('Le nom ne peut pas être vide');
+    const trimmedName = name.trim();
+    if (trimmedName.length < 3) {
+      toast.error('Le nom doit contenir au moins 3 caractères');
+      return;
+    }
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/.test(trimmedName)) {
+      toast.error('Le nom ne doit contenir que des lettres');
       return;
     }
     setSaving(true);
     try {
-      const updated = await usersApi.updateMe({ name: name.trim() });
+      const updated = await usersApi.updateMe({ name: trimmedName });
       setUser({ ...user, name: updated.name });
       toast.success('Profil mis à jour avec succès');
-    } catch {
-      toast.error('Erreur lors de la mise à jour du profil');
+    } catch (err: any) {
+      toast.error(err.message || 'Erreur lors de la mise à jour du profil');
     } finally {
       setSaving(false);
     }

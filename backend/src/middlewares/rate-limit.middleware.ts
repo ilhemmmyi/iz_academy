@@ -118,6 +118,13 @@ export const authResetPasswordLimiter = createLimiter({
   keyBy:    'ip',
 });
 
+/** 3 verification-email resends / hour per IP */
+export const authResendVerificationLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max:      3,
+  keyBy:    'ip',
+});
+
 // ── Enrollment limiter (user-keyed) ───────────────────────────────────────────
 
 /** 10 enrollment requests / hour per user */

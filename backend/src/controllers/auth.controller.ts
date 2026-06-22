@@ -14,9 +14,10 @@ export const AuthController = {
   async register(req: Request, res: Response) {
     try {
       const { name, email, password } = req.body;
-      const user = await AuthService.register(name, email, password);
-      AuditService.log({ actorId: user.id, actorRole: user.role, action: AuditAction.AUTH_REGISTER, targetType: 'User', targetId: user.id, payload: { email: user.email, name: user.name }, ...extractRequestContext(req) });
-      res.status(201).json({ message: 'Account created', user });
+      const pending = await AuthService.register(name, email, password);
+      // No User row exists yet — the account is only created once the verification link is clicked
+      AuditService.log({ actorId: null, action: AuditAction.AUTH_REGISTER, targetType: 'PendingRegistration', payload: { email: pending.email, name: pending.name }, ...extractRequestContext(req) });
+      res.status(201).json({ message: 'Verification email sent', user: pending });
     } catch (err: any) {
       if (err.message === 'EMAIL_EXISTS') return res.status(409).json({ message: 'Cet email est déjà utilisé' });
       console.error('[register]', err);
@@ -97,6 +98,22 @@ export const AuthController = {
     }
   },
 
+  async resendVerification(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: 'Email requis' });
+      }
+      const normalized = email.trim().toLowerCase();
+      await AuthService.resendVerificationEmail(normalized);
+      AuditService.log({ actorId: null, action: AuditAction.AUTH_EMAIL_VERIFICATION_RESEND, targetType: 'PendingRegistration', payload: { email: normalized }, ...extractRequestContext(req) });
+      res.json({ message: 'Si un compte existe avec cet email et n\'est pas encore vérifié, un nouveau lien a été envoyé.' });
+    } catch (err) {
+      console.error('[resendVerification]', err);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   async verifyEmail(req: Request, res: Response) {
     try {
       const { token } = req.query as { token: string };
@@ -107,6 +124,7 @@ export const AuthController = {
     } catch (err: any) {
       if (err.message === 'INVALID_TOKEN') return res.status(400).json({ message: 'Lien invalide' });
       if (err.message === 'TOKEN_EXPIRED') return res.status(400).json({ message: 'Lien expiré. Veuillez vous réinscrire.' });
+      if (err.message === 'EMAIL_EXISTS') return res.status(409).json({ message: 'Cet email est déjà associé à un compte.' });
       console.error('[verifyEmail]', err);
       res.status(500).json({ message: 'Vérification échouée' });
     }

@@ -7,6 +7,7 @@ import crypto from 'crypto';
  * 32 random bytes → 64-character hex string (256 bits of entropy).
  * Used for password-reset and email-verification links.
  */
+// creation du refresh tokenn 
 export function generateSecureToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
@@ -27,6 +28,7 @@ export function hashToken(rawToken: string): string {
  * 64 random bytes → 128-character hex string (512 bits of entropy).
  * This is NOT a JWT — it carries no payload and cannot be decoded.
  */
+// z
 export function generateRefreshToken(): string {
   return crypto.randomBytes(64).toString('hex');
 }

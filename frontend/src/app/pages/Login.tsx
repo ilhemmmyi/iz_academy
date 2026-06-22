@@ -35,12 +35,15 @@ export function Login() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [reg, setReg] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   useEffect(() => { setShowPassword(false); }, [mode]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setUnverifiedEmail(null);
     try {
       const res = await login(email, password);
       toast.success('Connexion réussie !');
@@ -49,20 +52,43 @@ export function Login() {
       else                                  navigate('/admin');
     } catch (err: any) {
       toast.error(err.message || 'Identifiants invalides');
+      if (err.code === 'EMAIL_NOT_VERIFIED') setUnverifiedEmail(email);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setIsResending(true);
+    try {
+      await authApi.resendVerification(unverifiedEmail);
+      toast.success('Email de vérification renvoyé.');
+    } catch (err: any) {
+      toast.error(err.message || "Échec de l'envoi");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedName = reg.name.trim();
+    if (trimmedName.length < 3) {
+      toast.error('Le nom doit contenir au moins 3 caractères');
+      return;
+    }
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/.test(trimmedName)) {
+      toast.error('Le nom ne doit contenir que des lettres');
+      return;
+    }
     if (reg.password !== reg.confirm) {
       toast.error('Les mots de passe ne correspondent pas');
       return;
     }
     setIsLoading(true);
     try {
-      await authApi.register({ name: reg.name, email: reg.email, password: reg.password });
+      await authApi.register({ name: trimmedName, email: reg.email, password: reg.password });
       navigate('/check-email', { state: { email: reg.email } });
     } catch (err: any) {
       toast.error(err.message || 'Erreur lors de la création du compte');
@@ -167,6 +193,21 @@ export function Login() {
           {passwordResetSuccess && mode === 'login' && (
             <div className="mb-5 p-3.5 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
               Mot de passe réinitialisé avec succès ! Connectez-vous.
+            </div>
+          )}
+
+          {/* Email not verified banner */}
+          {unverifiedEmail && mode === 'login' && (
+            <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm flex items-center justify-between gap-3">
+              <span>Adresse email non vérifiée.</span>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={isResending}
+                className="font-medium text-amber-800 hover:underline disabled:opacity-50 whitespace-nowrap"
+              >
+                {isResending ? 'Envoi...' : "Renvoyer l'email"}
+              </button>
             </div>
           )}
 

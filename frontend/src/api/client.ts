@@ -6,10 +6,7 @@
  * Access token  — stored in memory; sent as Authorization: Bearer
  * Refresh token — httpOnly + sameSite=strict cookie; sent automatically by browser
  *
- * CSRF protection is NOT needed here because:
- *   • Every protected request requires Authorization: Bearer <accessToken>
- *   • accessToken is in JS memory — a cross-site attacker cannot read or forge it
- *   • The refresh cookie uses sameSite=strict, so it is never sent on cross-site requests
+
  */
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -81,7 +78,9 @@ const _fetch = async (
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message);
+    const err = new Error(error.message) as Error & { code?: string };
+    err.code = error.code;
+    throw err;
   }
 
   const text = await res.text();

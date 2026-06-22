@@ -8,6 +8,7 @@ export interface JwtPayload {
 }
 
 export const generateAccessToken = (payload: JwtPayload): string =>
+  // creation de l'access token 
   jwt.sign(payload, config.jwtAccessSecret, { expiresIn: config.jwtAccessExpires as any });
 
 export const verifyAccessToken = (token: string): JwtPayload =>

@@ -9,6 +9,7 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { CoachGuard } from "./components/CoachGuard";
+import { GuestRoute } from "./components/GuestRoute";
 
 // Lazy-loaded public pages
 const CoursesPage = lazy(() => import("./pages/CoursesPage").then(m => ({ default: m.CoursesPage })));
@@ -73,8 +74,8 @@ const StudentGuard = ({ children }: { children: React.ReactNode }) => (
 export const router = createBrowserRouter([
   // Eager — always in the initial bundle
   { path: "/", Component: LandingPage },
-  { path: "/login", Component: Login },
-  { path: "/register", Component: Register },
+  { path: "/login", element: <GuestRoute><Login /></GuestRoute> },
+  { path: "/register", element: <GuestRoute><Register /></GuestRoute> },
   { path: "/check-email", Component: CheckEmail },
   { path: "/verify-email", Component: VerifyEmail },
   { path: "/forgot-password", Component: ForgotPassword },

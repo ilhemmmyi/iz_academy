@@ -8,27 +8,29 @@ import { admin } from '../config/firebase';
 
 export const AuthService = {
 
+  /**
+   * No row is written to "User" here. The signup is held in PendingRegistration
+   * until the verification link is clicked — only then does a real User exist.
+   */
   async register(name: string, email: string, password: string) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new Error('EMAIL_EXISTS');
     const hashed = await bcrypt.hash(password, 12);
     const rawVerificationToken = generateSecureToken();
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const user = await prisma.user.create({
-      data: {
-        name, email, password: hashed, role: 'STUDENT',
-        isVerified: false,
-        emailVerificationTokenHash: hashToken(rawVerificationToken),
-        emailVerificationExpires: verificationExpires,
-      },
+    // Upsert by email — re-registering before verifying just replaces the pending signup
+    await prisma.pendingRegistration.upsert({
+      where: { email },
+      create: { name, email, password: hashed, tokenHash: hashToken(rawVerificationToken), expiresAt: verificationExpires },
+      update: { name, password: hashed, tokenHash: hashToken(rawVerificationToken), expiresAt: verificationExpires },
     });
     await queueEmail('verification-email', {
-      to: user.email,
-      name: user.name,
+      to: email,
+      name,
       token: rawVerificationToken,
       frontendUrl: config.frontendUrl,
     });
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+    return { name, email, role: 'STUDENT' };
   },
 
   async login(email: string, password: string) {
@@ -126,17 +128,49 @@ export const AuthService = {
     return { userId: user.id };
   },
 
+  async resendVerificationEmail(email: string) {
+    const pending = await prisma.pendingRegistration.findUnique({ where: { email } });
+    // Always behave as if it succeeded — never reveal whether a pending signup or verified account exists
+    if (!pending) return;
+    const rawVerificationToken = generateSecureToken();
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // Overwriting the hash/expiry invalidates the previous token (single active token per signup)
+    await prisma.pendingRegistration.update({
+      where: { email },
+      data: { tokenHash: hashToken(rawVerificationToken), expiresAt: verificationExpires },
+    });
+    await queueEmail('verification-email', {
+      to: pending.email,
+      name: pending.name,
+      token: rawVerificationToken,
+      frontendUrl: config.frontendUrl,
+    });
+  },
+
+  /**
+   * The real User row is created here, on successful verification — not at registration time.
+   */
   async verifyEmail(token: string) {
     const tokenHash = hashToken(token);
-    const user = await prisma.user.findUnique({ where: { emailVerificationTokenHash: tokenHash } });
-    if (!user) throw new Error('INVALID_TOKEN');
-    if (!user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
+    const pending = await prisma.pendingRegistration.findUnique({ where: { tokenHash } });
+    if (!pending) throw new Error('INVALID_TOKEN');
+    if (pending.expiresAt < new Date()) {
+      await prisma.pendingRegistration.delete({ where: { id: pending.id } }).catch(() => {});
       throw new Error('TOKEN_EXPIRED');
     }
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { isVerified: true, emailVerificationTokenHash: null, emailVerificationExpires: null },
-    });
+
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: { name: pending.name, email: pending.email, password: pending.password, role: 'STUDENT', isVerified: true },
+      });
+    } catch (err: any) {
+      // Someone else claimed this email between registration and verification (e.g. admin-created account)
+      if (err.code === 'P2002') throw new Error('EMAIL_EXISTS');
+      throw err;
+    }
+
+    await prisma.pendingRegistration.delete({ where: { id: pending.id } });
     await queueEmail('welcome', { name: user.name, email: user.email });
     return { userId: user.id };
   },

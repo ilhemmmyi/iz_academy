@@ -25,24 +25,27 @@ import { LessonComments } from '../../components/LessonComments';
 import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 
+// Pour chaque leçon vidéo, on garde combien de secondes ont été regardées
+// et la durée totale de la vidéo. Sert à calculer les pourcentages affichés.
 type VideoProgressMap = Record<string, { watchedSeconds: number; durationSeconds: number }>;
 
-/** SVG ring that shows watch percentage (0–100) for a lesson circle */
+/** Le petit rond avec l'anneau de progression à côté de chaque leçon (comme sur Instagram stories) */
 function ProgressRing({ pct, completed, active }: { pct: number; completed: boolean; active: boolean }) {
   const r = 8;
-  const circ = 2 * Math.PI * r; // ≈ 50.27
-  const dash = (pct / 100) * circ;
+  const circ = 2 * Math.PI * r; // périmètre du cercle (≈ 50.27)
+  const dash = (pct / 100) * circ; // longueur du trait à colorier selon le %
 
+  // Leçon finie → on affiche juste le check vert, pas besoin de l'anneau
   if (completed) {
     return <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />;
   }
 
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" className="flex-shrink-0 -rotate-90">
-      {/* track */}
+      {/* le cercle gris en fond (la "piste") */}
       <circle cx="10" cy="10" r={r} fill="none" stroke="currentColor"
         strokeWidth="2" className="text-muted-foreground/20" />
-      {/* progress */}
+      {/* le cercle coloré qui avance selon le % regardé */}
       {pct > 0 && (
         <circle cx="10" cy="10" r={r} fill="none"
           stroke="currentColor"
@@ -65,7 +68,7 @@ export function StudentCourseView() {
     videoProgress: VideoProgressMap;
     passedQuizLessonIds: string[];
     lessonDurations: Record<string, number>;
-    projectStatus: string | null;
+    projectStatus: string | null
     hasCertificate: boolean;
     accessExpiresAt: string | null;
     isExpired: boolean;
@@ -85,24 +88,26 @@ export function StudentCourseView() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [courseResources, setCourseResources] = useState<CourseResource[]>([]);
   const [lessonResources, setLessonResources] = useState<LessonRes[]>([]);
-  // live watched % for the currently-playing lesson
+  // % regardé en direct, juste pour la leçon en cours de lecture
   const [currentWatchedPct, setCurrentWatchedPct] = useState(0);
-  // true while the student is playing ahead of their earned position
+  // true quand l'étudiant a fait avancer la barre de lecture plus loin que ce qu'il a réellement regardé
   const [isSkipping, setIsSkipping] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  // highest timestamp the student has honestly watched (high-water mark)
+  // le point le plus loin que l'étudiant a vraiment regardé (on ne le fait jamais reculer)
   const maxWatchedRef = useRef(0);
   const hasAutoCompletedRef = useRef(false);
-  // save-throttle: only POST to server every 30 s (or immediately on pause/seek)
+  // pour ne pas spammer le serveur : on sauvegarde au max toutes les 30s (sauf pause/seek → save direct)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef(false);
   const selectedLessonRef = useRef<any>(null);
-  // ref mirror of isSkipping (accessible inside event handlers without stale closure)
+  // copie de isSkipping dans une ref, pour la lire dans les handlers vidéo sans closure périmée
   const isSkippingRef = useRef(false);
 
   /* ── helpers ─────────────────────────────────────────────── */
 
+  // Va chercher la progression du cours (leçons faites, vidéos vues, quiz réussis...)
+  // On garde l'ancien lessonDurations en mémoire pour éviter de perdre des durées déjà connues.
   const fetchProgress = useCallback(async () => {
     if (!courseId) return;
     try {
@@ -120,6 +125,8 @@ export function StudentCourseView() {
     } catch {}
   }, [courseId]);
 
+  // Récupère l'URL réelle (signée/sécurisée) de la vidéo depuis l'API.
+  // Si ça échoue, on retombe sur l'URL brute stockée dans la leçon.
   const loadVideo = async (lesson: any) => {
     if (!lesson?.videoUrl) { setVideoSrc(null); return; }
     try {
@@ -132,6 +139,8 @@ export function StudentCourseView() {
 
   /* ── initial load ─────────────────────────────────────────── */
 
+  // Au tout premier affichage : on charge le cours, la progression et les ressources en parallèle,
+  // puis on sélectionne automatiquement la 1ère leçon du 1er module pour que l'étudiant n'arrive pas sur une page vide.
   useEffect(() => {
     if (!courseId) { setLoading(false); return; }
     Promise.all([
@@ -146,6 +155,7 @@ export function StudentCourseView() {
       if (firstLesson) {
         setSelectedLesson(firstLesson);
         selectedLessonRef.current = firstLesson;
+        // si l'étudiant avait déjà regardé un peu cette leçon avant, on reprend où il en était
         const saved = (p.videoProgress || {})[firstLesson.id];
         maxWatchedRef.current = saved?.watchedSeconds || 0;
         hasAutoCompletedRef.current = (p.completedLessonIds || []).includes(firstLesson.id);
@@ -156,17 +166,20 @@ export function StudentCourseView() {
         loadVideo(firstLesson);
         lessonResourcesApi.getResources(firstLesson.id).then(setLessonResources).catch(() => {});
       }
+      // on ouvre le 1er module par défaut dans la liste à droite
       if (c?.modules?.[0]) setExpandedSections([c.modules[0].id]);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [courseId]);
 
   /* ── flush pending save when leaving ─────────────────────── */
 
+  // Si l'étudiant ferme l'onglet ou quitte la page pendant qu'une sauvegarde est en attente,
+  // on ne veut pas perdre sa progression. On essaie donc de l'envoyer une dernière fois.
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (pendingSaveRef.current && selectedLessonRef.current && videoRef.current) {
         const { duration } = videoRef.current;
-        // keepalive variant: guaranteed to complete even when the page is unloading
+        // version "beacon" : garantie d'être envoyé au backendmême si la page se ferme juste après
         lessonsApi.saveVideoProgressBeacon(
           selectedLessonRef.current.id,
           maxWatchedRef.current,
@@ -174,10 +187,10 @@ export function StudentCourseView() {
         );
       }
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);//Détecte quand tu fermes l’onglet ou refresh
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // SPA navigation away: flush normally (fetch is not cancelled here)
+      // cas d'une simple navigation interne (SPA) : on sauvegarde normalement
       flushSave();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
@@ -189,13 +202,15 @@ export function StudentCourseView() {
 
   /* ── video: seek to saved position once metadata is known ── */
 
+  // Dès que le navigateur connait la durée de la vidéo, on enregistre cette durée
+  // et on replace le curseur là où l'étudiant s'était arrêté la dernière fois.
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
     const lesson = selectedLessonRef.current;
     if (!video || !lesson) return;
 
-    // Record the real video duration in state so totalDuration is accurate for ALL lessons
-    // not just lessons the user has watched (fixes global course progress calculation)
+    // On garde la vraie durée de la vidéo en state, même pour les leçons jamais regardées.
+    // Sinon le calcul de progression globale du cours serait faux (durée inconnue = ignorée).
     if (video.duration && !isNaN(video.duration) && video.duration > 0) {
       setProgress(prev => ({
         ...prev,
@@ -221,6 +236,8 @@ export function StudentCourseView() {
 
   /* ── video: throttled progress save ─────────────────────── */
 
+  // Envoie immédiatement la progression au serveur (utilisé sur pause/seek/changement de leçon).
+  // On annule le timer en attente puisqu'on vient de sauvegarder "à la main".
   const flushSave = useCallback(() => {
     if (!pendingSaveRef.current || !selectedLessonRef.current) return;
     if (saveTimerRef.current) {
@@ -232,9 +249,11 @@ export function StudentCourseView() {
     lessonsApi.saveVideoProgress(selectedLessonRef.current.id, maxWatchedRef.current, duration).catch(() => {});
   }, []);
 
+  // Planifie une sauvegarde dans 30s si aucune n'est déjà prévue.
+  // Ça évite d'appeler l'API à chaque "timeupdate" (qui se déclenche très souvent).
   const scheduleSave = () => {
     pendingSaveRef.current = true;
-    if (saveTimerRef.current) return; // already scheduled
+    if (saveTimerRef.current) return; // une sauvegarde est déjà programmée, pas besoin d'en rajouter une
     saveTimerRef.current = setTimeout(() => {
       saveTimerRef.current = null;
       pendingSaveRef.current = false;
@@ -244,6 +263,9 @@ export function StudentCourseView() {
     }, 30000);
   };
 
+  // Appelé en continu pendant la lecture vidéo (plusieurs fois par seconde).
+  // Rôle : détecter si l'étudiant a "triché" en avançant la barre, mettre à jour le % regardé,
+  // et marquer la leçon comme terminée automatiquement une fois la vidéo finie.
   const handleTimeUpdate = () => {
     const video = videoRef.current;
     const lesson = selectedLessonRef.current;
@@ -251,28 +273,28 @@ export function StudentCourseView() {
     const { currentTime, duration } = video;
     if (!duration || isNaN(duration)) return;
 
-    // ── Skip detection ──────────────────────────────────────────────────────
-    // Allow up to 2 s of natural playback drift / tiny rewinds.
-    // Any position beyond that is considered a skip-forward.
+    // ── Détection de "saut" en avant ─────────────────────────────────────────
+    // On tolère 2s d'écart (lecture normale ou petit retour en arrière).
+    // Au-delà, on considère que l'étudiant a fait glisser la barre de lecture en avant.
     const TOLERANCE = 2;
     const isAhead = currentTime > maxWatchedRef.current + TOLERANCE;
 
     if (isAhead) {
-      // Student is playing ahead of their earned position – freeze tracking
+      // L'étudiant regarde plus loin que ce qu'il a "gagné" → on gèle le suivi de progression
       if (!isSkippingRef.current) {
         isSkippingRef.current = true;
         setIsSkipping(true);
       }
-      return; // do NOT advance the high-water mark
+      return; // surtout ne pas avancer le point max regardé
     }
 
-    // Back inside the valid zone → resume tracking
+    // Revenu dans la zone autorisée → on reprend le suivi normalement
     if (isSkippingRef.current) {
       isSkippingRef.current = false;
       setIsSkipping(false);
     }
 
-    // ── Advance high-water mark only forward ────────────────────────────────
+    // ── Le point max regardé ne peut qu'avancer, jamais reculer ─────────────
     if (currentTime > maxWatchedRef.current) {
       maxWatchedRef.current = currentTime;
       setCurrentWatchedPct(Math.min((maxWatchedRef.current / duration) * 100, 100));
@@ -286,7 +308,7 @@ export function StudentCourseView() {
       }));
     }
 
-    // ── Auto-complete at 100% ───────────────────────────────────────────────
+    // ── Validation automatique à 100% ───────────────────────────────────────
     if (
       !hasAutoCompletedRef.current &&
       !isCompleted(lesson.id) &&
@@ -296,8 +318,8 @@ export function StudentCourseView() {
       lessonsApi.complete(lesson.id)
         .then(async () => {
           await fetchProgress();
-          // Certificate generation is async (backend queue).
-          // One delayed re-check lets the sidebar reflect +10 without a manual refresh.
+          // La génération du certificat se fait en arrière-plan côté serveur (pas instantanée).
+          // On revérifie 6s plus tard pour que le +10% apparaisse sans que l'étudiant doive recharger la page.
           setTimeout(() => fetchProgress(), 6000);
         })
         .catch(() => {});
@@ -306,23 +328,26 @@ export function StudentCourseView() {
 
   /* ── lesson selection ─────────────────────────────────────── */
 
+  // Quand l'étudiant clique sur une leçon dans la liste à droite.
   const handleSelectLesson = (lesson: any) => {
     if (progress.isExpired) {
       toast.error("Votre accès à ce cours a expiré.");
       return;
     }
+    // Leçon verrouillée (précédente pas finie, ou quiz pas réussi) → on bloque
     if (!isUnlockedHelper(lesson.id)) {
       if (isQuizBlockedHelper(lesson.id)) {
         toast.error('Vous devez réussir le quiz de la leçon précédente pour continuer');
       }
       return;
     }
-    // Flush save for the previous lesson immediately before switching
+    // On sauvegarde tout de suite la progression de la leçon qu'on quitte
     flushSave();
 
     selectedLessonRef.current = lesson;
     setSelectedLesson(lesson);
 
+    // On reprend la nouvelle leçon là où elle en était (si déjà commencée avant)
     const saved = progress.videoProgress[lesson.id];
     maxWatchedRef.current = saved?.watchedSeconds || 0;
     hasAutoCompletedRef.current = isCompleted(lesson.id);
@@ -332,7 +357,7 @@ export function StudentCourseView() {
       ? Math.min((saved.watchedSeconds / saved.durationSeconds) * 100, 100) : 0);
 
     loadVideo(lesson);
-    // Load lesson resources
+    // on recharge les ressources propres à cette leçon
     lessonResourcesApi.getResources(lesson.id).then(setLessonResources).catch(() => setLessonResources([]));
   };
 
@@ -368,34 +393,39 @@ export function StudentCourseView() {
 
   /* ── derived from course structure ───────────────────────── */
 
+  // toutes les leçons du cours, peu importe le module, dans une seule liste à plat
   const allLessons: any[] = (course.modules || []).flatMap((m: any) => m.lessons || []);
 
-  // Duration-based progress
-  // Priority: 1) videoProgress[id].durationSeconds (from active session) 2) lessonDurations[id] (from Lesson table, all lessons) 3) l.durationSeconds (from course data)
+  // Pour connaitre la durée d'une leçon, on prend la 1ère valeur disponible parmi 3 sources :
+  // 1) la session de visionnage en cours, 2) les durées déjà connues en base, 3) la donnée du cours.
   const getLessonDuration = (l: any): number =>
     progress.videoProgress?.[l.id]?.durationSeconds
     || progress.lessonDurations?.[l.id]
     || l.durationSeconds
     || 0;
 
-  // Use Math.max(..., 1) so unknown-duration lessons still contribute to the denominator,
-  // preventing inflated percentages when only some lessons have known durations.
+  // On utilise Math.max(..., 1) pour que les leçons dont on ne connait pas encore la durée
+  // comptent quand même pour "1" au dénominateur, sinon le % global serait gonflé artificiellement.
   const totalDuration = allLessons.reduce((acc: number, l: any) => acc + Math.max(getLessonDuration(l), 1), 0);
 
-  // Watch-time based: sum actual watched seconds capped at lesson duration.
-  // Use Math.max(cap, 1) to match the totalDuration denominator so ratios stay sane.
+  // Temps réellement regardé, plafonné à la durée de chaque leçon (même cap que totalDuration
+  // pour que le ratio watched/total reste cohérent).
   const watchedDuration = allLessons.reduce((acc: number, l: any) => {
     const watched = progress.videoProgress[l.id]?.watchedSeconds || 0;
     const cap = Math.max(getLessonDuration(l), 1);
     return acc + Math.min(watched, cap);
   }, 0);
 
+  // % basé sur le temps de vidéo regardé4
+  //calcul pourcentage de toutes les  lessons
   const lessonPct = totalDuration > 0 ? Math.min(Math.round((watchedDuration / totalDuration) * 100), 100) : 0;
+  // % global du cours : les vidéos comptent pour 70%, le projet pour 20%, le certificat pour 10%
   const progressPct = Math.min(
     Math.round(lessonPct * 0.7) + (progress.projectStatus ? 20 : 0) + (progress.hasCertificate ? 10 : 0),
     100,
   );
 
+  // Transforme un nombre de secondes en texte lisible ("1 h 30 min", "5 min"...)
   const fmtDuration = (sec: number) => {
     const m = Math.floor(sec / 60);
     const h = Math.floor(m / 60);
@@ -405,31 +435,34 @@ export function StudentCourseView() {
     return '< 1 min';
   };
 
+  // Une leçon est débloquée si : c'est la 1ère, OU la précédente est finie ET (si elle a un quiz) le quiz est réussi.
   const isUnlockedHelper = (lessonId: string): boolean => {
     const idx = allLessons.findIndex(l => l.id === lessonId);
     if (idx <= 0) return true;
     const prev = allLessons[idx - 1];
     if (!progress.completedLessonIds.includes(prev.id)) return false;
-    // If the previous lesson has a quiz, the student must have passed it
+    // si la leçon précédente a un quiz, il faut l'avoir réussi pour avancer
     if (prev.quizId && !progress.passedQuizLessonIds.includes(prev.id)) return false;
     return true;
   };
 
-  /** True when the lesson is locked specifically because the previous lesson's quiz was not passed. */
+  /** Distingue le cas "verrouillée car quiz pas réussi" du cas "verrouillée car vidéo pas finie" (pour afficher le bon message/icône). */
   const isQuizBlockedHelper = (lessonId: string): boolean => {
     const idx = allLessons.findIndex(l => l.id === lessonId);
     if (idx <= 0) return false;
     const prev = allLessons[idx - 1];
-    if (!progress.completedLessonIds.includes(prev.id)) return false; // locked for video reason, not quiz
+    if (!progress.completedLessonIds.includes(prev.id)) return false; // verrouillée à cause de la vidéo, pas du quiz
     return !!prev.quizId && !progress.passedQuizLessonIds.includes(prev.id);
   };
 
+  // Ouvre/ferme un module dans la liste des leçons à droite
   const toggleSection = (moduleId: string) => {
     setExpandedSections(prev =>
       prev.includes(moduleId) ? prev.filter(id => id !== moduleId) : [...prev, moduleId]
     );
   };
 
+  // Combien de jours restent avant que l'accès au cours expire (null = pas de date d'expiration)
   const daysRemaining = (): number | null => {
     if (!progress.accessExpiresAt) return null;
     const diff = new Date(progress.accessExpiresAt).getTime() - Date.now();
@@ -704,10 +737,10 @@ export function StudentCourseView() {
                           const completed = isCompleted(lesson.id);
                           const active = selectedLesson?.id === lesson.id;
 
-                          // Determine ring percentage for this lesson
+                          // % à afficher dans l'anneau de cette leçon
                           let ringPct = 0;
                           if (active) {
-                            // Live value while watching
+                            // c'est la leçon en cours de lecture → on utilise la valeur live
                             ringPct = currentWatchedPct;
                           } else {
                             const vp = progress.videoProgress[lesson.id];

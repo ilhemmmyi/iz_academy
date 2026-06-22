@@ -36,8 +36,13 @@ export const UserController = {
           return res.status(400).json({ message: 'URL d\'avatar invalide' });
         }
       }
-      if (name !== undefined && (typeof name !== 'string' || name.trim().length < 2 || name.length > 100)) {
-        return res.status(400).json({ message: 'Le nom doit contenir entre 2 et 100 caractères' });
+      if (name !== undefined) {
+        if (typeof name !== 'string' || name.trim().length < 3 || name.length > 100) {
+          return res.status(400).json({ message: 'Le nom doit contenir entre 3 et 100 caractères' });
+        }
+        if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/.test(name.trim())) {
+          return res.status(400).json({ message: 'Le nom ne doit contenir que des lettres' });
+        }
       }
       if (phone !== undefined && phone !== null && (typeof phone !== 'string' || phone.length > 30)) {
         return res.status(400).json({ message: 'Numéro de téléphone invalide' });
@@ -51,7 +56,7 @@ export const UserController = {
       if (studentStatus !== undefined && studentStatus !== null && (typeof studentStatus !== 'string' || studentStatus.length > 50)) {
         return res.status(400).json({ message: 'Statut invalide' });
       }
-      res.json(await UserService.updateMe(req.user!.userId, { name, avatarUrl, phone, address, educationLevel, studentStatus }));
+      res.json(await UserService.updateMe(req.user!.userId, { name: name !== undefined ? name.trim() : name, avatarUrl, phone, address, educationLevel, studentStatus }));
     } catch {
       res.status(500).json({ message: 'Échec de la mise à jour du profil' });
     }

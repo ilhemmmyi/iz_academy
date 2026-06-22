@@ -10,7 +10,11 @@ const passwordSchema = z.string()
   .regex(/[!@#$%^&*()\-_=+\[\]{};':"\\|,.<>/?]/, 'Le mot de passe doit contenir au moins un caractère spécial');
 
 export const registerSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères').max(100, 'Le nom ne doit pas dépasser 100 caractères'),
+  name: z.string()
+    .trim()
+    .min(3, 'Le nom doit contenir au moins 3 caractères')
+    .max(100, 'Le nom ne doit pas dépasser 100 caractères')
+    .regex(/^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/, 'Le nom ne doit contenir que des lettres'),
   email: z.string().email('Adresse email invalide'),
   password: passwordSchema,
 });
