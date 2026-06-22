@@ -27,9 +27,6 @@ export const usersApi = {
     email: string;
     role: string;
     password: string;
-    formation?: string;
-    duree?: string;
-    dateDebut?: string;
   }) =>
     apiClient('/users', {
       method: 'POST',
@@ -55,9 +52,6 @@ export const usersApi = {
     id: string,
     data: {
       role?: string;
-      formation?: string;
-      duree?: string;
-      dateDebut?: string;
       name?: string;
       email?: string;
     }

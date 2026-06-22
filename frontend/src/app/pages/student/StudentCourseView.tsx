@@ -22,7 +22,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
 import { LessonComments } from '../../components/LessonComments';
-import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource as LessonRes } from '../../../api/lessonResources.api';
 
 // Pour chaque leçon vidéo, on garde combien de secondes ont été regardées
@@ -86,7 +85,6 @@ export function StudentCourseView() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [courseResources, setCourseResources] = useState<CourseResource[]>([]);
   const [lessonResources, setLessonResources] = useState<LessonRes[]>([]);
   // % regardé en direct, juste pour la leçon en cours de lecture
   const [currentWatchedPct, setCurrentWatchedPct] = useState(0);
@@ -146,11 +144,9 @@ export function StudentCourseView() {
     Promise.all([
       coursesApi.getById(courseId),
       coursesApi.getProgress(courseId).catch(() => ({ completedLessonIds: [], videoProgress: {} })),
-      resourcesApi.getResources(courseId).catch(() => []),
-    ]).then(([c, p, res]) => {
+    ]).then(([c, p]) => {
       setCourse(c);
       setProgress({ completedLessonIds: p.completedLessonIds || [], videoProgress: p.videoProgress || {}, passedQuizLessonIds: p.passedQuizLessonIds || [], lessonDurations: p.lessonDurations || {}, projectStatus: p.projectStatus ?? null, hasCertificate: p.hasCertificate ?? false, accessExpiresAt: p.accessExpiresAt ?? null, isExpired: p.isExpired ?? false });
-      setCourseResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
       if (firstLesson) {
         setSelectedLesson(firstLesson);
@@ -666,35 +662,6 @@ export function StudentCourseView() {
                               <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                             </a>
                           )
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Resources published by admin / teacher (course-level) */}
-                  {courseResources.length > 0 && (
-                    <div className="border-t border-border pt-4">
-                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-indigo-600" />
-                        Ressources du cours
-                      </h4>
-                      <div className="space-y-2">
-                        {courseResources.map(r => (
-                          <a
-                            key={r.id}
-                            href={r.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-indigo-100 hover:bg-indigo-50 transition group"
-                          >
-                            <div className="p-1.5 bg-indigo-50 rounded-md flex-shrink-0">
-                              <FileText className="w-4 h-4 text-indigo-600" />
-                            </div>
-                            <span className="flex-1 text-sm font-medium truncate group-hover:text-primary transition">
-                              {r.title}
-                            </span>
-                            <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                          </a>
                         ))}
                       </div>
                     </div>

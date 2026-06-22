@@ -16,9 +16,6 @@ model User {
   googleId                   String?             @unique
   role                       Role                @default(STUDENT)
   avatarUrl                  String?
-  formation                  String?
-  duree                      String?
-  dateDebut                  String?
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
   hasCompletedCoach          Boolean             @default(false)
@@ -96,7 +93,6 @@ model Course {
   certificates     Certificate[]
   category         Category         @relation(fields: [categoryId], references: [id])
   teacher          User             @relation("TeacherCourses", fields: [teacherId], references: [id])
-  resources        CourseResource[]
   snapshots        CourseSnapshot[]
   enrollments      Enrollment[]
   modules          Module[]
@@ -118,18 +114,6 @@ model CourseSnapshot {
   course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, version])
-  @@index([courseId])
-}
-
-model CourseResource {
-  id        String   @id @default(cuid())
-  title     String
-  fileUrl   String
-  fileType  String
-  courseId  String
-  createdAt DateTime @default(now())
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-
   @@index([courseId])
 }
 

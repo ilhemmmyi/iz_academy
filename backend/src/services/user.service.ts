@@ -78,9 +78,6 @@ export const UserService = {
     name: string;
     email: string;
     role: 'STUDENT' | 'TEACHER';
-    formation?: string;
-    duree?: string;
-    dateDebut?: string;
     password: string;
   }) {
     const existing = await UserModel.findByEmail(data.email);

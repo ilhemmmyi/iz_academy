@@ -110,7 +110,7 @@ export const UserController = {
 
   async createUser(req: AuthRequest, res: Response) {
     try {
-      const { name, email, role, formation, duree, dateDebut, password } = req.body;
+      const { name, email, role, password } = req.body;
       if (!name || !email || !role || !password) {
         return res.status(400).json({ message: 'Le nom, l\'email, le rôle et le mot de passe sont requis' });
       }
@@ -121,7 +121,7 @@ export const UserController = {
       if (typeof password !== 'string' || password.length < 8) {
         return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères.' });
       }
-      const user = await UserService.createUser({ name, email, role: normalizedRole, formation, duree, dateDebut, password });
+      const user = await UserService.createUser({ name, email, role: normalizedRole, password });
       AuditService.admin({ actorId: req.user!.userId, actorRole: req.user!.role, action: AuditAction.USER_CREATE, targetType: 'User', targetId: user.id, payload: { email: user.email, role: user.role }, ...extractRequestContext(req) });
       res.status(201).json(user);
     } catch (err: any) {
@@ -162,7 +162,7 @@ export const UserController = {
 
   async updateUser(req: AuthRequest, res: Response) {
     try {
-      const { role, formation, duree, dateDebut, name, email } = req.body;
+      const { role, name, email } = req.body;
 
       const targetUser = await prisma.user.findUnique({
         where: { id: String(req.params.id) },
@@ -183,9 +183,6 @@ export const UserController = {
           }
           data.role = role;
         }
-        if (formation !== undefined) data.formation = formation;
-        if (duree !== undefined) data.duree = duree;
-        if (dateDebut !== undefined && dateDebut !== '') data.dateDebut = dateDebut;
         if (name !== undefined) data.name = name;
         if (email !== undefined) data.email = email;
       }

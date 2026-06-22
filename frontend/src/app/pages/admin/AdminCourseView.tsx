@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { coursesApi } from '../../../api/courses.api';
 import { lessonsApi } from '../../../api/lessons.api';
-import { resourcesApi, CourseResource } from '../../../api/resources.api';
 import { lessonResourcesApi, LessonResource } from '../../../api/lessonResources.api';
 import { uploadApi } from '../../../api/upload.api';
 import { usersApi } from '../../../api/users.api';
@@ -112,7 +111,6 @@ export function AdminCourseView() {
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [resources, setResources] = useState<CourseResource[]>([]);
   const [lessonResources, setLessonResources] = useState<LessonResource[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'resources'>('info');
 
@@ -158,16 +156,14 @@ export function AdminCourseView() {
   const loadAll = useCallback(async () => {
     if (!courseId) { setLoading(false); return; }
     try {
-      const [c, res, cats, users] = await Promise.all([
+      const [c, cats, users] = await Promise.all([
         coursesApi.getById(courseId),
-        resourcesApi.getResources(courseId).catch(() => [] as CourseResource[]),
         coursesApi.getCategories().catch(() => [] as { id: string; name: string }[]),
         usersApi.getAll({ role: 'TEACHER', limit: 100 }).catch(() => ({ users: [] as any[] })),
       ]);
 
       // View state
       setCourse(c);
-      setResources(res);
       const firstLesson = c?.modules?.[0]?.lessons?.[0];
       if (firstLesson) {
         setSelectedLesson(firstLesson);
@@ -1229,7 +1225,7 @@ export function AdminCourseView() {
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    {tab === 'info' ? 'Détails du cours' : `Ressources (${resources.length + lessonResources.length})`}
+                    {tab === 'info' ? 'Détails du cours' : `Ressources (${lessonResources.length})`}
                   </button>
                 ))}
               </div>
@@ -1303,33 +1299,10 @@ export function AdminCourseView() {
                     </div>
                   )}
 
-                  {resources.length === 0 && lessonResources.length === 0 ? (
+                  {lessonResources.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Aucune ressource pour ce cours.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {resources.map(r => (
-                        <div key={r.id} className="flex items-center gap-3 p-3 bg-white border border-indigo-100 border-l-4 border-l-indigo-400 rounded-xl shadow-sm">
-                          <div className="p-2 bg-indigo-50 rounded-lg flex-shrink-0">
-                            <FileText className="w-4 h-4 text-indigo-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{r.title}</p>
-                            <p className="text-xs text-muted-foreground">{r.fileType} • {new Date(r.createdAt).toLocaleDateString('fr-FR')}</p>
-                          </div>
-                          <a
-                            href={r.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 hover:bg-accent rounded-lg transition text-muted-foreground"
-                            title="Télécharger"
-                          >
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </div>
-                      ))}
                     </div>
                   )}
                 </div>
